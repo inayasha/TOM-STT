@@ -6,6 +6,10 @@ import math
 import tempfile
 from shutil import which
 
+# Import Library AI
+import google.generativeai as genai
+from groq import Groq
+
 # ==========================================
 # 1. SETUP & CONFIG
 # ==========================================
@@ -13,132 +17,78 @@ st.set_page_config(
     page_title="TOM'STT", 
     page_icon="🎙️", 
     layout="centered",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded" # Buka sidebar untuk input API Key
 )
 
-# --- CUSTOM CSS (FINAL UI: Centered Info Box & Clean Look) ---
+# Inisialisasi Memori Transkrip (Session State)
+if 'transcript' not in st.session_state:
+    st.session_state.transcript = ""
+if 'filename' not in st.session_state:
+    st.session_state.filename = "Hasil_STT"
+
+# --- CUSTOM CSS (FINAL UI) ---
 st.markdown("""
 <style>
-    /* 1. Background Aplikasi: Putih Bersih */
     .stApp { background-color: #FFFFFF !important; }
     
-    /* 2. Header Style */
     .main-header {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        font-weight: 800;
-        color: #111111 !important;
-        text-align: center;
-        margin-top: 20px;
-        margin-bottom: 5px;
-        font-size: 2.4rem;
-        letter-spacing: -1.5px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 800; color: #111111 !important; text-align: center;
+        margin-top: 20px; margin-bottom: 5px; font-size: 2.4rem; letter-spacing: -1.5px;
     }
     .sub-header {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        color: #666666 !important;
-        text-align: center;
-        font-size: 1rem;
-        margin-bottom: 30px;
-        font-weight: 500;
+        color: #666666 !important; text-align: center; font-size: 1rem;
+        margin-bottom: 30px; font-weight: 500;
     }
 
-    /* 3. Label Input (Hitam Pekat) */
     .stFileUploader label, div[data-testid="stSelectbox"] label, .stAudioInput label {
-        width: 100% !important;
-        text-align: center !important;
-        display: block !important;
-        color: #000000 !important;
-        font-size: 1rem !important;
-        font-weight: 700 !important;
+        width: 100% !important; text-align: center !important; display: block !important;
+        color: #000000 !important; font-size: 1rem !important; font-weight: 700 !important;
         margin-bottom: 8px !important;
     }
 
-    /* 4. AREA UPLOAD FILE (DROPZONE - ABU MUDA) */
     [data-testid="stFileUploaderDropzone"] {
-        background-color: #F0F2F6 !important; 
-        border: 1px dashed #444 !important;
-        border-radius: 12px;
+        background-color: #F0F2F6 !important; border: 1px dashed #444 !important; border-radius: 12px;
     }
-
-    /* Teks instruksi dropzone DIPAKSA HITAM */
-    [data-testid="stFileUploaderDropzone"] div,
-    [data-testid="stFileUploaderDropzone"] span,
-    [data-testid="stFileUploaderDropzone"] small {
+    [data-testid="stFileUploaderDropzone"] div, [data-testid="stFileUploaderDropzone"] span, [data-testid="stFileUploaderDropzone"] small {
         color: #000000 !important;
     }
-
-    /* Tombol Kecil "Browse files" */
     [data-testid="stFileUploaderDropzone"] button {
-        background-color: #000000 !important;
-        color: #FFFFFF !important;
-        border: none !important;
+        background-color: #000000 !important; color: #FFFFFF !important; border: none !important;
     }
-    
-    /* Hilangkan teks extension duplikat */
     .stFileUploader > div > small { display: none !important; }
-
-    /* 5. Teks Nama File Setelah Upload */
-    div[data-testid="stFileUploaderFileName"] {
-        color: #000000 !important;
-        font-weight: 600 !important;
-    }
+    div[data-testid="stFileUploaderFileName"] { color: #000000 !important; font-weight: 600 !important; }
     
-    /* 6. TOMBOL UTAMA (Hitam Solid) */
     div.stButton > button, div.stDownloadButton > button {
-        width: 100%;
-        background-color: #000000 !important;
-        color: #FFFFFF !important;
-        border: 1px solid #000000;
-        padding: 14px 20px;
-        font-size: 16px;
-        font-weight: 700;
-        border-radius: 10px;
-        transition: all 0.2s;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        width: 100%; background-color: #000000 !important; color: #FFFFFF !important;
+        border: 1px solid #000000; padding: 14px 20px; font-size: 16px; font-weight: 700;
+        border-radius: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     div.stButton > button p, div.stDownloadButton > button p { color: #FFFFFF !important; }
-    
     div.stButton > button:hover, div.stDownloadButton > button:hover {
-        background-color: #333333 !important;
-        color: #FFFFFF !important; 
-        transform: translateY(-2px);
+        background-color: #333333 !important; color: #FFFFFF !important; transform: translateY(-2px);
     }
     
-    /* 7. Notifikasi & Tips */
     .stCaption, div[data-testid="stCaptionContainer"], p { color: #444444 !important; }
     
-    /* Tips Box */
     .mobile-tips {
-        background-color: #FFF3CD;
-        color: #856404;
-        padding: 12px;
-        border-radius: 10px;
-        font-size: 0.9rem;
-        text-align: center;
-        margin-bottom: 25px;
-        border: 1px solid #FFEEBA;
+        background-color: #FFF3CD; color: #856404; padding: 12px; border-radius: 10px;
+        font-size: 0.9rem; text-align: center; margin-bottom: 25px; border: 1px solid #FFEEBA;
     }
     .mobile-tips b, .mobile-tips small { color: #856404 !important; }
 
-    /* [BARU] Custom Info Box (Rata Tengah) */
     .custom-info-box {
-        background-color: #e6f3ff; /* Warna biru muda khas st.info */
-        color: #0068c9; /* Warna teks biru tua */
-        padding: 15px;
-        border-radius: 10px;
-        text-align: center; /* RATA TENGAH */
-        font-weight: 600;
-        border: 1px solid #cce5ff;
-        margin-bottom: 20px;
+        background-color: #e6f3ff; color: #0068c9; padding: 15px; border-radius: 10px;
+        text-align: center; font-weight: 600; border: 1px solid #cce5ff; margin-bottom: 20px;
     }
 
-    /* Footer Style */
     .footer-link { text-decoration: none; font-weight: 700; color: #e74c3c !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. LOGIKA FFMPEG (HYBRID)
+# 2. LOGIKA FFMPEG & AI
 # ==========================================
 project_folder = os.getcwd()
 local_ffmpeg = os.path.join(project_folder, "ffmpeg.exe")
@@ -163,11 +113,38 @@ def get_duration(file_path):
     except:
         return 0.0
 
+# System Prompts AI
+PROMPT_NOTULEN = """Kamu adalah seorang Sekretaris Profesional dan Notulis Rapat yang sangat teliti. Tugasmu adalah mengubah teks transkrip audio menjadi Notulen Rapat yang terstruktur, baku, dan mudah dibaca. 
+Abaikan kata-kata pengisi (filler words) atau obrolan di luar konteks pekerjaan. Susun notulen dengan format berikut:
+1. Agenda/Topik Utama: (1-2 kalimat ringkasan tujuan rapat).
+2. Ringkasan Pembahasan: (Buat poin-poin terstruktur tentang dinamika diskusi dan gagasan yang muncul).
+3. Keputusan/Kesimpulan: (Poin-poin hasil akhir yang disepakati).
+4. Tindak Lanjut (Action Items): (Daftar tugas yang harus dilakukan selanjutnya).
+Gunakan bahasa Indonesia formal dan ejaan yang disempurnakan (EYD)."""
+
+PROMPT_LAPORAN = """Kamu adalah seorang Aparatur Sipil Negara (ASN) yang ditugaskan menyusun Laporan Memorandum atau Nota Dinas. Tugasmu adalah menyusun bagian ISI LAPORAN dari teks transkrip yang diberikan. 
+Jangan membuat kop surat, tanggal, 'Yth', 'Dari', atau 'Hal'. Langsung masuk ke isi laporan. Gunakan gaya bahasa birokrasi pemerintahan yang formal, terstruktur, rapi, dan analitis.
+Susun laporan dengan struktur berikut:
+1. Pendahuluan: (Paragraf pembuka standar laporan kegiatan).
+2. Uraian Pembahasan: (Gunakan sistem penomoran/bullet points untuk menjabarkan poin substansial yang dibahas. Rangkum menjadi kalimat pasif atau formal).
+3. Kesimpulan dan Rekomendasi: (Rangkuman akhir dan saran tindak lanjut).
+4. Penutup: (Kalimat penutup standar, misalnya: 'Demikian kami laporkan, mohon arahan Bapak Pimpinan lebih lanjut. Terima kasih.')."""
+
 # ==========================================
-# 3. UI LAYOUT
+# 3. SIDEBAR (API KEYS)
+# ==========================================
+with st.sidebar:
+    st.header("⚙️ Pengaturan AI")
+    st.caption("Masukkan API Key Anda di bawah ini agar fitur AI dapat bekerja.")
+    gemini_key = st.text_input("🔑 Gemini API Key (Utama)", type="password")
+    groq_key = st.text_input("🔑 Groq API Key (Cadangan)", type="password")
+    st.markdown("---")
+    st.caption("🔒 Key Anda aman dan hanya tersimpan sementara di browser ini.")
+
+# ==========================================
+# 4. UI LAYOUT
 # ==========================================
 
-# --- JUDUL BARU: TOM'STT ---
 st.markdown("""
 <div class="main-header">
     🎙️ TOM'<span style="color: #e74c3c;">STT</span>
@@ -183,43 +160,44 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- TAB SELECTION ---
-tab1, tab2 = st.tabs(["📂 Upload File", "🎙️ Rekam Suara (Unstable)"])
+# --- TAB SELECTION (TAMBAH TAB 3) ---
+tab1, tab2, tab3 = st.tabs(["📂 Upload File", "🎙️ Rekam Suara", "✨ Ekstrak AI"])
 audio_to_process = None
 source_name = "audio" 
 
+# TAB 1
 with tab1:
     uploaded_file = st.file_uploader("Pilih File Audio", type=["aac", "mp3", "wav", "m4a", "opus", "mp4", "3gp", "amr", "ogg", "flac", "wma"])
     if uploaded_file:
         audio_to_process = uploaded_file
         source_name = uploaded_file.name
 
+# TAB 2
 with tab2:
     audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
     if audio_mic:
         audio_to_process = audio_mic
         source_name = "rekaman_mic.wav"
 
-st.write("") 
-c1, c2, c3 = st.columns([1, 4, 1]) 
-with c2:
-    lang_choice = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"))
+if tab1 or tab2:
     st.write("") 
-    
-    if audio_to_process:
-        submit_btn = st.button("🚀 Mulai Transkrip", use_container_width=True)
-    else:
-        # --- UPDATE: MENGGUNAKAN CUSTOM HTML AGAR RATA TENGAH ---
-        st.markdown("""
-            <div class="custom-info-box">
-                👆 Silakan Upload atau Rekam terlebih dahulu.
-            </div>
-        """, unsafe_allow_html=True)
-        submit_btn = False
+    c1, c2, c3 = st.columns([1, 4, 1]) 
+    with c2:
+        lang_choice = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"))
+        st.write("") 
+        if audio_to_process:
+            submit_btn = st.button("🚀 Mulai Transkrip", use_container_width=True)
+        else:
+            st.markdown("""
+                <div class="custom-info-box">
+                    👆 Silakan Upload atau Rekam terlebih dahulu.
+                </div>
+            """, unsafe_allow_html=True)
+            submit_btn = False
 
+# --- PROSES STT ---
 if submit_btn and audio_to_process:
     st.markdown("---")
-    
     status_box = st.empty()
     progress_bar = st.progress(0)
     result_area = st.empty()
@@ -248,14 +226,11 @@ if submit_btn and audio_to_process:
         recognizer = sr.Recognizer()
         recognizer.energy_threshold = 300 
         recognizer.dynamic_energy_threshold = True 
-        
         lang_code = "id-ID" if lang_choice == "Indonesia" else "en-US"
 
         for i in range(total_chunks):
             start_time = i * chunk_len
             chunk_filename = f"temp_slice_{i}.wav"
-            
-            # FFMPEG VOLUME BOOST 3x
             cmd = [
                 ffmpeg_cmd, "-y", "-i", input_path,
                 "-ss", str(start_time), "-t", str(chunk_len),
@@ -282,20 +257,15 @@ if submit_btn and audio_to_process:
             progress_bar.progress(pct)
             status_box.caption(f"Sedang memproses... ({pct}%)")
 
-        status_box.success("✅ Selesai!")
+        status_box.success("✅ Selesai! Transkrip tersimpan di sistem. Silakan klik Tab '✨ Ekstrak AI'.")
         final_text = " ".join(full_transcript)
         
-        # --- AUTO FILENAME ---
-        base_name = os.path.splitext(source_name)[0]
-        output_filename = f"{base_name}.txt"
+        # SIMPAN KE SESSION STATE AGAR BISA DIPAKAI DI TAB AI
+        st.session_state.transcript = final_text
+        st.session_state.filename = os.path.splitext(source_name)[0]
         
-        st.download_button(
-            label=f"💾 Download {output_filename}", 
-            data=final_text, 
-            file_name=output_filename, 
-            mime="text/plain", 
-            use_container_width=True
-        )
+        output_filename = f"{st.session_state.filename}.txt"
+        st.download_button("💾 Download Hasil (.TXT)", final_text, output_filename, "text/plain", use_container_width=True)
 
     except Exception as e:
         st.error(f"Error: {e}")
@@ -303,5 +273,76 @@ if submit_btn and audio_to_process:
         if os.path.exists(input_path):
             os.remove(input_path)
 
+# ==========================================
+# 5. TAB 3 (EKSTRAK AI)
+# ==========================================
+with tab3:
+    if not st.session_state.transcript:
+        st.markdown("""
+            <div class="custom-info-box">
+                👆 Transkrip belum tersedia.<br><small>Selesaikan proses di tab Upload/Rekam terlebih dahulu.</small>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.success("Teks Transkrip Siap Diproses!")
+        st.text_area("📄 Teks Asli:", st.session_state.transcript, height=150, disabled=True)
+        st.write("")
+        
+        # Dua Tombol Ajaib
+        col1, col2 = st.columns(2)
+        with col1:
+            btn_notulen = st.button("📝 Buat Notulen", use_container_width=True)
+        with col2:
+            btn_laporan = st.button("📋 Buat Laporan", use_container_width=True)
+
+        if btn_notulen or btn_laporan:
+            if not gemini_key and not groq_key:
+                st.error("⚠️ Mohon masukkan API Key Gemini atau Groq di menu Sidebar sebelah kiri terlebih dahulu.")
+            else:
+                prompt_active = PROMPT_NOTULEN if btn_notulen else PROMPT_LAPORAN
+                ai_result = None
+                
+                # 1. COBA GEMINI (UTAMA)
+                if gemini_key:
+                    try:
+                        with st.spinner("🤖 Menggunakan Gemini (Utama)... Sedang merangkum..."):
+                            genai.configure(api_key=gemini_key)
+                            model = genai.GenerativeModel('gemini-1.5-flash')
+                            response = model.generate_content(f"{prompt_active}\n\nBerikut adalah teks transkripnya:\n{st.session_state.transcript}")
+                            ai_result = response.text
+                    except Exception as e:
+                        st.warning(f"Gemini sibuk/gagal. Beralih ke Groq... (Log: {e})")
+                
+                # 2. COBA GROQ (CADANGAN)
+                if groq_key and ai_result is None:
+                    try:
+                        with st.spinner("⚡ Menggunakan Groq (Cadangan)... Sedang merangkum..."):
+                            client = Groq(api_key=groq_key)
+                            completion = client.chat.completions.create(
+                                model="llama-3.1-70b-versatile",
+                                messages=[
+                                    {"role": "system", "content": prompt_active},
+                                    {"role": "user", "content": f"Berikut adalah teks transkripnya:\n{st.session_state.transcript}"}
+                                ],
+                                temperature=0.3,
+                            )
+                            ai_result = completion.choices[0].message.content
+                    except Exception as e:
+                        st.error(f"Groq juga mengalami kendala. (Log: {e})")
+
+                # 3. TAMPILKAN HASIL JIKA BERHASIL
+                if ai_result:
+                    st.markdown("---")
+                    st.markdown("### ✨ Hasil Ekstrak AI")
+                    st.markdown(ai_result)
+                    
+                    # Fitur Download Hasil AI
+                    prefix = "Notulen_" if btn_notulen else "Laporan_"
+                    ai_filename = f"{prefix}{st.session_state.filename}.txt"
+                    st.download_button("💾 Download Hasil AI (.TXT)", ai_result, ai_filename, "text/plain", use_container_width=True)
+                elif not ai_result and (gemini_key or groq_key):
+                    st.error("❌ Mohon maaf, server AI utama maupun cadangan saat ini sedang penuh atau durasi transkrip melebihi kapasitas. Silakan coba beberapa saat lagi.")
+
+# Footer
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
