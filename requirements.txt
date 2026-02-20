@@ -1,2 +1,4 @@
 streamlit
 SpeechRecognition
+google-generativeai
+groq
