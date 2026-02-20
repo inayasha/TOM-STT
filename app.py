@@ -33,6 +33,8 @@ db = firestore.client()
 
 # --- FUNGSI DATABASE FIREBASE (USER) ---
 def get_user(username):
+    # Validasi tambahan untuk mencegah query dengan string kosong
+    if not username: return None
     doc = db.collection('users').document(username).get()
     return doc.to_dict() if doc.exists else None
 
@@ -98,6 +100,7 @@ st.markdown("""
     .stFileUploader > div > small { display: none !important; }
     div[data-testid="stFileUploaderFileName"] { color: #000000 !important; font-weight: 600 !important; }
     
+    /* UPDATE: CSS untuk tombol di dalam form agar konsisten */
     div.stButton > button, div.stDownloadButton > button, div[data-testid="stFormSubmitButton"] > button { 
         width: 100%; background-color: #000000 !important; color: #FFFFFF !important; border: 1px solid #000000; padding: 14px 20px; font-size: 16px; font-weight: 700; border-radius: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
     }
@@ -105,9 +108,8 @@ st.markdown("""
     div.stButton > button:hover, div.stDownloadButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover { background-color: #333333 !important; color: #FFFFFF !important; transform: translateY(-2px); }
     
     /* Tombol Danger Merah untuk Hapus/Nonaktif */
-    .btn-danger > button { background-color: #e74c3c !important; border-color: #c0392b !important; }
-    .btn-danger > button:hover { background-color: #c0392b !important; }
-    .btn-warning > button { background-color: #f39c12 !important; border-color: #e67e22 !important; }
+    .btn-danger > button, .btn-danger > button:hover { background-color: #e74c3c !important; border-color: #c0392b !important; }
+    .btn-warning > button, .btn-warning > button:hover { background-color: #f39c12 !important; border-color: #e67e22 !important; }
     
     .stCaption, p { color: #444444 !important; }
     textarea { color: #000000 !important; background-color: #F8F9FA !important; font-weight: 500 !important; }
@@ -187,7 +189,7 @@ Format:
 # ==========================================
 # 3. SIDEBAR (INFO & STATUS)
 # ==========================================
-with st.sidebar:
+with sidebar:
     st.header("⚙️ Status Sistem")
     if st.session_state.logged_in:
         st.success(f"👤 Login as: {st.session_state.current_user}")
@@ -398,7 +400,8 @@ if st.session_state.user_role == "admin":
                     new_provider = st.selectbox("Provider", ["Gemini", "Groq"])
                     new_name = st.text_input("Nama Key (Misal: Akun Istri)")
                 with col2:
-                    new_limit = st.number_input("Batas Limit Kuota/Hari", min_value=1, value=1500)
+                    # UPDATE: Nilai default limit menjadi 200
+                    new_limit = st.number_input("Batas Limit Kuota/Hari", min_value=1, value=200)
                     new_key_str = st.text_input("Paste API Key", type="password")
                 
                 if st.form_submit_button("Simpan Kunci API"):
@@ -411,7 +414,6 @@ if st.session_state.user_role == "admin":
         st.markdown("#### 📋 Daftar API Key & Sisa Kuota")
         keys_ref = db.collection('api_keys').stream()
         
-        # Tampilan Rapi menggunakan Columns dan memaksakan warna hitam (Inline Style)
         for doc in keys_ref:
             k = doc.to_dict()
             sisa_kuota = k['limit'] - k['used']
@@ -426,7 +428,6 @@ if st.session_state.user_role == "admin":
             </div>
             """, unsafe_allow_html=True)
             
-            # Tombol Aksi per API Key
             ca1, ca2 = st.columns([1, 1])
             with ca1:
                 btn_label = "🔴 Matikan" if k['is_active'] else "🟢 Hidupkan"
@@ -444,7 +445,7 @@ if st.session_state.user_role == "admin":
             st.write("---")
         
         # --- MANAJEMEN USER ---
-        st.markdown("### 👥 Manajemen User")
+        st.markdown("#### 👥 Manajemen User")
         users_ref = db.collection('users').stream()
         st.write("Daftar Pengguna Saat Ini:")
         for doc in users_ref:
@@ -458,7 +459,8 @@ if st.session_state.user_role == "admin":
             
             c_add, c_del = st.columns(2)
             with c_add:
-                if st.form_submit_button("Simpan User"):
+                # UPDATE: Tambahkan use_container_width=True agar rata
+                if st.form_submit_button("Simpan User", use_container_width=True):
                     if add_email and add_pwd:
                         save_user(add_email, add_pwd, add_role)
                         st.success(f"✅ User {add_email} disimpan ke Firebase!")
@@ -466,16 +468,19 @@ if st.session_state.user_role == "admin":
                     else: st.error("Isi Username dan Password!")
             with c_del:
                 st.markdown('<div class="btn-danger">', unsafe_allow_html=True)
-                if st.form_submit_button("Hapus User"):
-                    if get_user(add_email):
-                        if add_email == "admin": st.error("Dilarang menghapus Admin Utama!")
-                        else:
-                            delete_user(add_email)
-                            st.warning(f"🗑️ User {add_email} dihapus dari Firebase!")
-                            st.rerun()
-                    else: st.error("User tidak ditemukan.")
+                # UPDATE: Tambahkan use_container_width=True dan validasi input kosong
+                if st.form_submit_button("Hapus User", use_container_width=True):
+                    if add_email: # Cek apakah email diisi
+                        if get_user(add_email):
+                            if add_email == "admin": st.error("Dilarang menghapus Admin Utama!")
+                            else:
+                                delete_user(add_email)
+                                st.warning(f"🗑️ User {add_email} dihapus dari Firebase!")
+                                st.rerun()
+                        else: st.error("User tidak ditemukan.")
+                    else:
+                        st.error("Isi Username yang ingin dihapus!")
                 st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
-
