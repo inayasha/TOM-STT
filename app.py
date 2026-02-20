@@ -292,7 +292,7 @@ with tab3:
                                 with st.spinner("🤖 Gemini sedang menganalisis komprehensif (mungkin memakan waktu)..."):
                                     genai.configure(api_key=gemini_key)
                                     # KITA GUNAKAN 1.5 PRO AGAR LEBIH STABIL DI DOKUMEN PANJANG
-                                    model = genai.GenerativeModel('gemini-2.5-pro')
+                                    model = genai.GenerativeModel('gemini-1.5-flash')
                                     response = model.generate_content(f"{prompt_active}\n\nBerikut teks transkripnya:\n{st.session_state.transcript}")
                                     ai_result = response.text
                             except Exception as e: st.error(f"Gemini gagal: {e}")
@@ -372,5 +372,6 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
 
 
