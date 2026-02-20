@@ -59,10 +59,10 @@ if 'filename' not in st.session_state: st.session_state.filename = "Hasil_STT"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'current_user' not in st.session_state: st.session_state.current_user = ""
 if 'user_role' not in st.session_state: st.session_state.user_role = ""
-if 'ai_result' not in st.session_state: st.session_state.ai_result = "" # Memori Hasil AI
-if 'ai_prefix' not in st.session_state: st.session_state.ai_prefix = "" # Memori Jenis Laporan
+if 'ai_result' not in st.session_state: st.session_state.ai_result = "" 
+if 'ai_prefix' not in st.session_state: st.session_state.ai_prefix = "" 
 
-# --- CUSTOM CSS (FIX TOMBOL FORM ADMIN) ---
+# --- CUSTOM CSS (FIX TEXTAREA DISABLED & SIDEBAR ARROW) ---
 st.markdown("""
 <style>
     .stApp { background-color: #FFFFFF !important; }
@@ -75,7 +75,7 @@ st.markdown("""
     .stFileUploader > div > small { display: none !important; }
     div[data-testid="stFileUploaderFileName"] { color: #000000 !important; font-weight: 600 !important; }
     
-    /* FIX SEMUA TOMBOL (TERMASUK TOMBOL DI DALAM FORM ADMIN) */
+    /* FIX SEMUA TOMBOL */
     div.stButton > button, div.stDownloadButton > button, div[data-testid="stFormSubmitButton"] > button { 
         width: 100%; background-color: #000000 !important; color: #FFFFFF !important; border: 1px solid #000000; padding: 14px 20px; font-size: 16px; font-weight: 700; border-radius: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
     }
@@ -83,7 +83,25 @@ st.markdown("""
     div.stButton > button:hover, div.stDownloadButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover { background-color: #333333 !important; color: #FFFFFF !important; transform: translateY(-2px); }
     
     .stCaption, p { color: #444444 !important; }
-    textarea { color: #000000 !important; background-color: #F8F9FA !important; font-weight: 500 !important; }
+    
+    /* FIX TEXTAREA NORMAL & DISABLED */
+    textarea { 
+        color: #000000 !important; 
+        background-color: #F8F9FA !important; 
+        font-weight: 500 !important; 
+    }
+    textarea:disabled {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important; /* Memaksa hitam di Chrome/Safari */
+        opacity: 1 !important; /* Menghilangkan efek pudar bawaan browser */
+    }
+    
+    /* FIX PANAH SIDEBAR (COLLAPSE CONTROL) */
+    [data-testid="collapsedControl"], [data-testid="collapsedControl"] svg {
+        color: #111111 !important;
+        fill: #111111 !important;
+    }
+
     div[data-testid="stMarkdownContainer"] p, div[data-testid="stMarkdownContainer"] h1, div[data-testid="stMarkdownContainer"] h2, div[data-testid="stMarkdownContainer"] h3, div[data-testid="stMarkdownContainer"] li, div[data-testid="stMarkdownContainer"] strong, div[data-testid="stMarkdownContainer"] span { color: #111111 !important; }
     [data-testid="stSidebar"] { background-color: #F4F6F9 !important; }
     [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] p, [data-testid="stSidebar"] label { color: #111111 !important; font-weight: 600 !important; }
@@ -237,7 +255,7 @@ if submit_btn and audio_to_process:
         status_box.success("✅ Selesai! Transkrip tersimpan. Silakan klik Tab '✨ Ekstrak AI'.")
         final_text = " ".join(full_transcript)
         st.session_state.transcript, st.session_state.filename = final_text, os.path.splitext(source_name)[0]
-        st.session_state.ai_result = "" # Reset AI memory saat ada transkrip baru
+        st.session_state.ai_result = "" 
         st.download_button("💾 Download (.TXT)", final_text, f"{st.session_state.filename}.txt", "text/plain", use_container_width=True)
 
     except Exception as e: st.error(f"Error: {e}")
@@ -265,7 +283,7 @@ with tab3:
             uploaded_txt = st.file_uploader("Upload File Transkrip (.txt)", type=["txt"])
             if uploaded_txt:
                 st.session_state.transcript, st.session_state.filename = uploaded_txt.read().decode("utf-8"), os.path.splitext(uploaded_txt.name)[0]
-                st.session_state.ai_result = "" # Reset AI memory saat upload baru
+                st.session_state.ai_result = "" 
                 st.rerun()
         else:
             st.success("✅ Teks Transkrip Siap Diproses!")
@@ -273,7 +291,7 @@ with tab3:
             
             if st.button("🗑️ Hapus Teks"): 
                 st.session_state.transcript = ""
-                st.session_state.ai_result = "" # Hapus memori AI juga
+                st.session_state.ai_result = "" 
                 st.rerun()
                 
             st.write("")
@@ -320,12 +338,10 @@ with tab3:
                                     ai_result = completion.choices[0].message.content
                             except Exception as e: st.error(f"Groq gagal: {e}")
 
-                    # JIKA BERHASIL, SIMPAN KE SESSION STATE (JANGAN HANYA DITAMPILKAN SESAAT)
                     if ai_result:
                         st.session_state.ai_result = ai_result
                         st.session_state.ai_prefix = "Notulen_" if btn_notulen else "Laporan_"
 
-            # BLOK PENAMPILAN DAN DOWNLOAD (AMAN DARI REFRESH)
             if st.session_state.ai_result:
                 st.markdown("---")
                 st.markdown("### ✨ Hasil Ekstrak AI (Super Mendetail)")
