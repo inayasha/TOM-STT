@@ -307,7 +307,8 @@ with tab3:
                     try:
                         with st.spinner("🤖 Menggunakan Gemini (Utama)... Sedang merangkum..."):
                             genai.configure(api_key=gemini_key)
-                            model = genai.GenerativeModel('gemini-1.5-flash')
+                            # --- UBAH NAMA MODEL GEMINI DI SINI ---
+                            model = genai.GenerativeModel('gemini-2.0-flash') 
                             response = model.generate_content(f"{prompt_active}\n\nBerikut adalah teks transkripnya:\n{st.session_state.transcript}")
                             ai_result = response.text
                     except Exception as e:
@@ -319,7 +320,8 @@ with tab3:
                         with st.spinner("⚡ Menggunakan Groq (Cadangan)... Sedang merangkum..."):
                             client = Groq(api_key=groq_key)
                             completion = client.chat.completions.create(
-                                model="llama-3.1-70b-versatile",
+                                # --- UBAH NAMA MODEL GROQ DI SINI ---
+                                model="llama-3.3-70b-versatile",
                                 messages=[
                                     {"role": "system", "content": prompt_active},
                                     {"role": "user", "content": f"Berikut adalah teks transkripnya:\n{st.session_state.transcript}"}
@@ -346,3 +348,4 @@ with tab3:
 # Footer
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
