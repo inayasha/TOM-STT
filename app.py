@@ -64,7 +64,6 @@ def increment_api_usage(doc_id, current_used):
 
 def get_active_keys(provider):
     keys_ref = db.collection('api_keys').where("provider", "==", provider).where("is_active", "==", True).stream()
-    # Filter tambahan: hanya ambil yang pemakaiannya belum melebihi limit
     valid_keys = []
     for doc in keys_ref:
         data = doc.to_dict()
@@ -117,6 +116,11 @@ st.markdown("""
     [data-testid="collapsedControl"] svg, [data-testid="collapsedControl"] svg path,
     [data-testid="stSidebarCollapseButton"] svg, [data-testid="stSidebarCollapseButton"] svg path,
     button[kind="header"] svg, button[kind="header"] svg path { fill: #111111 !important; stroke: #111111 !important; color: #111111 !important; }
+
+    /* FIX EXPANDER (TAMBAH API KEY BARU) */
+    [data-testid="stExpander"] details summary p, 
+    [data-testid="stExpander"] details summary span { color: #111111 !important; font-weight: 700 !important; }
+    [data-testid="stExpander"] details summary svg { fill: #111111 !important; color: #111111 !important; }
 
     div[data-testid="stMarkdownContainer"] p, div[data-testid="stMarkdownContainer"] h1, div[data-testid="stMarkdownContainer"] h2, div[data-testid="stMarkdownContainer"] h3, div[data-testid="stMarkdownContainer"] li, div[data-testid="stMarkdownContainer"] strong, div[data-testid="stMarkdownContainer"] span { color: #111111 !important; }
     [data-testid="stSidebar"] { background-color: #F4F6F9 !important; }
