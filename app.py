@@ -269,7 +269,7 @@ with tab3:
             st.write("")
             
             st.markdown("#### ⚙️ Pilih Mesin AI")
-            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini (Google 1.5 Pro - Sangat Cerdas)", "Groq (Llama 3.3 - Sangat Cepat)"])
+            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini (Google 2.5 Flash - Sangat Cerdas)", "Groq (Llama 3.3 - Sangat Cepat)"])
             st.write("")
             
             col1, col2 = st.columns(2)
@@ -372,6 +372,7 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
 
 
 
