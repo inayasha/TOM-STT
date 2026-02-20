@@ -62,7 +62,7 @@ if 'user_role' not in st.session_state: st.session_state.user_role = ""
 if 'ai_result' not in st.session_state: st.session_state.ai_result = "" 
 if 'ai_prefix' not in st.session_state: st.session_state.ai_prefix = "" 
 
-# --- CUSTOM CSS (FINAL UI & ICON FIX) ---
+# --- CUSTOM CSS (FIX TEXTAREA DISABLED & SIDEBAR ARROW) ---
 st.markdown("""
 <style>
     .stApp { background-color: #FFFFFF !important; }
@@ -92,20 +92,14 @@ st.markdown("""
     }
     textarea:disabled {
         color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important; 
-        opacity: 1 !important; 
+        -webkit-text-fill-color: #000000 !important; /* Memaksa hitam di Chrome/Safari */
+        opacity: 1 !important; /* Menghilangkan efek pudar bawaan browser */
     }
     
-    /* FIX IKON PANAH SIDEBAR SVG (MEMAKSA HITAM WALAUPUN HP DARK MODE) */
-    [data-testid="collapsedControl"] svg, 
-    [data-testid="collapsedControl"] svg path,
-    [data-testid="stSidebarCollapseButton"] svg,
-    [data-testid="stSidebarCollapseButton"] svg path,
-    button[kind="header"] svg,
-    button[kind="header"] svg path {
-        fill: #111111 !important;
-        stroke: #111111 !important;
+    /* FIX PANAH SIDEBAR (COLLAPSE CONTROL) */
+    [data-testid="collapsedControl"], [data-testid="collapsedControl"] svg {
         color: #111111 !important;
+        fill: #111111 !important;
     }
 
     div[data-testid="stMarkdownContainer"] p, div[data-testid="stMarkdownContainer"] h1, div[data-testid="stMarkdownContainer"] h2, div[data-testid="stMarkdownContainer"] h3, div[data-testid="stMarkdownContainer"] li, div[data-testid="stMarkdownContainer"] strong, div[data-testid="stMarkdownContainer"] span { color: #111111 !important; }
@@ -303,7 +297,7 @@ with tab3:
             st.write("")
             
             st.markdown("#### ⚙️ Pilih Mesin AI")
-            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini (Google 2.5 Flash - Sangat Cerdas)", "Groq (Llama 3.3 - Sangat Cepat)"])
+            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini (Sangat Cerdas)", "Groq (Sangat Cepat)"])
             st.write("")
             
             col1, col2 = st.columns(2)
