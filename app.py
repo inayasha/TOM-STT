@@ -33,7 +33,6 @@ db = firestore.client()
 
 # --- FUNGSI DATABASE FIREBASE (USER) ---
 def get_user(username):
-    # Validasi tambahan untuk mencegah query dengan string kosong
     if not username: return None
     doc = db.collection('users').document(username).get()
     return doc.to_dict() if doc.exists else None
@@ -100,7 +99,6 @@ st.markdown("""
     .stFileUploader > div > small { display: none !important; }
     div[data-testid="stFileUploaderFileName"] { color: #000000 !important; font-weight: 600 !important; }
     
-    /* UPDATE: CSS untuk tombol di dalam form agar konsisten */
     div.stButton > button, div.stDownloadButton > button, div[data-testid="stFormSubmitButton"] > button { 
         width: 100%; background-color: #000000 !important; color: #FFFFFF !important; border: 1px solid #000000; padding: 14px 20px; font-size: 16px; font-weight: 700; border-radius: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
     }
@@ -189,7 +187,7 @@ Format:
 # ==========================================
 # 3. SIDEBAR (INFO & STATUS)
 # ==========================================
-with sidebar:
+with st.sidebar: # <--- INI SUDAH DIPERBAIKI
     st.header("⚙️ Status Sistem")
     if st.session_state.logged_in:
         st.success(f"👤 Login as: {st.session_state.current_user}")
@@ -400,7 +398,6 @@ if st.session_state.user_role == "admin":
                     new_provider = st.selectbox("Provider", ["Gemini", "Groq"])
                     new_name = st.text_input("Nama Key (Misal: Akun Istri)")
                 with col2:
-                    # UPDATE: Nilai default limit menjadi 200
                     new_limit = st.number_input("Batas Limit Kuota/Hari", min_value=1, value=200)
                     new_key_str = st.text_input("Paste API Key", type="password")
                 
@@ -459,7 +456,6 @@ if st.session_state.user_role == "admin":
             
             c_add, c_del = st.columns(2)
             with c_add:
-                # UPDATE: Tambahkan use_container_width=True agar rata
                 if st.form_submit_button("Simpan User", use_container_width=True):
                     if add_email and add_pwd:
                         save_user(add_email, add_pwd, add_role)
@@ -468,9 +464,8 @@ if st.session_state.user_role == "admin":
                     else: st.error("Isi Username dan Password!")
             with c_del:
                 st.markdown('<div class="btn-danger">', unsafe_allow_html=True)
-                # UPDATE: Tambahkan use_container_width=True dan validasi input kosong
                 if st.form_submit_button("Hapus User", use_container_width=True):
-                    if add_email: # Cek apakah email diisi
+                    if add_email:
                         if get_user(add_email):
                             if add_email == "admin": st.error("Dilarang menghapus Admin Utama!")
                             else:
