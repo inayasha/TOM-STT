@@ -60,7 +60,7 @@ if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'current_user' not in st.session_state: st.session_state.current_user = ""
 if 'user_role' not in st.session_state: st.session_state.user_role = ""
 
-# --- CUSTOM CSS ---
+# --- CUSTOM CSS (FIX TOMBOL FORM ADMIN) ---
 st.markdown("""
 <style>
     .stApp { background-color: #FFFFFF !important; }
@@ -72,9 +72,14 @@ st.markdown("""
     [data-testid="stFileUploaderDropzone"] button { background-color: #000000 !important; color: #FFFFFF !important; border: none !important; }
     .stFileUploader > div > small { display: none !important; }
     div[data-testid="stFileUploaderFileName"] { color: #000000 !important; font-weight: 600 !important; }
-    div.stButton > button, div.stDownloadButton > button { width: 100%; background-color: #000000 !important; color: #FFFFFF !important; border: 1px solid #000000; padding: 14px 20px; font-size: 16px; font-weight: 700; border-radius: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    div.stButton > button p, div.stDownloadButton > button p { color: #FFFFFF !important; }
-    div.stButton > button:hover, div.stDownloadButton > button:hover { background-color: #333333 !important; color: #FFFFFF !important; transform: translateY(-2px); }
+    
+    /* FIX SEMUA TOMBOL (TERMASUK TOMBOL DI DALAM FORM ADMIN) */
+    div.stButton > button, div.stDownloadButton > button, div[data-testid="stFormSubmitButton"] > button { 
+        width: 100%; background-color: #000000 !important; color: #FFFFFF !important; border: 1px solid #000000; padding: 14px 20px; font-size: 16px; font-weight: 700; border-radius: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+    }
+    div.stButton > button p, div.stDownloadButton > button p, div[data-testid="stFormSubmitButton"] > button p { color: #FFFFFF !important; }
+    div.stButton > button:hover, div.stDownloadButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover { background-color: #333333 !important; color: #FFFFFF !important; transform: translateY(-2px); }
+    
     .stCaption, p { color: #444444 !important; }
     textarea { color: #000000 !important; background-color: #F8F9FA !important; font-weight: 500 !important; }
     div[data-testid="stMarkdownContainer"] p, div[data-testid="stMarkdownContainer"] h1, div[data-testid="stMarkdownContainer"] h2, div[data-testid="stMarkdownContainer"] h3, div[data-testid="stMarkdownContainer"] li, div[data-testid="stMarkdownContainer"] strong, div[data-testid="stMarkdownContainer"] span { color: #111111 !important; }
@@ -263,9 +268,8 @@ with tab3:
             if st.button("🗑️ Hapus Teks"): st.session_state.transcript = ""; st.rerun()
             st.write("")
             
-            # --- FITUR PILIH ENGINE AI ---
             st.markdown("#### ⚙️ Pilih Mesin AI")
-            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini (Google - Sangat Cerdas)", "Groq (Llama 3.3 - Sangat Cepat)"])
+            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini (Google 1.5 Pro - Sangat Cerdas)", "Groq (Llama 3.3 - Sangat Cepat)"])
             st.write("")
             
             col1, col2 = st.columns(2)
@@ -287,7 +291,8 @@ with tab3:
                             try:
                                 with st.spinner("🤖 Gemini sedang menganalisis komprehensif (mungkin memakan waktu)..."):
                                     genai.configure(api_key=gemini_key)
-                                    model = genai.GenerativeModel('gemini-2.0-flash')
+                                    # KITA GUNAKAN 1.5 PRO AGAR LEBIH STABIL DI DOKUMEN PANJANG
+                                    model = genai.GenerativeModel('gemini-1.5-pro')
                                     response = model.generate_content(f"{prompt_active}\n\nBerikut teks transkripnya:\n{st.session_state.transcript}")
                                     ai_result = response.text
                             except Exception as e: st.error(f"Gemini gagal: {e}")
