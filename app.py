@@ -117,7 +117,7 @@ st.markdown("""
     [data-testid="stSidebarCollapseButton"] svg, [data-testid="stSidebarCollapseButton"] svg path,
     button[kind="header"] svg, button[kind="header"] svg path { fill: #111111 !important; stroke: #111111 !important; color: #111111 !important; }
 
-    /* FIX EXPANDER (TAMBAH API KEY BARU) */
+    /* FIX EXPANDER */
     [data-testid="stExpander"] details summary p, 
     [data-testid="stExpander"] details summary span { color: #111111 !important; font-weight: 700 !important; }
     [data-testid="stExpander"] details summary svg { fill: #111111 !important; color: #111111 !important; }
@@ -132,7 +132,7 @@ st.markdown("""
     .footer-link { text-decoration: none; font-weight: 700; color: #e74c3c !important; }
     
     /* Box Data API Key */
-    .api-card { background-color: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    .api-card { background-color: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; color: #111111 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -411,7 +411,7 @@ if st.session_state.user_role == "admin":
         st.markdown("#### 📋 Daftar API Key & Sisa Kuota")
         keys_ref = db.collection('api_keys').stream()
         
-        # Tampilan Rapi menggunakan Columns
+        # Tampilan Rapi menggunakan Columns dan memaksakan warna hitam (Inline Style)
         for doc in keys_ref:
             k = doc.to_dict()
             sisa_kuota = k['limit'] - k['used']
@@ -419,10 +419,10 @@ if st.session_state.user_role == "admin":
             status_color = "#e6f3ff" if k['is_active'] else "#fdeced"
             
             st.markdown(f"""
-            <div class="api-card" style="background-color: {status_color};">
-                <b>{k['name']}</b> ({k['provider']}) <br>
-                Sisa Limit: <b>{sisa_kuota}</b> / {k['limit']} &nbsp;|&nbsp; Terpakai: {k['used']} <br>
-                Status: {status_text}
+            <div class="api-card" style="background-color: {status_color}; color: #111111 !important;">
+                <b style="color: #111111 !important;">{k['name']}</b> ({k['provider']}) <br>
+                Sisa Limit: <b style="color: #111111 !important;">{sisa_kuota}</b> / <span style="color: #111111 !important;">{k['limit']}</span> &nbsp;|&nbsp; Terpakai: <span style="color: #111111 !important;">{k['used']}</span> <br>
+                Status: <span style="color: #111111 !important; font-weight: bold;">{status_text}</span>
             </div>
             """, unsafe_allow_html=True)
             
