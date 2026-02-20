@@ -99,15 +99,12 @@ st.markdown("""
     .stFileUploader > div > small { display: none !important; }
     div[data-testid="stFileUploaderFileName"] { color: #000000 !important; font-weight: 600 !important; }
     
+    /* FIX: Desain Universal Tombol agar semua senada dan seimbang */
     div.stButton > button, div.stDownloadButton > button, div[data-testid="stFormSubmitButton"] > button { 
         width: 100%; background-color: #000000 !important; color: #FFFFFF !important; border: 1px solid #000000; padding: 14px 20px; font-size: 16px; font-weight: 700; border-radius: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
     }
     div.stButton > button p, div.stDownloadButton > button p, div[data-testid="stFormSubmitButton"] > button p { color: #FFFFFF !important; }
     div.stButton > button:hover, div.stDownloadButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover { background-color: #333333 !important; color: #FFFFFF !important; transform: translateY(-2px); }
-    
-    /* Tombol Danger Merah untuk Hapus/Nonaktif */
-    .btn-danger > button, .btn-danger > button:hover { background-color: #e74c3c !important; border-color: #c0392b !important; }
-    .btn-warning > button, .btn-warning > button:hover { background-color: #f39c12 !important; border-color: #e67e22 !important; }
     
     .stCaption, p { color: #444444 !important; }
     textarea { color: #000000 !important; background-color: #F8F9FA !important; font-weight: 500 !important; }
@@ -187,7 +184,7 @@ Format:
 # ==========================================
 # 3. SIDEBAR (INFO & STATUS)
 # ==========================================
-with st.sidebar: # <--- INI SUDAH DIPERBAIKI
+with st.sidebar:
     st.header("⚙️ Status Sistem")
     if st.session_state.logged_in:
         st.success(f"👤 Login as: {st.session_state.current_user}")
@@ -425,20 +422,17 @@ if st.session_state.user_role == "admin":
             </div>
             """, unsafe_allow_html=True)
             
+            # FIX: Tombol dibuat seragam dan sejajar (tanpa HTML tambahan)
             ca1, ca2 = st.columns([1, 1])
             with ca1:
                 btn_label = "🔴 Matikan" if k['is_active'] else "🟢 Hidupkan"
-                st.markdown('<div class="btn-warning">', unsafe_allow_html=True)
-                if st.button(f"{btn_label} '{k['name']}'", key=f"tog_{doc.id}"):
+                if st.button(f"{btn_label} '{k['name']}'", key=f"tog_{doc.id}", use_container_width=True):
                     toggle_api_key(doc.id, k['is_active'])
                     st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
             with ca2:
-                st.markdown('<div class="btn-danger">', unsafe_allow_html=True)
-                if st.button(f"🗑️ Hapus '{k['name']}'", key=f"del_{doc.id}"):
+                if st.button(f"🗑️ Hapus '{k['name']}'", key=f"del_{doc.id}", use_container_width=True):
                     delete_api_key(doc.id)
                     st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
             st.write("---")
         
         # --- MANAJEMEN USER ---
@@ -454,6 +448,7 @@ if st.session_state.user_role == "admin":
             add_pwd = st.text_input("Password Baru", type="password")
             add_role = st.selectbox("Role", ["user", "admin"])
             
+            # FIX: Tombol dibuat seragam dan sejajar (tanpa HTML tambahan)
             c_add, c_del = st.columns(2)
             with c_add:
                 if st.form_submit_button("Simpan User", use_container_width=True):
@@ -463,7 +458,6 @@ if st.session_state.user_role == "admin":
                         st.rerun()
                     else: st.error("Isi Username dan Password!")
             with c_del:
-                st.markdown('<div class="btn-danger">', unsafe_allow_html=True)
                 if st.form_submit_button("Hapus User", use_container_width=True):
                     if add_email:
                         if get_user(add_email):
@@ -475,7 +469,6 @@ if st.session_state.user_role == "admin":
                         else: st.error("User tidak ditemukan.")
                     else:
                         st.error("Isi Username yang ingin dihapus!")
-                st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
