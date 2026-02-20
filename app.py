@@ -59,6 +59,8 @@ if 'filename' not in st.session_state: st.session_state.filename = "Hasil_STT"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'current_user' not in st.session_state: st.session_state.current_user = ""
 if 'user_role' not in st.session_state: st.session_state.user_role = ""
+if 'ai_result' not in st.session_state: st.session_state.ai_result = "" # Memori Hasil AI
+if 'ai_prefix' not in st.session_state: st.session_state.ai_prefix = "" # Memori Jenis Laporan
 
 # --- CUSTOM CSS (FIX TOMBOL FORM ADMIN) ---
 st.markdown("""
@@ -152,6 +154,7 @@ with st.sidebar:
         if st.session_state.user_role == "admin": st.info("👑 Anda Administrator.")
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state.logged_in, st.session_state.current_user, st.session_state.user_role = False, "", ""
+            st.session_state.ai_result = ""
             st.rerun()
     else:
         st.caption("Silakan login di Tab 'Ekstrak AI'.")
@@ -234,6 +237,7 @@ if submit_btn and audio_to_process:
         status_box.success("✅ Selesai! Transkrip tersimpan. Silakan klik Tab '✨ Ekstrak AI'.")
         final_text = " ".join(full_transcript)
         st.session_state.transcript, st.session_state.filename = final_text, os.path.splitext(source_name)[0]
+        st.session_state.ai_result = "" # Reset AI memory saat ada transkrip baru
         st.download_button("💾 Download (.TXT)", final_text, f"{st.session_state.filename}.txt", "text/plain", use_container_width=True)
 
     except Exception as e: st.error(f"Error: {e}")
@@ -261,15 +265,21 @@ with tab3:
             uploaded_txt = st.file_uploader("Upload File Transkrip (.txt)", type=["txt"])
             if uploaded_txt:
                 st.session_state.transcript, st.session_state.filename = uploaded_txt.read().decode("utf-8"), os.path.splitext(uploaded_txt.name)[0]
+                st.session_state.ai_result = "" # Reset AI memory saat upload baru
                 st.rerun()
         else:
             st.success("✅ Teks Transkrip Siap Diproses!")
             st.text_area("📄 Teks Saat Ini:", st.session_state.transcript, height=150, disabled=True)
-            if st.button("🗑️ Hapus Teks"): st.session_state.transcript = ""; st.rerun()
+            
+            if st.button("🗑️ Hapus Teks"): 
+                st.session_state.transcript = ""
+                st.session_state.ai_result = "" # Hapus memori AI juga
+                st.rerun()
+                
             st.write("")
             
             st.markdown("#### ⚙️ Pilih Mesin AI")
-            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini (Google 2.5 Flash - Sangat Cerdas)", "Groq (Llama 3.3 - Sangat Cepat)"])
+            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini (Sangat Cerdas)", "Groq (Sangat Cepat)"])
             st.write("")
             
             col1, col2 = st.columns(2)
@@ -291,7 +301,6 @@ with tab3:
                             try:
                                 with st.spinner("🤖 Gemini sedang menganalisis komprehensif (mungkin memakan waktu)..."):
                                     genai.configure(api_key=gemini_key)
-                                    # KITA GUNAKAN 1.5 PRO AGAR LEBIH STABIL DI DOKUMEN PANJANG
                                     model = genai.GenerativeModel('gemini-2.5-flash')
                                     response = model.generate_content(f"{prompt_active}\n\nBerikut teks transkripnya:\n{st.session_state.transcript}")
                                     ai_result = response.text
@@ -311,16 +320,35 @@ with tab3:
                                     ai_result = completion.choices[0].message.content
                             except Exception as e: st.error(f"Groq gagal: {e}")
 
+                    # JIKA BERHASIL, SIMPAN KE SESSION STATE (JANGAN HANYA DITAMPILKAN SESAAT)
                     if ai_result:
-                        st.markdown("---")
-                        st.markdown("### ✨ Hasil Ekstrak AI (Super Mendetail)")
-                        st.markdown(ai_result)
-                        
-                        prefix = "Notulen_" if btn_notulen else "Laporan_"
-                        st.download_button("💾 Download Hasil AI (.TXT)", ai_result, f"{prefix}{st.session_state.filename}.txt", "text/plain", use_container_width=True)
-                        
-                        docx_file = create_docx(ai_result, f"{prefix}{st.session_state.filename}")
-                        st.download_button("📄 Download Hasil AI (.DOCX)", data=docx_file, file_name=f"{prefix}{st.session_state.filename}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                        st.session_state.ai_result = ai_result
+                        st.session_state.ai_prefix = "Notulen_" if btn_notulen else "Laporan_"
+
+            # BLOK PENAMPILAN DAN DOWNLOAD (AMAN DARI REFRESH)
+            if st.session_state.ai_result:
+                st.markdown("---")
+                st.markdown("### ✨ Hasil Ekstrak AI (Super Mendetail)")
+                st.markdown(st.session_state.ai_result)
+                
+                prefix = st.session_state.ai_prefix
+                
+                st.download_button(
+                    "💾 Download Hasil AI (.TXT)", 
+                    st.session_state.ai_result, 
+                    f"{prefix}{st.session_state.filename}.txt", 
+                    "text/plain", 
+                    use_container_width=True
+                )
+                
+                docx_file = create_docx(st.session_state.ai_result, f"{prefix}{st.session_state.filename}")
+                st.download_button(
+                    "📄 Download Hasil AI (.DOCX)", 
+                    data=docx_file, 
+                    file_name=f"{prefix}{st.session_state.filename}.docx", 
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", 
+                    use_container_width=True
+                )
 
 # ==========================================
 # 6. TAB 4 (PANEL ADMIN) 
@@ -372,8 +400,3 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
-
-
-
-
-
