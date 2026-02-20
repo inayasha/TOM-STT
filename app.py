@@ -26,7 +26,7 @@ if 'transcript' not in st.session_state:
 if 'filename' not in st.session_state:
     st.session_state.filename = "Hasil_STT"
 
-# --- CUSTOM CSS (FINAL UI & MARKDOWN COLOR FIX) ---
+# --- CUSTOM CSS (FINAL UI & SIDEBAR FIX) ---
 st.markdown("""
 <style>
     .stApp { background-color: #FFFFFF !important; }
@@ -72,14 +72,14 @@ st.markdown("""
     
     .stCaption, div[data-testid="stCaptionContainer"], p { color: #444444 !important; }
     
-    /* [BARU] FIX WARNA TEXT AREA (Transkrip Asli) */
+    /* FIX WARNA TEXT AREA (Transkrip Asli) */
     textarea {
         color: #000000 !important;
         background-color: #F8F9FA !important;
         font-weight: 500 !important;
     }
 
-    /* [BARU] FIX WARNA SEMUA HASIL AI (MARKDOWN) AGAR HITAM TERBACA */
+    /* FIX WARNA SEMUA HASIL AI (MARKDOWN) AGAR HITAM TERBACA */
     div[data-testid="stMarkdownContainer"] p, 
     div[data-testid="stMarkdownContainer"] h1, 
     div[data-testid="stMarkdownContainer"] h2, 
@@ -89,6 +89,22 @@ st.markdown("""
     div[data-testid="stMarkdownContainer"] strong,
     div[data-testid="stMarkdownContainer"] span {
         color: #111111 !important;
+    }
+    
+    /* [BARU] FIX WARNA BACKGROUND & TEKS SIDEBAR (PENGATURAN AI) */
+    [data-testid="stSidebar"] {
+        background-color: #F4F6F9 !important; /* Abu-abu sangat muda */
+    }
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, 
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] label {
+        color: #111111 !important; /* Hitam pekat */
+        font-weight: 600 !important;
+    }
+    /* Warna kotak input di sidebar */
+    [data-testid="stSidebar"] input {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 1px solid #CCCCCC !important;
     }
     
     .mobile-tips {
@@ -132,7 +148,6 @@ def get_duration(file_path):
     except:
         return 0.0
 
-# System Prompts AI
 PROMPT_NOTULEN = """Kamu adalah seorang Sekretaris Profesional dan Notulis Rapat yang sangat teliti. Tugasmu adalah mengubah teks transkrip audio menjadi Notulen Rapat yang terstruktur, baku, dan mudah dibaca. 
 Abaikan kata-kata pengisi (filler words) atau obrolan di luar konteks pekerjaan. Susun notulen dengan format berikut:
 1. Agenda/Topik Utama: (1-2 kalimat ringkasan tujuan rapat).
@@ -150,15 +165,26 @@ Susun laporan dengan struktur berikut:
 4. Penutup: (Kalimat penutup standar, misalnya: 'Demikian kami laporkan, mohon arahan Bapak Pimpinan lebih lanjut. Terima kasih.')."""
 
 # ==========================================
-# 3. SIDEBAR (API KEYS)
+# 3. SIDEBAR (API KEYS DENGAN FITUR SIMPAN PERMANEN)
 # ==========================================
+# Deteksi apakah API Key sudah disimpan di Streamlit Secrets
+saved_groq = st.secrets.get("GROQ_API_KEY", "")
+saved_gemini = st.secrets.get("GEMINI_API_KEY", "")
+
 with st.sidebar:
     st.header("⚙️ Pengaturan AI")
-    st.caption("Masukkan API Key Anda di bawah ini agar fitur AI dapat bekerja.")
-    groq_key = st.text_input("🔑 Groq API Key (Utama)", type="password")
-    gemini_key = st.text_input("🔑 Gemini API Key (Cadangan)", type="password")
-    st.markdown("---")
-    st.caption("🔒 Key Anda aman dan hanya tersimpan sementara di browser ini.")
+    
+    if saved_groq or saved_gemini:
+        st.success("✅ Sistem mendeteksi API Key permanen aktif.")
+        # Jika sudah ada di server, otomatis pakai yang dari server
+        groq_key = saved_groq
+        gemini_key = saved_gemini
+    else:
+        st.caption("Masukkan API Key Anda di bawah ini:")
+        groq_key = st.text_input("🔑 Groq API Key (Utama)", type="password")
+        gemini_key = st.text_input("🔑 Gemini API Key (Cadangan)", type="password")
+        st.markdown("---")
+        st.caption("🔒 Key yang diketik di sini hanya tersimpan sementara.")
 
 # ==========================================
 # 4. UI LAYOUT
@@ -316,12 +342,12 @@ with tab3:
 
         if btn_notulen or btn_laporan:
             if not gemini_key and not groq_key:
-                st.error("⚠️ Mohon masukkan API Key Groq atau Gemini di menu Sidebar sebelah kiri terlebih dahulu.")
+                st.error("⚠️ Mohon masukkan/simpan API Key Groq atau Gemini terlebih dahulu.")
             else:
                 prompt_active = PROMPT_NOTULEN if btn_notulen else PROMPT_LAPORAN
                 ai_result = None
                 
-                # 1. COBA GROQ DULUAN (MESIN UTAMA KARENA LEBIH CEPAT & BEBAS KUOTA)
+                # 1. COBA GROQ DULUAN (MESIN UTAMA KARENA LEBIH CEPAT)
                 if groq_key:
                     try:
                         with st.spinner("⚡ Menggunakan Groq (Utama)... Sedang merangkum..."):
@@ -343,8 +369,7 @@ with tab3:
                     try:
                         with st.spinner("🤖 Menggunakan Gemini (Cadangan)... Sedang merangkum..."):
                             genai.configure(api_key=gemini_key)
-                            # Gunakan versi pro yang paling stabil
-                            model = genai.GenerativeModel('gemini-1.5-pro')
+                            model = genai.GenerativeModel('gemini-2.0-flash')
                             response = model.generate_content(f"{prompt_active}\n\nBerikut adalah teks transkripnya:\n{st.session_state.transcript}")
                             ai_result = response.text
                     except Exception as e:
@@ -361,7 +386,7 @@ with tab3:
                     ai_filename = f"{prefix}{st.session_state.filename}.txt"
                     st.download_button("💾 Download Hasil AI (.TXT)", ai_result, ai_filename, "text/plain", use_container_width=True)
                 elif not ai_result and (gemini_key or groq_key):
-                    st.error("❌ Mohon maaf, server AI utama maupun cadangan saat ini sedang penuh atau kuota API Anda habis. Silakan coba beberapa saat lagi.")
+                    st.error("❌ Mohon maaf, server AI utama maupun cadangan saat ini sedang penuh. Silakan coba beberapa saat lagi.")
 
 # Footer
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
