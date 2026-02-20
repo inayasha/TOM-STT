@@ -17,7 +17,7 @@ st.set_page_config(
     page_title="TOM'STT", 
     page_icon="🎙️", 
     layout="centered",
-    initial_sidebar_state="expanded" # Buka sidebar untuk input API Key
+    initial_sidebar_state="expanded" 
 )
 
 # Inisialisasi Memori Transkrip (Session State)
@@ -26,7 +26,7 @@ if 'transcript' not in st.session_state:
 if 'filename' not in st.session_state:
     st.session_state.filename = "Hasil_STT"
 
-# --- CUSTOM CSS (FINAL UI) ---
+# --- CUSTOM CSS (FINAL UI & MARKDOWN COLOR FIX) ---
 st.markdown("""
 <style>
     .stApp { background-color: #FFFFFF !important; }
@@ -71,6 +71,25 @@ st.markdown("""
     }
     
     .stCaption, div[data-testid="stCaptionContainer"], p { color: #444444 !important; }
+    
+    /* [BARU] FIX WARNA TEXT AREA (Transkrip Asli) */
+    textarea {
+        color: #000000 !important;
+        background-color: #F8F9FA !important;
+        font-weight: 500 !important;
+    }
+
+    /* [BARU] FIX WARNA SEMUA HASIL AI (MARKDOWN) AGAR HITAM TERBACA */
+    div[data-testid="stMarkdownContainer"] p, 
+    div[data-testid="stMarkdownContainer"] h1, 
+    div[data-testid="stMarkdownContainer"] h2, 
+    div[data-testid="stMarkdownContainer"] h3, 
+    div[data-testid="stMarkdownContainer"] h4,
+    div[data-testid="stMarkdownContainer"] li,
+    div[data-testid="stMarkdownContainer"] strong,
+    div[data-testid="stMarkdownContainer"] span {
+        color: #111111 !important;
+    }
     
     .mobile-tips {
         background-color: #FFF3CD; color: #856404; padding: 12px; border-radius: 10px;
@@ -136,8 +155,8 @@ Susun laporan dengan struktur berikut:
 with st.sidebar:
     st.header("⚙️ Pengaturan AI")
     st.caption("Masukkan API Key Anda di bawah ini agar fitur AI dapat bekerja.")
-    gemini_key = st.text_input("🔑 Gemini API Key (Utama)", type="password")
-    groq_key = st.text_input("🔑 Groq API Key (Cadangan)", type="password")
+    groq_key = st.text_input("🔑 Groq API Key (Utama)", type="password")
+    gemini_key = st.text_input("🔑 Gemini API Key (Cadangan)", type="password")
     st.markdown("---")
     st.caption("🔒 Key Anda aman dan hanya tersimpan sementara di browser ini.")
 
@@ -160,7 +179,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- TAB SELECTION (TAMBAH TAB 3) ---
+# --- TAB SELECTION ---
 tab1, tab2, tab3 = st.tabs(["📂 Upload File", "🎙️ Rekam Suara", "✨ Ekstrak AI"])
 audio_to_process = None
 source_name = "audio" 
@@ -297,30 +316,17 @@ with tab3:
 
         if btn_notulen or btn_laporan:
             if not gemini_key and not groq_key:
-                st.error("⚠️ Mohon masukkan API Key Gemini atau Groq di menu Sidebar sebelah kiri terlebih dahulu.")
+                st.error("⚠️ Mohon masukkan API Key Groq atau Gemini di menu Sidebar sebelah kiri terlebih dahulu.")
             else:
                 prompt_active = PROMPT_NOTULEN if btn_notulen else PROMPT_LAPORAN
                 ai_result = None
                 
-                # 1. COBA GEMINI (UTAMA)
-                if gemini_key:
+                # 1. COBA GROQ DULUAN (MESIN UTAMA KARENA LEBIH CEPAT & BEBAS KUOTA)
+                if groq_key:
                     try:
-                        with st.spinner("🤖 Menggunakan Gemini (Utama)... Sedang merangkum..."):
-                            genai.configure(api_key=gemini_key)
-                            # --- UBAH NAMA MODEL GEMINI DI SINI ---
-                            model = genai.GenerativeModel('gemini-2.0-flash') 
-                            response = model.generate_content(f"{prompt_active}\n\nBerikut adalah teks transkripnya:\n{st.session_state.transcript}")
-                            ai_result = response.text
-                    except Exception as e:
-                        st.warning(f"Gemini sibuk/gagal. Beralih ke Groq... (Log: {e})")
-                
-                # 2. COBA GROQ (CADANGAN)
-                if groq_key and ai_result is None:
-                    try:
-                        with st.spinner("⚡ Menggunakan Groq (Cadangan)... Sedang merangkum..."):
+                        with st.spinner("⚡ Menggunakan Groq (Utama)... Sedang merangkum..."):
                             client = Groq(api_key=groq_key)
                             completion = client.chat.completions.create(
-                                # --- UBAH NAMA MODEL GROQ DI SINI ---
                                 model="llama-3.3-70b-versatile",
                                 messages=[
                                     {"role": "system", "content": prompt_active},
@@ -330,7 +336,19 @@ with tab3:
                             )
                             ai_result = completion.choices[0].message.content
                     except Exception as e:
-                        st.error(f"Groq juga mengalami kendala. (Log: {e})")
+                        st.warning(f"Groq sibuk/gagal. Beralih ke Gemini... (Log: {e})")
+                
+                # 2. JIKA GROQ GAGAL/TIDAK ADA KEY, COBA GEMINI (CADANGAN)
+                if gemini_key and ai_result is None:
+                    try:
+                        with st.spinner("🤖 Menggunakan Gemini (Cadangan)... Sedang merangkum..."):
+                            genai.configure(api_key=gemini_key)
+                            # Gunakan versi pro yang paling stabil
+                            model = genai.GenerativeModel('gemini-1.5-pro')
+                            response = model.generate_content(f"{prompt_active}\n\nBerikut adalah teks transkripnya:\n{st.session_state.transcript}")
+                            ai_result = response.text
+                    except Exception as e:
+                        st.error(f"Gemini juga mengalami kendala kuota/sistem. (Log: {e})")
 
                 # 3. TAMPILKAN HASIL JIKA BERHASIL
                 if ai_result:
@@ -343,9 +361,8 @@ with tab3:
                     ai_filename = f"{prefix}{st.session_state.filename}.txt"
                     st.download_button("💾 Download Hasil AI (.TXT)", ai_result, ai_filename, "text/plain", use_container_width=True)
                 elif not ai_result and (gemini_key or groq_key):
-                    st.error("❌ Mohon maaf, server AI utama maupun cadangan saat ini sedang penuh atau durasi transkrip melebihi kapasitas. Silakan coba beberapa saat lagi.")
+                    st.error("❌ Mohon maaf, server AI utama maupun cadangan saat ini sedang penuh atau kuota API Anda habis. Silakan coba beberapa saat lagi.")
 
 # Footer
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
-
