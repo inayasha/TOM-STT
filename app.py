@@ -297,7 +297,7 @@ with tab3:
             st.write("")
             
             st.markdown("#### ⚙️ Pilih Mesin AI")
-            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini (Sangat Cerdas)", "Groq (Sangat Cepat)"])
+            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini (Google 2.5 Flash - Sangat Cerdas)", "Groq (Llama 3.3 - Sangat Cepat)"])
             st.write("")
             
             col1, col2 = st.columns(2)
