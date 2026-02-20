@@ -2,3 +2,5 @@ streamlit
 SpeechRecognition
 google-generativeai
 groq
+python-docx
+firebase-admin
