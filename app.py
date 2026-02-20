@@ -31,7 +31,7 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
-# --- FUNGSI DATABASE FIREBASE ---
+# --- FUNGSI DATABASE FIREBASE (USER) ---
 def get_user(username):
     doc = db.collection('users').document(username).get()
     return doc.to_dict() if doc.exists else None
@@ -42,12 +42,36 @@ def save_user(username, password, role):
 def delete_user(username):
     db.collection('users').document(username).delete()
 
-def get_api_keys():
-    doc = db.collection('config').document('api_keys').get()
-    return doc.to_dict() if doc.exists else {"groq": "", "gemini": ""}
+# --- FUNGSI DATABASE FIREBASE (API KEYS & LOAD BALANCER) ---
+def add_api_key(name, provider, key_string, limit):
+    db.collection('api_keys').add({
+        "name": name,
+        "provider": provider,
+        "key": key_string,
+        "limit": int(limit),
+        "used": 0,
+        "is_active": True
+    })
 
-def save_api_keys(groq_key, gemini_key):
-    db.collection('config').document('api_keys').set({"groq": groq_key, "gemini": gemini_key})
+def delete_api_key(doc_id):
+    db.collection('api_keys').document(doc_id).delete()
+
+def toggle_api_key(doc_id, current_status):
+    db.collection('api_keys').document(doc_id).update({"is_active": not current_status})
+
+def increment_api_usage(doc_id, current_used):
+    db.collection('api_keys').document(doc_id).update({"used": current_used + 1})
+
+def get_active_keys(provider):
+    keys_ref = db.collection('api_keys').where("provider", "==", provider).where("is_active", "==", True).stream()
+    # Filter tambahan: hanya ambil yang pemakaiannya belum melebihi limit
+    valid_keys = []
+    for doc in keys_ref:
+        data = doc.to_dict()
+        data['id'] = doc.id
+        if data['used'] < data['limit']:
+            valid_keys.append(data)
+    return valid_keys
 
 # Bikin Default Admin jika belum ada di Firebase
 if not get_user("admin"):
@@ -62,7 +86,7 @@ if 'user_role' not in st.session_state: st.session_state.user_role = ""
 if 'ai_result' not in st.session_state: st.session_state.ai_result = "" 
 if 'ai_prefix' not in st.session_state: st.session_state.ai_prefix = "" 
 
-# --- CUSTOM CSS (FIX TEXTAREA DISABLED & SIDEBAR ARROW) ---
+# --- CUSTOM CSS ---
 st.markdown("""
 <style>
     .stApp { background-color: #FFFFFF !important; }
@@ -75,32 +99,24 @@ st.markdown("""
     .stFileUploader > div > small { display: none !important; }
     div[data-testid="stFileUploaderFileName"] { color: #000000 !important; font-weight: 600 !important; }
     
-    /* FIX SEMUA TOMBOL */
     div.stButton > button, div.stDownloadButton > button, div[data-testid="stFormSubmitButton"] > button { 
         width: 100%; background-color: #000000 !important; color: #FFFFFF !important; border: 1px solid #000000; padding: 14px 20px; font-size: 16px; font-weight: 700; border-radius: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
     }
     div.stButton > button p, div.stDownloadButton > button p, div[data-testid="stFormSubmitButton"] > button p { color: #FFFFFF !important; }
     div.stButton > button:hover, div.stDownloadButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover { background-color: #333333 !important; color: #FFFFFF !important; transform: translateY(-2px); }
     
+    /* Tombol Danger Merah untuk Hapus/Nonaktif */
+    .btn-danger > button { background-color: #e74c3c !important; border-color: #c0392b !important; }
+    .btn-danger > button:hover { background-color: #c0392b !important; }
+    .btn-warning > button { background-color: #f39c12 !important; border-color: #e67e22 !important; }
+    
     .stCaption, p { color: #444444 !important; }
+    textarea { color: #000000 !important; background-color: #F8F9FA !important; font-weight: 500 !important; }
+    textarea:disabled { color: #000000 !important; -webkit-text-fill-color: #000000 !important; opacity: 1 !important; }
     
-    /* FIX TEXTAREA NORMAL & DISABLED */
-    textarea { 
-        color: #000000 !important; 
-        background-color: #F8F9FA !important; 
-        font-weight: 500 !important; 
-    }
-    textarea:disabled {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important; /* Memaksa hitam di Chrome/Safari */
-        opacity: 1 !important; /* Menghilangkan efek pudar bawaan browser */
-    }
-    
-    /* FIX PANAH SIDEBAR (COLLAPSE CONTROL) */
-    [data-testid="collapsedControl"], [data-testid="collapsedControl"] svg {
-        color: #111111 !important;
-        fill: #111111 !important;
-    }
+    [data-testid="collapsedControl"] svg, [data-testid="collapsedControl"] svg path,
+    [data-testid="stSidebarCollapseButton"] svg, [data-testid="stSidebarCollapseButton"] svg path,
+    button[kind="header"] svg, button[kind="header"] svg path { fill: #111111 !important; stroke: #111111 !important; color: #111111 !important; }
 
     div[data-testid="stMarkdownContainer"] p, div[data-testid="stMarkdownContainer"] h1, div[data-testid="stMarkdownContainer"] h2, div[data-testid="stMarkdownContainer"] h3, div[data-testid="stMarkdownContainer"] li, div[data-testid="stMarkdownContainer"] strong, div[data-testid="stMarkdownContainer"] span { color: #111111 !important; }
     [data-testid="stSidebar"] { background-color: #F4F6F9 !important; }
@@ -110,6 +126,9 @@ st.markdown("""
     .custom-info-box { background-color: #e6f3ff; color: #0068c9; padding: 15px; border-radius: 10px; text-align: center; font-weight: 600; border: 1px solid #cce5ff; margin-bottom: 20px; }
     .login-box { background-color: #F8F9FA; padding: 25px; border-radius: 12px; border: 1px solid #E0E0E0; margin-bottom: 20px; }
     .footer-link { text-decoration: none; font-weight: 700; color: #e74c3c !important; }
+    
+    /* Box Data API Key */
+    .api-card { background-color: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -138,7 +157,6 @@ def create_docx(text, title):
     doc.save(bio)
     return bio.getvalue()
 
-# PROMPTS (SUPER PANJANG & KOMPREHENSIF)
 PROMPT_NOTULEN = """Kamu adalah Sekretaris Profesional. Tugasmu membuat Notulen Rapat dari transkrip yang diberikan.
 INSTRUKSI MUTLAK:
 - TULIS SANGAT PANJANG, MENDETAIL, DAN KOMPREHENSIF. 
@@ -263,7 +281,7 @@ if submit_btn and audio_to_process:
         if os.path.exists(input_path): os.remove(input_path)
 
 # ==========================================
-# 5. TAB 3 (EKSTRAK AI & AUTENTIKASI)
+# 5. TAB 3 (EKSTRAK AI - DENGAN LOAD BALANCER)
 # ==========================================
 with tab3:
     if not st.session_state.logged_in:
@@ -288,16 +306,13 @@ with tab3:
         else:
             st.success("✅ Teks Transkrip Siap Diproses!")
             st.text_area("📄 Teks Saat Ini:", st.session_state.transcript, height=150, disabled=True)
-            
             if st.button("🗑️ Hapus Teks"): 
-                st.session_state.transcript = ""
-                st.session_state.ai_result = "" 
+                st.session_state.transcript, st.session_state.ai_result = "", "" 
                 st.rerun()
                 
             st.write("")
-            
             st.markdown("#### ⚙️ Pilih Mesin AI")
-            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini (Sangat Cerdas)", "Groq (Sangat Cepat)"])
+            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini", "Groq"])
             st.write("")
             
             col1, col2 = st.columns(2)
@@ -305,42 +320,51 @@ with tab3:
             with col2: btn_laporan = st.button("📋 Buat Laporan", use_container_width=True)
 
             if btn_notulen or btn_laporan:
-                keys = get_api_keys()
-                groq_key, gemini_key = keys.get("groq", ""), keys.get("gemini", "")
+                prompt_active = PROMPT_NOTULEN if btn_notulen else PROMPT_LAPORAN
+                ai_result = None
                 
-                if not gemini_key and not groq_key: st.error("⚠️ Sistem belum memiliki API Key. Harap hubungi Admin.")
+                # MENGAMBIL SEMUA API KEY YANG AKTIF & BELUM LIMIT
+                active_keys = get_active_keys(engine_choice)
+                
+                if not active_keys:
+                    st.error(f"❌ Tidak ada API Key {engine_choice} yang aktif atau semua Key sudah melebihi batas limit. Hubungi Admin!")
                 else:
-                    prompt_active = PROMPT_NOTULEN if btn_notulen else PROMPT_LAPORAN
-                    ai_result = None
+                    success_generation = False
                     
-                    if "Gemini" in engine_choice:
-                        if not gemini_key: st.error("⚠️ Gemini API Key kosong di sistem Admin.")
-                        else:
+                    with st.spinner(f"🚀 Memproses dengan {engine_choice} (Load Balancer Aktif)..."):
+                        # LOOP LOAD BALANCER: COBA SATU PER SATU
+                        for key_data in active_keys:
                             try:
-                                with st.spinner("🤖 Gemini sedang menganalisis komprehensif (mungkin memakan waktu)..."):
-                                    genai.configure(api_key=gemini_key)
+                                if engine_choice == "Gemini":
+                                    genai.configure(api_key=key_data["key"])
                                     model = genai.GenerativeModel('gemini-2.5-flash')
                                     response = model.generate_content(f"{prompt_active}\n\nBerikut teks transkripnya:\n{st.session_state.transcript}")
                                     ai_result = response.text
-                            except Exception as e: st.error(f"Gemini gagal: {e}")
-                            
-                    elif "Groq" in engine_choice:
-                        if not groq_key: st.error("⚠️ Groq API Key kosong di sistem Admin.")
-                        else:
-                            try:
-                                with st.spinner("⚡ Groq sedang menganalisis komprehensif..."):
-                                    client = Groq(api_key=groq_key)
+                                    
+                                elif engine_choice == "Groq":
+                                    client = Groq(api_key=key_data["key"])
                                     completion = client.chat.completions.create(
                                         model="llama-3.3-70b-versatile",
                                         messages=[{"role": "system", "content": prompt_active}, {"role": "user", "content": f"Berikut teks transkripnya:\n{st.session_state.transcript}"}],
                                         temperature=0.4,
                                     )
                                     ai_result = completion.choices[0].message.content
-                            except Exception as e: st.error(f"Groq gagal: {e}")
 
-                    if ai_result:
+                                # JIKA BERHASIL: Catat pemakaian, hentikan loop
+                                increment_api_usage(key_data["id"], key_data["used"])
+                                success_generation = True
+                                break 
+                                
+                            except Exception as e:
+                                # JIKA GAGAL: Lanjut ke kunci berikutnya diam-diam
+                                st.toast(f"⚠️ Kunci '{key_data['name']}' sibuk. Mencoba kunci cadangan...")
+                                continue
+                    
+                    if success_generation and ai_result:
                         st.session_state.ai_result = ai_result
                         st.session_state.ai_prefix = "Notulen_" if btn_notulen else "Laporan_"
+                    elif not success_generation:
+                        st.error("❌ Gagal memproses. Seluruh API Key cadangan sedang mengalami gangguan server. Silakan coba lagi nanti.")
 
             if st.session_state.ai_result:
                 st.markdown("---")
@@ -348,43 +372,75 @@ with tab3:
                 st.markdown(st.session_state.ai_result)
                 
                 prefix = st.session_state.ai_prefix
-                
-                st.download_button(
-                    "💾 Download Hasil AI (.TXT)", 
-                    st.session_state.ai_result, 
-                    f"{prefix}{st.session_state.filename}.txt", 
-                    "text/plain", 
-                    use_container_width=True
-                )
-                
+                st.download_button("💾 Download Hasil AI (.TXT)", st.session_state.ai_result, f"{prefix}{st.session_state.filename}.txt", "text/plain", use_container_width=True)
                 docx_file = create_docx(st.session_state.ai_result, f"{prefix}{st.session_state.filename}")
-                st.download_button(
-                    "📄 Download Hasil AI (.DOCX)", 
-                    data=docx_file, 
-                    file_name=f"{prefix}{st.session_state.filename}.docx", 
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", 
-                    use_container_width=True
-                )
+                st.download_button("📄 Download Hasil AI (.DOCX)", data=docx_file, file_name=f"{prefix}{st.session_state.filename}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
 
 # ==========================================
-# 6. TAB 4 (PANEL ADMIN) 
+# 6. TAB 4 (PANEL ADMIN) - DATABASE API KEY & LIMIT
 # ==========================================
 if st.session_state.user_role == "admin":
     with tabs[3]:
-        st.markdown("## ⚙️ Panel Manajemen Admin (Firebase)")
+        st.markdown("## ⚙️ Pusat Kendali & Manajemen")
         
-        st.markdown("### 🔑 Konfigurasi API Key Global")
-        keys = get_api_keys()
-        with st.form("api_form"):
-            new_groq = st.text_input("Groq API Key", value=keys.get("groq", ""), type="password")
-            new_gemini = st.text_input("Gemini API Key", value=keys.get("gemini", ""), type="password")
-            if st.form_submit_button("Simpan API Keys"):
-                save_api_keys(new_groq, new_gemini)
-                st.success("✅ API Keys berhasil diperbarui ke Firebase!")
+        # --- MANAJEMEN API KEY & LOAD BALANCER ---
+        st.markdown("### 🏦 Bank API Key (Load Balancer)")
+        st.caption("Tambahkan API Key Anda. Sistem akan otomatis membagi beban dan melompat jika ada kunci yang error/habis limit.")
         
-        st.markdown("---")
+        with st.expander("➕ Tambah API Key Baru"):
+            with st.form("form_add_key"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    new_provider = st.selectbox("Provider", ["Gemini", "Groq"])
+                    new_name = st.text_input("Nama Key (Misal: Akun Istri)")
+                with col2:
+                    new_limit = st.number_input("Batas Limit Kuota/Hari", min_value=1, value=1500)
+                    new_key_str = st.text_input("Paste API Key", type="password")
+                
+                if st.form_submit_button("Simpan Kunci API"):
+                    if new_name and new_key_str:
+                        add_api_key(new_name, new_provider, new_key_str, new_limit)
+                        st.success("✅ API Key berhasil ditambahkan ke Bank!")
+                        st.rerun()
+                    else: st.error("Isi Nama dan API Key!")
+
+        st.markdown("#### 📋 Daftar API Key & Sisa Kuota")
+        keys_ref = db.collection('api_keys').stream()
+        
+        # Tampilan Rapi menggunakan Columns
+        for doc in keys_ref:
+            k = doc.to_dict()
+            sisa_kuota = k['limit'] - k['used']
+            status_text = "🟢 AKTIF" if k['is_active'] else "🔴 NONAKTIF"
+            status_color = "#e6f3ff" if k['is_active'] else "#fdeced"
+            
+            st.markdown(f"""
+            <div class="api-card" style="background-color: {status_color};">
+                <b>{k['name']}</b> ({k['provider']}) <br>
+                Sisa Limit: <b>{sisa_kuota}</b> / {k['limit']} &nbsp;|&nbsp; Terpakai: {k['used']} <br>
+                Status: {status_text}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Tombol Aksi per API Key
+            ca1, ca2 = st.columns([1, 1])
+            with ca1:
+                btn_label = "🔴 Matikan" if k['is_active'] else "🟢 Hidupkan"
+                st.markdown('<div class="btn-warning">', unsafe_allow_html=True)
+                if st.button(f"{btn_label} '{k['name']}'", key=f"tog_{doc.id}"):
+                    toggle_api_key(doc.id, k['is_active'])
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+            with ca2:
+                st.markdown('<div class="btn-danger">', unsafe_allow_html=True)
+                if st.button(f"🗑️ Hapus '{k['name']}'", key=f"del_{doc.id}"):
+                    delete_api_key(doc.id)
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+            st.write("---")
+        
+        # --- MANAJEMEN USER ---
         st.markdown("### 👥 Manajemen User")
-        
         users_ref = db.collection('users').stream()
         st.write("Daftar Pengguna Saat Ini:")
         for doc in users_ref:
@@ -405,6 +461,7 @@ if st.session_state.user_role == "admin":
                         st.rerun()
                     else: st.error("Isi Username dan Password!")
             with c_del:
+                st.markdown('<div class="btn-danger">', unsafe_allow_html=True)
                 if st.form_submit_button("Hapus User"):
                     if get_user(add_email):
                         if add_email == "admin": st.error("Dilarang menghapus Admin Utama!")
@@ -413,6 +470,7 @@ if st.session_state.user_role == "admin":
                             st.warning(f"🗑️ User {add_email} dihapus dari Firebase!")
                             st.rerun()
                     else: st.error("User tidak ditemukan.")
+                st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
