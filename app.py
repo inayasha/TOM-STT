@@ -313,10 +313,10 @@ with st.sidebar:
 st.markdown('<div class="main-header">🎙️ TOM\'<span style="color: #e74c3c;">STT</span></div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Speech-to-Text | Konversi Audio ke Teks</div>', unsafe_allow_html=True)
 
-tab_titles = ["📂 Upload File", "🎙️ Rekam Suara", "🔐 Akses Akun", "✨ Ekstrak AI"]
+tab_titles = ["📂 Upload File", "🎙️ Rekam Suara", "✨ Ekstrak AI", "🔐 Akses Akun"]
 if st.session_state.user_role == "admin": tab_titles.append("⚙️ Panel Admin")
 tabs = st.tabs(tab_titles)
-tab_upload, tab_rekam, tab_auth, tab_ai = tabs[0], tabs[1], tabs[2], tabs[3]
+tab_upload, tab_rekam, tab_ai, tab_auth = tabs[0], tabs[1], tabs[2], tabs[3]
 
 audio_to_process, source_name = None, "audio"
 
