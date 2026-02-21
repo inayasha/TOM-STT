@@ -1,3 +1,4 @@
+import uuid
 import streamlit as st
 import speech_recognition as sr
 import os
@@ -257,10 +258,50 @@ Format:
 5. Penutup: ('Demikian kami laporkan, mohon arahan Bapak Pimpinan lebih lanjut. Terima kasih.')."""
 
 # ==========================================
-# 3. SIDEBAR (INFO & STATUS & DOMPET)
+# 3. SIDEBAR & ETALASE HARGA (MIDTRANS SNAP)
 # ==========================================
+def buat_tagihan_midtrans(nama_paket, harga, user_email):
+    """Menghubungi server Midtrans untuk meminta Link Pembayaran (QRIS/VA)"""
+    # URL Sandbox (Ubah ke https://app.midtrans.com/snap/v1/transactions jika sudah rilis resmi/Production)
+    url = "https://app.sandbox.midtrans.com/snap/v1/transactions" 
+    server_key = st.secrets["midtrans_server_key"]
+    
+    # Membuat Order ID unik (Contoh: TOM-STARTER-A1B2C3)
+    order_id = f"TOM-{nama_paket.split()[0].upper()}-{uuid.uuid4().hex[:6].upper()}"
+    
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "transaction_details": {
+            "order_id": order_id,
+            "gross_amount": harga
+        },
+        "customer_details": {
+            "email": user_email
+        },
+        "item_details": [{
+            "id": nama_paket.replace(" ", "_"),
+            "price": harga,
+            "quantity": 1,
+            "name": f"Paket {nama_paket} TOM'STT"
+        }]
+    }
+    
+    # Mengirim permintaan ke Midtrans
+    response = requests.post(url, auth=(server_key, ''), json=payload, headers=headers)
+    
+    if response.status_code == 201:
+        return response.json().get("redirect_url")
+    else:
+        st.error(f"Gagal menghubungi gateway pembayaran. Pesan Error: {response.text}")
+        return None
+
 @st.dialog("🛒 Pilih Paket Kebutuhan Anda", width="large")
 def show_pricing_dialog():
+    user_email = st.session_state.current_user
     col1, col2 = st.columns(2)
     
     with col1:
@@ -276,7 +317,9 @@ def show_pricing_dialog():
         ⏳ Jalur Antrean Reguler
         """)
         if st.button("🛒 Beli Paket Starter", use_container_width=True, key="buy_starter"):
-            st.info("🔜 Mengarahkan ke Gateway Pembayaran (Segera Hadir)")
+            with st.spinner("Mencetak tagihan..."):
+                link_bayar = buat_tagihan_midtrans("Starter", 50750, user_email)
+                if link_bayar: st.link_button("💳 Bayar Sekarang (QRIS/VA)", link_bayar, use_container_width=True)
             
         st.markdown("---")
         st.markdown("""
@@ -291,7 +334,9 @@ def show_pricing_dialog():
         ⏳ Jalur Antrean Reguler
         """)
         if st.button("🛒 Beli Paket Pro", use_container_width=True, key="buy_pro"):
-            st.info("🔜 Mengarahkan ke Gateway Pembayaran (Segera Hadir)")
+            with st.spinner("Mencetak tagihan..."):
+                link_bayar = buat_tagihan_midtrans("Pro", 101500, user_email)
+                if link_bayar: st.link_button("💳 Bayar Sekarang (QRIS/VA)", link_bayar, use_container_width=True)
 
     with col2:
         st.markdown("""
@@ -305,7 +350,9 @@ def show_pricing_dialog():
         🚀 **Jalur Prioritas (Fast Track)**
         """)
         if st.button("🛒 Beli Paket Eksekutif", use_container_width=True, key="buy_exec"):
-            st.info("🔜 Mengarahkan ke Gateway Pembayaran (Segera Hadir)")
+            with st.spinner("Mencetak tagihan..."):
+                link_bayar = buat_tagihan_midtrans("Eksekutif", 304500, user_email)
+                if link_bayar: st.link_button("💳 Bayar Sekarang (QRIS/VA)", link_bayar, use_container_width=True)
             
         st.markdown("---")
         st.markdown("""
@@ -319,7 +366,9 @@ def show_pricing_dialog():
         ⚡ **Jalur Prioritas VVIP**
         """)
         if st.button("🛒 Beli Paket VIP", use_container_width=True, key="buy_vip"):
-            st.info("🔜 Mengarahkan ke Gateway Pembayaran (Segera Hadir)")
+            with st.spinner("Mencetak tagihan..."):
+                link_bayar = buat_tagihan_midtrans("VIP", 507500, user_email)
+                if link_bayar: st.link_button("💳 Bayar Sekarang (QRIS/VA)", link_bayar, use_container_width=True)
 
     st.markdown("---")
     st.markdown("""
