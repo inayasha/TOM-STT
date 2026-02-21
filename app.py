@@ -5,6 +5,7 @@ import subprocess
 import math
 import tempfile
 import io
+import requests    # <--- TAMBAHKAN BARIS INI
 from shutil import which
 
 # Import Library AI, DOCX, & Firebase
@@ -399,17 +400,64 @@ if submit_btn and audio_to_process:
 # 5. TAB 3 (EKSTRAK AI - DENGAN LOAD BALANCER & KASIR)
 # ==========================================
 with tab3:
-    if not st.session_state.logged_in:
-        st.markdown('<div class="login-box"><h3>🔒 Login Diperlukan</h3><p>Silakan masukkan kredensial Anda.</p>', unsafe_allow_html=True)
-        input_email = st.text_input("Username / Email")
-        input_pwd = st.text_input("Password", type="password")
-        if st.button("Masuk / Login"):
-            user_data = get_user(input_email)
-            if user_data and user_data["password"] == input_pwd:
-                st.session_state.logged_in, st.session_state.current_user, st.session_state.user_role = True, input_email, user_data["role"]
-                st.rerun()
-            else: st.error("❌ Username atau Password salah!")
-        st.markdown('</div>', unsafe_allow_html=True)
+if not st.session_state.logged_in:
+        st.markdown('<div class="login-box" style="text-align: center;"><h3>🔒 Portal Akses</h3><p>Silakan masuk atau buat akun baru untuk mulai menggunakan AI.</p></div>', unsafe_allow_html=True)
+        
+        auth_tab1, auth_tab2 = st.tabs(["🔑 Masuk (Login)", "📝 Daftar Baru (Register)"])
+        
+        # --- TAB LOGIN ---
+        with auth_tab1:
+            login_email = st.text_input("Email", key="log_email").strip()
+            login_pwd = st.text_input("Password", type="password", key="log_pwd")
+            if st.button("🚀 Masuk Sistem", use_container_width=True):
+                with st.spinner("Mengecek kredensial..."):
+                    api_key = st.secrets["firebase_web_api_key"]
+                    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
+                    res = requests.post(url, json={"email": login_email, "password": login_pwd, "returnSecureToken": True}).json()
+                    
+                    if "idToken" in res:
+                        # BERHASIL LOGIN: Ambil data role dan dompet dari Firestore
+                        user_data = get_user(login_email)
+                        
+                        # Jika user tidak ditemukan di database (misal error saat daftar), buatkan darurat
+                        if not user_data:
+                            save_user(login_email, login_pwd, "user")
+                            user_data = {"role": "user"}
+                            
+                        st.session_state.logged_in = True
+                        st.session_state.current_user = login_email
+                        st.session_state.user_role = user_data.get("role", "user")
+                        st.rerun()
+                    else:
+                        err = res.get("error", {}).get("message", "Gagal")
+                        if err == "INVALID_LOGIN_CREDENTIALS": st.error("❌ Email atau Password salah!")
+                        else: st.error(f"❌ Akses Ditolak: {err}")
+                        
+        # --- TAB REGISTER MANDIRI ---
+        with auth_tab2:
+            reg_email = st.text_input("Email Aktif", key="reg_email").strip()
+            reg_pwd = st.text_input("Buat Password (Min. 6 Karakter)", type="password", key="reg_pwd")
+            if st.button("🎁 Daftar & Klaim Kuota Gratis", use_container_width=True):
+                if len(reg_pwd) < 6:
+                    st.error("❌ Password terlalu pendek. Minimal 6 karakter!")
+                elif not reg_email:
+                    st.error("❌ Email tidak boleh kosong!")
+                else:
+                    with st.spinner("Membuat akun dan menyiapkan Dompet..."):
+                        api_key = st.secrets["firebase_web_api_key"]
+                        url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={api_key}"
+                        res = requests.post(url, json={"email": reg_email, "password": reg_pwd, "returnSecureToken": True}).json()
+                        
+                        if "idToken" in res:
+                            # BERHASIL DAFTAR DI FIREBASE AUTH! 
+                            # Langsung panggil fungsi save_user() untuk mencetak dompet Freemium di Firestore
+                            save_user(reg_email, reg_pwd, "user")
+                            st.success("✅ Pendaftaran berhasil! Anda mendapatkan modal awal 2x Kuota Freemium. Silakan beralih ke tab 'Masuk (Login)' untuk memulai.")
+                        else:
+                            err = res.get("error", {}).get("message", "Gagal")
+                            if err == "EMAIL_EXISTS": st.error("❌ Email sudah terdaftar. Silakan langsung Login saja.")
+                            elif err == "INVALID_EMAIL": st.error("❌ Format email tidak valid.")
+                            else: st.error(f"❌ Gagal mendaftar: {err}")
     else:
         if not st.session_state.transcript:
             st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia.<br><strong>ATAU</strong> Unggah file .txt di bawah ini:</div>', unsafe_allow_html=True)
