@@ -202,13 +202,47 @@ Format:
 5. Penutup: ('Demikian kami laporkan, mohon arahan Bapak Pimpinan lebih lanjut. Terima kasih.')."""
 
 # ==========================================
-# 3. SIDEBAR (INFO & STATUS)
+# 3. SIDEBAR (INFO & STATUS & DOMPET)
 # ==========================================
 with st.sidebar:
     st.header("⚙️ Status Sistem")
+    
     if st.session_state.logged_in:
         st.success(f"👤 Login as: {st.session_state.current_user}")
-        if st.session_state.user_role == "admin": st.info("👑 Anda Administrator.")
+        
+        # --- MENARIK DATA DOMPET DARI FIREBASE ---
+        user_data = get_user(st.session_state.current_user)
+        
+        if user_data:
+            st.markdown("---")
+            st.markdown("### 💼 Dompet Anda")
+            
+            # Mengambil data dengan nilai default jika kosong
+            paket = user_data.get("paket_aktif", "Freemium")
+            kuota = user_data.get("kuota", 0)
+            saldo = user_data.get("saldo", 0)
+            batas = user_data.get("batas_durasi", 10)
+            
+            # Format Rupiah
+            saldo_rp = f"Rp {saldo:,}".replace(",", ".")
+            
+            # UI Dashboard Mini
+            st.info(f"📦 Paket: **{paket}**")
+            
+            col_k, col_b = st.columns(2)
+            col_k.metric("Sisa Kuota", f"{kuota}x")
+            col_b.metric("Max Audio", f"{batas} Min")
+            
+            st.metric("💳 Saldo Darurat", saldo_rp)
+            
+            if st.button("🛒 Upgrade / Top-Up", use_container_width=True):
+                st.warning("🚧 Fitur Pembayaran QRIS sedang dalam persiapan.")
+                
+            st.markdown("---")
+
+        if st.session_state.user_role == "admin": 
+            st.info("👑 Anda Administrator.")
+            
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state.logged_in, st.session_state.current_user, st.session_state.user_role = False, "", ""
             st.session_state.ai_result = ""
