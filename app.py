@@ -253,6 +253,76 @@ Format:
 # ==========================================
 # 3. SIDEBAR (INFO & STATUS & DOMPET)
 # ==========================================
+@st.dialog("🛒 Pilih Paket Kebutuhan Anda", width="large")
+def show_pricing_dialog():
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        📦 **PAKET STARTER**
+        ### Rp 50.750
+        *Cocok untuk kebutuhan personal & tugas ringan.*
+        
+        ✅ **5x** Ekstrak AI (Laporan/Notulen)
+        ✅ Maks. Durasi Audio **1 Jam (~7.800 Kata)** / File
+        ✅ Masa Aktif **14 Hari**
+        🎁 Bonus Saldo **Rp 3.000**
+        ⏳ Jalur Antrean Reguler
+        """)
+        if st.button("🛒 Beli Paket Starter", use_container_width=True, key="buy_starter"):
+            st.info("🔜 Mengarahkan ke Gateway Pembayaran (Segera Hadir)")
+            
+        st.markdown("---")
+        st.markdown("""
+        💼 **PAKET PRO NOTULIS**
+        ### Rp 101.500
+        *Standar profesional untuk notulis & sekretaris.*
+        
+        ✅ **15x** Ekstrak AI (Laporan/Notulen)
+        ✅ Maks. Durasi Audio **1,5 Jam (~11.700 Kata)** / File
+        ✅ Masa Aktif **30 Hari**
+        🎁 Bonus Saldo **Rp 10.000**
+        ⏳ Jalur Antrean Reguler
+        """)
+        if st.button("🛒 Beli Paket Pro", use_container_width=True, key="buy_pro"):
+            st.info("🔜 Mengarahkan ke Gateway Pembayaran (Segera Hadir)")
+
+    with col2:
+        st.markdown("""
+        🏢 **PAKET EKSEKUTIF (Divisi)**
+        ### Rp 304.500
+        *Pilihan tepat untuk intensitas rapat tinggi.*
+        
+        ✅ **50x** Ekstrak AI (Laporan/Notulen)
+        ✅ Maks. Durasi Audio **2 Jam (~15.600 Kata)** / File
+        🎁 Bonus Saldo **Rp 20.000**
+        🚀 **Jalur Prioritas (Fast Track)**
+        """)
+        if st.button("🛒 Beli Paket Eksekutif", use_container_width=True, key="buy_exec"):
+            st.info("🔜 Mengarahkan ke Gateway Pembayaran (Segera Hadir)")
+            
+        st.markdown("---")
+        st.markdown("""
+        👑 **PAKET VIP INSTANSI (Kuartal)**
+        ### Rp 507.500
+        *Akses tanpa hambatan untuk level kementerian & instansi.*
+        
+        ✅ **100x** Ekstrak AI (Laporan/Notulen)
+        ✅ Maks. Durasi Audio **3 Jam (~23.400 Kata)** / File
+        🎁 Bonus Saldo **Rp 35.000**
+        ⚡ **Jalur Prioritas VVIP**
+        """)
+        if st.button("🛒 Beli Paket VIP", use_container_width=True, key="buy_vip"):
+            st.info("🔜 Mengarahkan ke Gateway Pembayaran (Segera Hadir)")
+
+    st.markdown("---")
+    st.markdown("""
+    💡 **Informasi Penting Sebelum Membeli:**
+    * 📄 **1 Kuota = 1x Pembuatan Dokumen (Notulen/Laporan).** Jika dokumen gagal diproses oleh sistem AI karena gangguan server, kuota dan saldo Anda 100% aman (tidak dipotong).
+    * ⚖️ **Sistem Adil (Fair Usage):** Durasi maksimal dihitung berdasarkan *jumlah kata aktual* yang diucapkan (Rata-rata 130 kata/menit), bukan panjang waktu rekaman mentah. Anda tidak akan rugi jika terdapat banyak jeda hening/istirahat dalam rekaman.
+    * 🛡️ **Sistem Subsidi Silang (Anti-Tolak):** Jika rekaman Anda sangat panjang dan *melebihi* batas maksimal paket, sistem **tidak akan menolak** dokumen Anda. Kelebihan menit tersebut akan otomatis dibayar menggunakan *Bonus Saldo* Anda dengan tarif dasar **Rp 350 / Menit**.
+    """)
+
 with st.sidebar:
     st.header("⚙️ Status Sistem")
     
@@ -293,7 +363,7 @@ with st.sidebar:
                 st.metric("💳 Saldo Darurat", saldo_rp)
                 
                 if st.button("🛒 Upgrade / Top-Up", use_container_width=True):
-                    st.warning("🚧 Fitur Pembayaran QRIS sedang dalam persiapan.")
+                    show_pricing_dialog()  # <--- MEMANGGIL POP-UP ETALASE
                 
             st.markdown("---")
 
@@ -688,3 +758,4 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
