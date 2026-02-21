@@ -283,7 +283,7 @@ with st.sidebar:
             
             col_k, col_b = st.columns(2)
             col_k.metric("Sisa Kuota", f"{kuota}x")
-            col_b.metric("Max Audio", f"{batas} Min")
+            col_b.metric("Batas Paket", f"{batas} Menit")
             
             st.metric("💳 Saldo Darurat", saldo_rp)
             
@@ -420,6 +420,11 @@ with tab3:
             st.write("")
             st.markdown("#### ⚙️ Pilih Mesin AI")
             engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini", "Groq"])
+            
+            # --- UI INDIKATOR TAGIHAN (TRANSPARANSI) ---
+            durasi_teks = hitung_estimasi_menit(st.session_state.transcript)
+            jumlah_kata = len(st.session_state.transcript.split())
+            st.info(f"📊 **Analisis Teks:** Anda memiliki **{jumlah_kata:,} Kata**. (Sistem menghitung ini setara dengan **± {durasi_teks} Menit** pemakaian paket).")
             st.write("")
             
             col1, col2 = st.columns(2)
@@ -428,12 +433,11 @@ with tab3:
 
             if btn_notulen or btn_laporan:
                 # 1. CEK BIAYA SEBELUM MEMANGGIL AI
-                durasi_teks = hitung_estimasi_menit(st.session_state.transcript)
                 bisa_bayar, pesan_bayar, p_kuota, p_saldo = cek_pembayaran(st.session_state.current_user, durasi_teks)
                 
                 if not bisa_bayar:
                     st.error(f"❌ TRANSAKSI DITOLAK: {pesan_bayar}")
-                    st.info("💡 Silakan Top-Up Saldo atau Upgrade Paket Anda di menu samping.")
+                    st.warning("💡 Silakan Top-Up Saldo atau Upgrade Paket Anda.")
                 else:
                     # 2. LANJUT PROSES AI JIKA SALDO/KUOTA CUKUP
                     prompt_active = PROMPT_NOTULEN if btn_notulen else PROMPT_LAPORAN
@@ -446,7 +450,7 @@ with tab3:
                     else:
                         success_generation = False
                         
-                        with st.spinner(f"🚀 Memproses dengan {engine_choice} (Estimasi {durasi_teks} Menit)..."):
+                        with st.spinner(f"🚀 Memproses dengan {engine_choice} (Beban: {durasi_teks} Menit Kuota)..."):
                             for key_data in active_keys:
                                 try:
                                     if engine_choice == "Gemini":
@@ -469,13 +473,15 @@ with tab3:
                                     break 
                                     
                                 except Exception as e:
-                                    st.toast(f"⚠️ Kunci cadangan sedang aktif...")
+                                    st.toast(f"⚠️ Mencoba server cadangan...")
                                     continue
                         
                         if success_generation and ai_result:
                             # 3. POTONG SALDO KARENA HASIL BERHASIL DIBUAT!
                             eksekusi_pembayaran(st.session_state.current_user, p_kuota, p_saldo)
-                            st.toast(f"💰 Pembayaran Berhasil: {pesan_bayar}")
+                            
+                            # MENGGANTI TOAST MENJADI KOTAK SUCCESS BESAR
+                            st.success(f"✅ **Proses Selesai!** {pesan_bayar}")
                             
                             st.session_state.ai_result = ai_result
                             st.session_state.ai_prefix = "Notulen_" if btn_notulen else "Laporan_"
