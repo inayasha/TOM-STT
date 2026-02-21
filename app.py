@@ -405,7 +405,7 @@ with tab3:
         
         auth_tab1, auth_tab2 = st.tabs(["🔑 Masuk (Login)", "📝 Daftar Baru (Register)"])
         
-        # --- TAB LOGIN ---
+# --- TAB LOGIN ---
         with auth_tab1:
             login_email = st.text_input("Email", key="log_email").strip()
             login_pwd = st.text_input("Password", type="password", key="log_pwd")
@@ -416,18 +416,30 @@ with tab3:
                     res = requests.post(url, json={"email": login_email, "password": login_pwd, "returnSecureToken": True}).json()
                     
                     if "idToken" in res:
-                        # BERHASIL LOGIN: Ambil data role dan dompet dari Firestore
-                        user_data = get_user(login_email)
+                        id_token = res["idToken"]
                         
-                        # Jika user tidak ditemukan di database (misal error saat daftar), buatkan darurat
-                        if not user_data:
-                            save_user(login_email, login_pwd, "user")
-                            user_data = {"role": "user"}
-                            
-                        st.session_state.logged_in = True
-                        st.session_state.current_user = login_email
-                        st.session_state.user_role = user_data.get("role", "user")
-                        st.rerun()
+                        # CEK STATUS VERIFIKASI EMAIL DI FIREBASE
+                        url_lookup = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={api_key}"
+                        lookup_res = requests.post(url_lookup, json={"idToken": id_token}).json()
+                        is_verified = lookup_res.get("users", [{}])[0].get("emailVerified", False)
+                        
+                        user_data = get_user(login_email)
+                        is_admin = user_data and user_data.get("role") == "admin"
+                        
+                        # LOGIKA SATPAM: Tolak jika belum verifikasi (Kecuali Admin Utama)
+                        if not is_verified and not is_admin:
+                            st.error("❌ Akses Ditolak: Email Anda belum diverifikasi!")
+                            st.warning("📧 Silakan cek Inbox atau folder Spam di email Anda, lalu klik link verifikasi yang telah kami kirimkan saat Anda mendaftar.")
+                        else:
+                            # Jika user lolos verifikasi, masukkan ke sistem!
+                            if not user_data:
+                                save_user(login_email, login_pwd, "user")
+                                user_data = {"role": "user"}
+                                
+                            st.session_state.logged_in = True
+                            st.session_state.current_user = login_email
+                            st.session_state.user_role = user_data.get("role", "user")
+                            st.rerun()
                     else:
                         err = res.get("error", {}).get("message", "Gagal")
                         if err == "INVALID_LOGIN_CREDENTIALS": st.error("❌ Email atau Password salah!")
@@ -443,20 +455,27 @@ with tab3:
                 elif not reg_email:
                     st.error("❌ Email tidak boleh kosong!")
                 else:
-                    with st.spinner("Membuat akun dan menyiapkan Dompet..."):
+                    with st.spinner("Mendaftarkan akun & mengirim email verifikasi..."):
                         api_key = st.secrets["firebase_web_api_key"]
                         url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={api_key}"
                         res = requests.post(url, json={"email": reg_email, "password": reg_pwd, "returnSecureToken": True}).json()
                         
                         if "idToken" in res:
-                            # BERHASIL DAFTAR DI FIREBASE AUTH! 
-                            # Langsung panggil fungsi save_user() untuk mencetak dompet Freemium di Firestore
+                            id_token = res["idToken"]
+                            
+                            # PERINTAHKAN FIREBASE MENGIRIM EMAIL VERIFIKASI KE USER
+                            url_verify = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}"
+                            requests.post(url_verify, json={"requestType": "VERIFY_EMAIL", "idToken": id_token})
+                            
+                            # Simpan dompet Freemium di Firestore
                             save_user(reg_email, reg_pwd, "user")
-                            st.success("✅ Pendaftaran berhasil! Anda mendapatkan modal awal 2x Kuota Freemium. Silakan beralih ke tab 'Masuk (Login)' untuk memulai.")
+                            
+                            st.success("✅ Pembuatan akun berhasil!")
+                            st.info("🚨 **LANGKAH WAJIB:** Kami telah mengirimkan link verifikasi ke email Anda. Anda **TIDAK AKAN BISA LOGIN** sebelum mengeklik link tersebut. Jangan lupa cek folder Spam!")
                         else:
                             err = res.get("error", {}).get("message", "Gagal")
                             if err == "EMAIL_EXISTS": st.error("❌ Email sudah terdaftar. Silakan langsung Login saja.")
-                            elif err == "INVALID_EMAIL": st.error("❌ Format email tidak valid.")
+                            elif err == "INVALID_EMAIL": st.error("❌ Format email tidak valid. Gunakan email asli!")
                             else: st.error(f"❌ Gagal mendaftar: {err}")
     else:
         if not st.session_state.transcript:
