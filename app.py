@@ -305,46 +305,59 @@ with st.sidebar:
             st.session_state.ai_result = ""
             st.rerun()
     else:
-        st.caption("Silakan login di Tab '🔐 Akses Akun'.")
+        st.caption("Silakan login di Tab '🔐 Akun'.")
 
 # ==========================================
 # 4. MAIN LAYOUT & TABS
 # ==========================================
-st.markdown('<div class="main-header">🎙️ TOM\'<span style="color: #e74c3c;">STT</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">🎙️ TOM\'<span style="color: #e74c3c !important;">STT</span></div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Speech-to-Text | Konversi Audio ke Teks</div>', unsafe_allow_html=True)
 
-tab_titles = ["📂 Upload File", "🎙️ Rekam Suara", "✨ Ekstrak AI", "🔐 Akses Akun"]
+tab_titles = ["📂 Upload File", "🎙️ Rekam Suara", "✨ Ekstrak AI", "🔐 Akun"]
 if st.session_state.user_role == "admin": tab_titles.append("⚙️ Panel Admin")
 tabs = st.tabs(tab_titles)
 tab_upload, tab_rekam, tab_ai, tab_auth = tabs[0], tabs[1], tabs[2], tabs[3]
 
 audio_to_process, source_name = None, "audio"
+submit_btn = False
+lang_code = "id-ID"
 
 # TAB 1: UPLOAD FILE (Bebas Akses)
 with tab_upload:
     uploaded_file = st.file_uploader("Pilih File Audio", type=["aac", "mp3", "wav", "m4a", "opus", "mp4", "3gp", "amr", "ogg", "flac", "wma"])
     if uploaded_file: audio_to_process, source_name = uploaded_file, uploaded_file.name
+    
+    st.write("") 
+    c1, c2, c3 = st.columns([1, 4, 1]) 
+    with c2:
+        lang_choice_upload = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_up")
+        st.write("") 
+        if uploaded_file:
+            if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_up"):
+                submit_btn = True
+                lang_code = "id-ID" if lang_choice_upload == "Indonesia" else "en-US"
+        else:
+            st.markdown('<div class="custom-info-box">👆 Silakan Upload terlebih dahulu.</div>', unsafe_allow_html=True)
 
 # TAB 2: REKAM SUARA (Terkunci)
 with tab_rekam:
     if not st.session_state.logged_in:
-        st.error("🔒 Akses Terkunci!")
-        st.warning("Silakan masuk (login) atau daftar terlebih dahulu di tab **🔐 Akses Akun** untuk menggunakan fitur rekam suara langsung.")
+        st.markdown('<div style="text-align: center; padding: 20px; background-color: #fdeced; border-radius: 10px; border: 1px solid #f5c6cb; margin-bottom: 20px;"><h3 style="color: #e74c3c; margin-top: 0;">🔒 Akses Terkunci!</h3><p style="color: #e74c3c; font-weight: 500;">Silakan masuk (login) atau daftar terlebih dahulu di tab <b>🔐 Akun</b> untuk menggunakan fitur rekam suara langsung.</p></div>', unsafe_allow_html=True)
     else:
         audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
         if audio_mic: audio_to_process, source_name = audio_mic, "rekaman_mic.wav"
-
-if tab_upload or tab_rekam:
-    st.write("") 
-    c1, c2, c3 = st.columns([1, 4, 1]) 
-    with c2:
-        lang_choice = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"))
+        
         st.write("") 
-        if audio_to_process:
-            submit_btn = st.button("🚀 Mulai Transkrip", use_container_width=True)
-        else:
-            st.markdown('<div class="custom-info-box">👆 Silakan Upload atau Rekam terlebih dahulu.</div>', unsafe_allow_html=True)
-            submit_btn = False
+        c1, c2, c3 = st.columns([1, 4, 1]) 
+        with c2:
+            lang_choice_mic = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_mic")
+            st.write("") 
+            if audio_mic:
+                if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_mic"):
+                    submit_btn = True
+                    lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
+            else:
+                st.markdown('<div class="custom-info-box">👆 Silakan Rekam terlebih dahulu.</div>', unsafe_allow_html=True)
 
 if submit_btn and audio_to_process:
     st.markdown("---")
@@ -366,7 +379,6 @@ if submit_btn and audio_to_process:
         
         recognizer = sr.Recognizer()
         recognizer.energy_threshold, recognizer.dynamic_energy_threshold = 300, True 
-        lang_code = "id-ID" if lang_choice == "Indonesia" else "en-US"
 
         for i in range(total_chunks):
             start_time = i * chunk_len
@@ -484,8 +496,7 @@ with tab_auth:
 
 with tab_ai:
     if not st.session_state.logged_in:
-        st.error("🔒 Akses Terkunci!")
-        st.warning("Silakan masuk (login) atau daftar terlebih dahulu di tab **🔐 Akses Akun** untuk menggunakan fitur AI.")
+        st.markdown('<div style="text-align: center; padding: 20px; background-color: #fdeced; border-radius: 10px; border: 1px solid #f5c6cb; margin-bottom: 20px;"><h3 style="color: #e74c3c; margin-top: 0;">🔒 Akses Terkunci!</h3><p style="color: #e74c3c; font-weight: 500;">Silakan masuk (login) atau daftar terlebih dahulu di tab <b>🔐 Akun</b> untuk menggunakan fitur AI.</p></div>', unsafe_allow_html=True)
     else:
         if not st.session_state.transcript:
             st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia.<br><strong>ATAU</strong> Unggah file .txt di bawah ini:</div>', unsafe_allow_html=True)
