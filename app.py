@@ -199,6 +199,10 @@ st.markdown("""
     
     /* Box Data API Key */
     .api-card { background-color: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; color: #111111 !important; }
+	/* FIX DIALOG (POP-UP) STYLING */
+    div[data-testid="stDialog"] { background-color: #FFFFFF !important; }
+    div[data-testid="stDialog"] h1, div[data-testid="stDialog"] h2, div[data-testid="stDialog"] h3, div[data-testid="stDialog"] p, div[data-testid="stDialog"] li, div[data-testid="stDialog"] span { color: #111111 !important; }
+    div[data-testid="stDialog"] hr { border-color: #EEEEEE !important; }
 </style>
 """, unsafe_allow_html=True)
 
