@@ -199,10 +199,12 @@ st.markdown("""
     
     /* Box Data API Key */
     .api-card { background-color: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; color: #111111 !important; }
-	/* FIX DIALOG (POP-UP) STYLING */
-    div[data-testid="stDialog"] { background-color: #FFFFFF !important; }
-    div[data-testid="stDialog"] h1, div[data-testid="stDialog"] h2, div[data-testid="stDialog"] h3, div[data-testid="stDialog"] p, div[data-testid="stDialog"] li, div[data-testid="stDialog"] span { color: #111111 !important; }
-    div[data-testid="stDialog"] hr { border-color: #EEEEEE !important; }
+	
+	/* FIX MODAL & DIALOG (POP-UP) STYLING */
+    div[data-testid="stModal"] > div[role="dialog"], div[role="dialog"] { background-color: #FFFFFF !important; }
+    div[role="dialog"] h1, div[role="dialog"] h2, div[role="dialog"] h3, div[role="dialog"] p, div[role="dialog"] li, div[role="dialog"] span { color: #111111 !important; }
+    div[role="dialog"] div.stButton > button p { color: #FFFFFF !important; }
+    div[role="dialog"] hr { border-color: #EEEEEE !important; }
 </style>
 """, unsafe_allow_html=True)
 
