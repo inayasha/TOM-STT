@@ -269,26 +269,34 @@ with st.sidebar:
             st.markdown("---")
             st.markdown("### 💼 Dompet Anda")
             
-            # Mengambil data dengan nilai default jika kosong
-            paket = user_data.get("paket_aktif", "Freemium")
-            kuota = user_data.get("kuota", 0)
-            saldo = user_data.get("saldo", 0)
-            batas = user_data.get("batas_durasi", 10)
-            
-            # Format Rupiah
-            saldo_rp = f"Rp {saldo:,}".replace(",", ".")
-            
-            # UI Dashboard Mini
-            st.info(f"📦 Paket: **{paket}**")
-            
-            col_k, col_b = st.columns(2)
-            col_k.metric("Sisa Kuota", f"{kuota}x")
-            col_b.metric("Batas Paket", f"{batas} Menit")
-            
-            st.metric("💳 Saldo Darurat", saldo_rp)
-            
-            if st.button("🛒 Upgrade / Top-Up", use_container_width=True):
-                st.warning("🚧 Fitur Pembayaran QRIS sedang dalam persiapan.")
+            # CEK APAKAH DIA ADMIN ATAU USER BIASA
+            if user_data.get("role") == "admin":
+                st.info("👑 Paket: **Super Admin (VIP)**")
+                col_k, col_b = st.columns(2)
+                col_k.metric("Sisa Kuota", "♾️")
+                col_b.metric("Batas Paket", "♾️")
+                st.metric("💳 Saldo Darurat", "♾️ (Tak Terbatas)")
+            else:
+                # TAMPILAN UNTUK USER REGULER
+                paket = user_data.get("paket_aktif", "Freemium")
+                kuota = user_data.get("kuota", 0)
+                saldo = user_data.get("saldo", 0)
+                batas = user_data.get("batas_durasi", 10)
+                
+                # Format Rupiah
+                saldo_rp = f"Rp {saldo:,}".replace(",", ".")
+                
+                # UI Dashboard Mini
+                st.info(f"📦 Paket: **{paket}**")
+                
+                col_k, col_b = st.columns(2)
+                col_k.metric("Sisa Kuota", f"{kuota}x")
+                col_b.metric("Batas Paket", f"{batas} Menit")
+                
+                st.metric("💳 Saldo Darurat", saldo_rp)
+                
+                if st.button("🛒 Upgrade / Top-Up", use_container_width=True):
+                    st.warning("🚧 Fitur Pembayaran QRIS sedang dalam persiapan.")
                 
             st.markdown("---")
 
