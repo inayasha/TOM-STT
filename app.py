@@ -273,9 +273,9 @@ with st.sidebar:
             if user_data.get("role") == "admin":
                 st.info("👑 Paket: **Super Admin (VIP)**")
                 col_k, col_b = st.columns(2)
-                col_k.metric("Sisa Kuota", "♾️")
-                col_b.metric("Batas Paket", "♾️")
-                st.metric("💳 Saldo Darurat", "♾️ (Tak Terbatas)")
+                col_k.metric("Sisa Kuota", "∞ Unlimited")
+                col_b.metric("Batas Paket", "⚡ Bebas Akses")
+                st.metric("💳 Saldo Darurat", "💎 Tak Terbatas")
             else:
                 # TAMPILAN UNTUK USER REGULER
                 paket = user_data.get("paket_aktif", "Freemium")
