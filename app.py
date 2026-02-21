@@ -206,6 +206,32 @@ st.markdown("""
     div[role="dialog"] h1, div[role="dialog"] h2, div[role="dialog"] h3, div[role="dialog"] p, div[role="dialog"] li, div[role="dialog"] span { color: #111111 !important; }
     div[role="dialog"] div.stButton > button p { color: #FFFFFF !important; }
     div[role="dialog"] hr { border-color: #EEEEEE !important; }
+	
+	/* FIX TOMBOL BAYAR MIDTRANS (st.link_button) */
+    div[data-testid="stLinkButton"] > a {
+        width: 100% !important; 
+        background-color: #000000 !important; 
+        border: 1px solid #000000 !important; 
+        border-radius: 10px !important; 
+        padding: 14px 20px !important; 
+        text-decoration: none !important; 
+        display: flex !important; 
+        justify-content: center !important; 
+        align-items: center !important;
+        transition: all 0.2s !important;
+    }
+    div[data-testid="stLinkButton"] > a p, 
+    div[data-testid="stLinkButton"] > a span,
+    div[role="dialog"] div[data-testid="stLinkButton"] > a p,
+    div[role="dialog"] div[data-testid="stLinkButton"] > a span {
+        color: #FFFFFF !important; 
+        font-weight: 700 !important; 
+        font-size: 16px !important;
+    }
+    div[data-testid="stLinkButton"] > a:hover {
+        background-color: #333333 !important; 
+        transform: translateY(-2px) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
