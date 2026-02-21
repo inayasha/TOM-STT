@@ -308,6 +308,7 @@ def buat_tagihan_midtrans(nama_paket, harga, user_email):
         "customer_details": {
             "email": user_email
         },
+	    "custom_field1": user_email,  # <--- TAMBAHKAN BARIS INI (Sangat Krusial)
         "item_details": [{
             "id": nama_paket.replace(" ", "_"),
             "price": harga,
