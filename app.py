@@ -62,6 +62,61 @@ def save_user(username, password, role):
 
 def delete_user(username):
     db.collection('users').document(username).delete()
+    
+# --- FUNGSI KASIR & SUBSIDI SILANG ---
+import math
+
+def hitung_estimasi_menit(teks):
+    """Estimasi durasi berdasarkan jumlah kata (Rata-rata bicara: 130 kata/menit)"""
+    if not teks: return 0
+    jumlah_kata = len(teks.split())
+    durasi = math.ceil(jumlah_kata / 130)
+    return durasi if durasi > 0 else 1 # Minimal terhitung 1 menit
+
+def cek_pembayaran(username, durasi_menit):
+    """Mengecek apakah user sanggup membayar. Return: (BisaBayar, Pesan, PotongKuota, PotongSaldo)"""
+    user_ref = db.collection('users').document(username)
+    user_data = user_ref.get().to_dict()
+    
+    if user_data.get("role") == "admin":
+        return True, "Akses Admin (Gratis)", 0, 0
+
+    kuota = user_data.get("kuota", 0)
+    saldo = user_data.get("saldo", 0)
+    batas_durasi = user_data.get("batas_durasi", 10)
+    TARIF = 350 # Tarif Rp 350/Menit
+
+    # Skenario 1: Durasi Aman (Sesuai Batas)
+    if durasi_menit <= batas_durasi:
+        if kuota > 0:
+            return True, "1 Kuota Terpakai.", 1, 0
+        else:
+            biaya = durasi_menit * TARIF
+            if saldo >= biaya: return True, f"Saldo terpotong Rp {biaya:,}", 0, biaya
+            else: return False, f"Saldo kurang. Butuh Rp {biaya:,} untuk {durasi_menit} Menit.", 0, 0
+
+    # Skenario 2: Subsidi Silang (Kelebihan Durasi)
+    else:
+        kelebihan = durasi_menit - batas_durasi
+        biaya_tambahan = kelebihan * TARIF
+        
+        if kuota > 0:
+            if saldo >= biaya_tambahan:
+                return True, f"1 Kuota + Saldo Rp {biaya_tambahan:,} terpakai (Kelebihan waktu).", 1, biaya_tambahan
+            else: return False, f"Kelebihan durasi! Saldo Anda kurang untuk menutupi biaya tambahan Rp {biaya_tambahan:,}", 0, 0
+        else:
+            biaya_total = durasi_menit * TARIF
+            if saldo >= biaya_total: return True, f"Saldo terpotong Rp {biaya_total:,}", 0, biaya_total
+            else: return False, f"Saldo kurang. Butuh Rp {biaya_total:,} untuk total {durasi_menit} Menit.", 0, 0
+
+def eksekusi_pembayaran(username, potong_kuota, potong_saldo):
+    """Memotong dompet di Firebase secara NYATA (Dipanggil hanya jika AI berhasil)"""
+    if potong_kuota == 0 and potong_saldo == 0: return # Admin tidak dipotong
+    user_ref = db.collection('users').document(username)
+    user_ref.update({
+        "kuota": firestore.Increment(-potong_kuota),
+        "saldo": firestore.Increment(-potong_saldo)
+    })
 
 # --- FUNGSI DATABASE FIREBASE (API KEYS & LOAD BALANCER) ---
 def add_api_key(name, provider, key_string, limit):
@@ -374,7 +429,62 @@ with tab3:
             with col1: btn_notulen = st.button("📝 Buat Notulen", use_container_width=True)
             with col2: btn_laporan = st.button("📋 Buat Laporan", use_container_width=True)
 
-            if btn_notulen or btn_laporan:
+if btn_notulen or btn_laporan:
+                # 1. CEK BIAYA SEBELUM MEMANGGIL AI
+                durasi_teks = hitung_estimasi_menit(st.session_state.transcript)
+                bisa_bayar, pesan_bayar, p_kuota, p_saldo = cek_pembayaran(st.session_state.current_user, durasi_teks)
+                
+                if not bisa_bayar:
+                    st.error(f"❌ TRANSAKSI DITOLAK: {pesan_bayar}")
+                    st.info("💡 Silakan Top-Up Saldo atau Upgrade Paket Anda di menu samping.")
+                else:
+                    # 2. LANJUT PROSES AI JIKA SALDO/KUOTA CUKUP
+                    prompt_active = PROMPT_NOTULEN if btn_notulen else PROMPT_LAPORAN
+                    ai_result = None
+                    
+                    active_keys = get_active_keys(engine_choice)
+                    
+                    if not active_keys:
+                        st.error(f"❌ Sistem Sibuk: Tidak ada API Key {engine_choice} yang aktif. Saldo/Kuota Anda AMAN (Tidak dipotong).")
+                    else:
+                        success_generation = False
+                        
+                        with st.spinner(f"🚀 Memproses dengan {engine_choice} (Estimasi {durasi_teks} Menit)..."):
+                            for key_data in active_keys:
+                                try:
+                                    if engine_choice == "Gemini":
+                                        genai.configure(api_key=key_data["key"])
+                                        model = genai.GenerativeModel('gemini-2.5-flash')
+                                        response = model.generate_content(f"{prompt_active}\n\nBerikut teks transkripnya:\n{st.session_state.transcript}")
+                                        ai_result = response.text
+                                        
+                                    elif engine_choice == "Groq":
+                                        client = Groq(api_key=key_data["key"])
+                                        completion = client.chat.completions.create(
+                                            model="llama-3.3-70b-versatile",
+                                            messages=[{"role": "system", "content": prompt_active}, {"role": "user", "content": f"Berikut transkripnya:\n{st.session_state.transcript}"}],
+                                            temperature=0.4,
+                                        )
+                                        ai_result = completion.choices[0].message.content
+
+                                    increment_api_usage(key_data["id"], key_data["used"])
+                                    success_generation = True
+                                    break 
+                                    
+                                except Exception as e:
+                                    st.toast(f"⚠️ Kunci cadangan sedang aktif...")
+                                    continue
+                        
+                        if success_generation and ai_result:
+                            # 3. POTONG SALDO KARENA HASIL BERHASIL DIBUAT!
+                            eksekusi_pembayaran(st.session_state.current_user, p_kuota, p_saldo)
+                            st.toast(f"💰 Pembayaran Berhasil: {pesan_bayar}")
+                            
+                            st.session_state.ai_result = ai_result
+                            st.session_state.ai_prefix = "Notulen_" if btn_notulen else "Laporan_"
+                        elif not success_generation:
+                            st.error("❌ Gagal memproses. Server API sedang gangguan. Saldo & Kuota Anda AMAN (Tidak dipotong).")
+
                 prompt_active = PROMPT_NOTULEN if btn_notulen else PROMPT_LAPORAN
                 ai_result = None
                 
