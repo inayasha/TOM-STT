@@ -37,8 +37,28 @@ def get_user(username):
     doc = db.collection('users').document(username).get()
     return doc.to_dict() if doc.exists else None
 
+from datetime import datetime
+
 def save_user(username, password, role):
-    db.collection('users').document(username).set({"password": password, "role": role})
+    """Menyimpan user baru beserta dompetnya, atau mengupdate user lama"""
+    user_ref = db.collection('users').document(username)
+    existing_user = user_ref.get()
+    
+    if existing_user.exists:
+        # JIKA USER SUDAH ADA: Update password & role saja, JANGAN sentuh saldo/kuota!
+        user_ref.update({"password": password, "role": role})
+    else:
+        # JIKA USER BARU: Buatkan akun dan berikan modal awal (Paket Freemium)
+        user_ref.set({
+            "password": password,
+            "role": role,
+            "paket_aktif": "Freemium",
+            "kuota": 2,                # Jatah awal Freemium
+            "saldo": 0,                # Saldo awal Rp 0
+            "batas_durasi": 10,        # Maksimal audio 10 Menit
+            "masa_aktif": "Selamanya",
+            "created_at": datetime.now()
+        })
 
 def delete_user(username):
     db.collection('users').document(username).delete()
@@ -472,3 +492,4 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
