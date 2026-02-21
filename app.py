@@ -41,19 +41,22 @@ def get_user(username):
     return doc.to_dict() if doc.exists else None
 
 def save_user(username, password, role):
+    """Menyimpan user baru beserta dompetnya, atau mengupdate user lama"""
     user_ref = db.collection('users').document(username)
     existing_user = user_ref.get()
     
     if existing_user.exists:
+        # JIKA USER SUDAH ADA: Update password & role saja, JANGAN sentuh saldo/kuota!
         user_ref.update({"password": password, "role": role})
     else:
+        # JIKA USER BARU: Buatkan akun dan berikan modal awal (Paket Freemium)
         user_ref.set({
             "password": password,
             "role": role,
             "paket_aktif": "Freemium",
-            "kuota": 2,                
-            "saldo": 0,                
-            "batas_durasi": 10,        
+            "kuota": 2,                # Jatah awal Freemium
+            "saldo": 0,                # Saldo awal Rp 0
+            "batas_durasi": 10,        # Maksimal audio 10 Menit
             "masa_aktif": "Selamanya",
             "created_at": datetime.now()
         })
@@ -63,33 +66,42 @@ def delete_user(username):
     
 # --- FUNGSI KASIR & SUBSIDI SILANG ---
 def hitung_estimasi_menit(teks):
+    """Estimasi durasi berdasarkan jumlah kata (Rata-rata bicara: 130 kata/menit)"""
     if not teks: return 0
     jumlah_kata = len(teks.split())
     durasi = math.ceil(jumlah_kata / 130)
-    return durasi if durasi > 0 else 1 
+    return durasi if durasi > 0 else 1 # Minimal terhitung 1 menit
 
 def cek_pembayaran(username, durasi_menit):
+    """Mengecek apakah user sanggup membayar. Return: (BisaBayar, Pesan, PotongKuota, PotongSaldo)"""
     user_ref = db.collection('users').document(username)
     user_data = user_ref.get().to_dict()
     
-    if user_data.get("role") == "admin": return True, "Akses Admin (Gratis)", 0, 0
+    if user_data.get("role") == "admin":
+        return True, "Akses Admin (Gratis)", 0, 0
 
     kuota = user_data.get("kuota", 0)
     saldo = user_data.get("saldo", 0)
     batas_durasi = user_data.get("batas_durasi", 10)
-    TARIF = 350 
+    TARIF = 350 # Tarif Rp 350/Menit
 
+    # Skenario 1: Durasi Aman (Sesuai Batas)
     if durasi_menit <= batas_durasi:
-        if kuota > 0: return True, "1 Kuota Terpakai.", 1, 0
+        if kuota > 0:
+            return True, "1 Kuota Terpakai.", 1, 0
         else:
             biaya = durasi_menit * TARIF
             if saldo >= biaya: return True, f"Saldo terpotong Rp {biaya:,}", 0, biaya
             else: return False, f"Saldo kurang. Butuh Rp {biaya:,} untuk {durasi_menit} Menit.", 0, 0
+
+    # Skenario 2: Subsidi Silang (Kelebihan Durasi)
     else:
         kelebihan = durasi_menit - batas_durasi
         biaya_tambahan = kelebihan * TARIF
+        
         if kuota > 0:
-            if saldo >= biaya_tambahan: return True, f"1 Kuota + Saldo Rp {biaya_tambahan:,} terpakai (Kelebihan waktu).", 1, biaya_tambahan
+            if saldo >= biaya_tambahan:
+                return True, f"1 Kuota + Saldo Rp {biaya_tambahan:,} terpakai (Kelebihan waktu).", 1, biaya_tambahan
             else: return False, f"Kelebihan durasi! Saldo Anda kurang untuk menutupi biaya tambahan Rp {biaya_tambahan:,}", 0, 0
         else:
             biaya_total = durasi_menit * TARIF
@@ -97,20 +109,33 @@ def cek_pembayaran(username, durasi_menit):
             else: return False, f"Saldo kurang. Butuh Rp {biaya_total:,} untuk total {durasi_menit} Menit.", 0, 0
 
 def eksekusi_pembayaran(username, potong_kuota, potong_saldo):
-    if potong_kuota == 0 and potong_saldo == 0: return 
+    """Memotong dompet di Firebase secara NYATA (Dipanggil hanya jika AI berhasil)"""
+    if potong_kuota == 0 and potong_saldo == 0: return # Admin tidak dipotong
     user_ref = db.collection('users').document(username)
     user_ref.update({
         "kuota": firestore.Increment(-potong_kuota),
         "saldo": firestore.Increment(-potong_saldo)
     })
 
-# --- FUNGSI DATABASE FIREBASE (API KEYS) ---
+# --- FUNGSI DATABASE FIREBASE (API KEYS & LOAD BALANCER) ---
 def add_api_key(name, provider, key_string, limit):
-    db.collection('api_keys').add({"name": name, "provider": provider, "key": key_string, "limit": int(limit), "used": 0, "is_active": True})
+    db.collection('api_keys').add({
+        "name": name,
+        "provider": provider,
+        "key": key_string,
+        "limit": int(limit),
+        "used": 0,
+        "is_active": True
+    })
 
-def delete_api_key(doc_id): db.collection('api_keys').document(doc_id).delete()
-def toggle_api_key(doc_id, current_status): db.collection('api_keys').document(doc_id).update({"is_active": not current_status})
-def increment_api_usage(doc_id, current_used): db.collection('api_keys').document(doc_id).update({"used": current_used + 1})
+def delete_api_key(doc_id):
+    db.collection('api_keys').document(doc_id).delete()
+
+def toggle_api_key(doc_id, current_status):
+    db.collection('api_keys').document(doc_id).update({"is_active": not current_status})
+
+def increment_api_usage(doc_id, current_used):
+    db.collection('api_keys').document(doc_id).update({"used": current_used + 1})
 
 def get_active_keys(provider):
     keys_ref = db.collection('api_keys').where("provider", "==", provider).where("is_active", "==", True).stream()
@@ -118,12 +143,11 @@ def get_active_keys(provider):
     for doc in keys_ref:
         data = doc.to_dict()
         data['id'] = doc.id
-        if data['used'] < data['limit']: valid_keys.append(data)
+        if data['used'] < data['limit']:
+            valid_keys.append(data)
     return valid_keys
 
-# ==========================================
-# INISIALISASI MEMORI (SESSION STATE & AUTO LOGIN)
-# ==========================================
+# Inisialisasi Memori (Session State)
 if 'transcript' not in st.session_state: st.session_state.transcript = ""
 if 'filename' not in st.session_state: st.session_state.filename = "Hasil_STT"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
@@ -151,7 +175,10 @@ st.markdown("""
     .stFileUploader > div > small { display: none !important; }
     div[data-testid="stFileUploaderFileName"] { color: #000000 !important; font-weight: 600 !important; }
     
-    div.stButton > button, div.stDownloadButton > button, div[data-testid="stFormSubmitButton"] > button { width: 100%; background-color: #000000 !important; color: #FFFFFF !important; border: 1px solid #000000; padding: 14px 20px; font-size: 16px; font-weight: 700; border-radius: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    /* FIX: Desain Universal Tombol agar semua senada dan seimbang */
+    div.stButton > button, div.stDownloadButton > button, div[data-testid="stFormSubmitButton"] > button { 
+        width: 100%; background-color: #000000 !important; color: #FFFFFF !important; border: 1px solid #000000; padding: 14px 20px; font-size: 16px; font-weight: 700; border-radius: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+    }
     div.stButton > button p, div.stDownloadButton > button p, div[data-testid="stFormSubmitButton"] > button p { color: #FFFFFF !important; }
     div.stButton > button:hover, div.stDownloadButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover { background-color: #333333 !important; color: #FFFFFF !important; transform: translateY(-2px); }
     
@@ -159,31 +186,58 @@ st.markdown("""
     textarea { color: #000000 !important; background-color: #F8F9FA !important; font-weight: 500 !important; }
     textarea:disabled { color: #000000 !important; -webkit-text-fill-color: #000000 !important; opacity: 1 !important; }
     
-    [data-testid="collapsedControl"] svg, [data-testid="stSidebarCollapseButton"] svg, button[kind="header"] svg { fill: #111111 !important; stroke: #111111 !important; color: #111111 !important; }
-    [data-testid="stExpander"] details summary p, [data-testid="stExpander"] details summary span { color: #111111 !important; font-weight: 700 !important; }
+    [data-testid="collapsedControl"] svg, [data-testid="collapsedControl"] svg path,
+    [data-testid="stSidebarCollapseButton"] svg, [data-testid="stSidebarCollapseButton"] svg path,
+    button[kind="header"] svg, button[kind="header"] svg path { fill: #111111 !important; stroke: #111111 !important; color: #111111 !important; }
+
+    /* FIX EXPANDER */
+    [data-testid="stExpander"] details summary p, 
+    [data-testid="stExpander"] details summary span { color: #111111 !important; font-weight: 700 !important; }
     [data-testid="stExpander"] details summary svg { fill: #111111 !important; color: #111111 !important; }
+
     div[data-testid="stMarkdownContainer"] p, div[data-testid="stMarkdownContainer"] h1, div[data-testid="stMarkdownContainer"] h2, div[data-testid="stMarkdownContainer"] h3, div[data-testid="stMarkdownContainer"] li, div[data-testid="stMarkdownContainer"] strong, div[data-testid="stMarkdownContainer"] span { color: #111111 !important; }
-    
     [data-testid="stSidebar"] { background-color: #F4F6F9 !important; }
     [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] p, [data-testid="stSidebar"] label { color: #111111 !important; font-weight: 600 !important; }
     [data-testid="stSidebar"] input { background-color: #FFFFFF !important; color: #000000 !important; border: 1px solid #CCCCCC !important; }
-    
+    .mobile-tips { background-color: #FFF3CD; color: #856404; padding: 12px; border-radius: 10px; font-size: 0.9rem; text-align: center; margin-bottom: 25px; border: 1px solid #FFEEBA; }
     .custom-info-box { background-color: #e6f3ff; color: #0068c9; padding: 15px; border-radius: 10px; text-align: center; font-weight: 600; border: 1px solid #cce5ff; margin-bottom: 20px; }
     .login-box { background-color: #F8F9FA; padding: 25px; border-radius: 12px; border: 1px solid #E0E0E0; margin-bottom: 20px; }
     .footer-link { text-decoration: none; font-weight: 700; color: #e74c3c !important; }
+    
+    /* Box Data API Key */
     .api-card { background-color: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; color: #111111 !important; }
 	
-	/* FIX MODAL DIALOG (PAKSA PUTIH & TEKS HITAM) */
-    div[data-testid="stDialog"], div[role="dialog"] { background-color: #FFFFFF !important; }
-    div[data-testid="stDialog"] > div { background-color: #FFFFFF !important; }
+	/* FIX MODAL & DIALOG (POP-UP) STYLING */
+    div[data-testid="stModal"] > div[role="dialog"], div[role="dialog"] { background-color: #FFFFFF !important; }
     div[role="dialog"] h1, div[role="dialog"] h2, div[role="dialog"] h3, div[role="dialog"] p, div[role="dialog"] li, div[role="dialog"] span { color: #111111 !important; }
     div[role="dialog"] div.stButton > button p { color: #FFFFFF !important; }
     div[role="dialog"] hr { border-color: #EEEEEE !important; }
 	
-	/* FIX TOMBOL BAYAR MIDTRANS */
-    div[data-testid="stLinkButton"] > a { width: 100% !important; background-color: #000000 !important; border: 1px solid #000000 !important; border-radius: 10px !important; padding: 14px 20px !important; text-decoration: none !important; display: flex !important; justify-content: center !important; align-items: center !important; transition: all 0.2s !important; }
-    div[data-testid="stLinkButton"] > a p, div[data-testid="stLinkButton"] > a span, div[role="dialog"] div[data-testid="stLinkButton"] > a p, div[role="dialog"] div[data-testid="stLinkButton"] > a span { color: #FFFFFF !important; font-weight: 700 !important; font-size: 16px !important; }
-    div[data-testid="stLinkButton"] > a:hover { background-color: #333333 !important; transform: translateY(-2px) !important; }
+	/* FIX TOMBOL BAYAR MIDTRANS (st.link_button) */
+    div[data-testid="stLinkButton"] > a {
+        width: 100% !important; 
+        background-color: #000000 !important; 
+        border: 1px solid #000000 !important; 
+        border-radius: 10px !important; 
+        padding: 14px 20px !important; 
+        text-decoration: none !important; 
+        display: flex !important; 
+        justify-content: center !important; 
+        align-items: center !important;
+        transition: all 0.2s !important;
+    }
+    div[data-testid="stLinkButton"] > a p, 
+    div[data-testid="stLinkButton"] > a span,
+    div[role="dialog"] div[data-testid="stLinkButton"] > a p,
+    div[role="dialog"] div[data-testid="stLinkButton"] > a span {
+        color: #FFFFFF !important; 
+        font-weight: 700 !important; 
+        font-size: 16px !important;
+    }
+    div[data-testid="stLinkButton"] > a:hover {
+        background-color: #333333 !important; 
+        transform: translateY(-2px) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -212,26 +266,71 @@ def create_docx(text, title):
     doc.save(bio)
     return bio.getvalue()
 
-PROMPT_NOTULEN = "Kamu adalah Sekretaris Profesional...\n(Instruksi disingkat di sini, tetap gunakan prompt asli Anda di app sebelumnya jika mau)"
-PROMPT_LAPORAN = "Kamu adalah ASN tingkat manajerial...\n(Instruksi disingkat di sini, tetap gunakan prompt asli Anda di app sebelumnya jika mau)"
+PROMPT_NOTULEN = """Kamu adalah Sekretaris Profesional. Tugasmu membuat Notulen Rapat dari transkrip yang diberikan.
+INSTRUKSI MUTLAK:
+- TULIS SANGAT PANJANG, MENDETAIL, DAN KOMPREHENSIF. 
+- JANGAN MERINGKAS TERLALU PENDEK. Jabarkan seluruh diskusi, nama (jika ada), argumen pro/kontra, data, dan fakta yang dibahas.
+- Ekstrak SEMUA informasi tanpa ada yang terlewat.
+Format:
+1. Agenda Utama: (Latar belakang komprehensif).
+2. Uraian Detail Pembahasan: (Jabarkan paragraf demi paragraf, poin per poin dengan sangat lengkap).
+3. Keputusan: (Keputusan akhir dan alasannya).
+4. Tindak Lanjut: (Langkah teknis dan penanggung jawab)."""
+
+PROMPT_LAPORAN = """Kamu adalah ASN tingkat manajerial. Tugasmu menyusun ISI LAPORAN Memorandum dari transkrip.
+INSTRUKSI MUTLAK:
+- TULIS SANGAT PANJANG, MENDETAIL, DAN KOMPREHENSIF.
+- JANGAN MERINGKAS. Jabarkan setiap topik yang dibahas, masalah yang ditemukan, dan solusi secara ekstensif.
+- Abaikan kop surat (Yth, Hal, dll). Langsung ke isi.
+Format:
+1. Pendahuluan: (Penjelasan acara/rapat secara lengkap).
+2. Uraian Hasil Pelaksanaan: (Penjabaran ekstensif seluruh dinamika, fakta, dan informasi dari transkrip).
+3. Kesimpulan & Analisis: (Analisis mendalam atas hasil pembahasan).
+4. Rekomendasi/Tindak Lanjut: (Saran konkret ke depan).
+5. Penutup: ('Demikian kami laporkan, mohon arahan Bapak Pimpinan lebih lanjut. Terima kasih.')."""
 
 # ==========================================
 # 3. SIDEBAR & ETALASE HARGA (MIDTRANS SNAP)
 # ==========================================
 def buat_tagihan_midtrans(nama_paket, harga, user_email):
+    """Menghubungi server Midtrans untuk meminta Link Pembayaran (QRIS/VA)"""
+    # URL Sandbox (Ubah ke https://app.midtrans.com/snap/v1/transactions jika sudah rilis resmi/Production)
     url = "https://app.sandbox.midtrans.com/snap/v1/transactions" 
     server_key = st.secrets["midtrans_server_key"]
+    
+    # Membuat Order ID unik (Contoh: TOM-STARTER-A1B2C3)
     order_id = f"TOM-{nama_paket.split()[0].upper()}-{uuid.uuid4().hex[:6].upper()}"
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
-    payload = {
-        "transaction_details": {"order_id": order_id, "gross_amount": harga},
-        "customer_details": {"email": user_email},
-	    "custom_field1": user_email,
-        "item_details": [{"id": nama_paket.replace(" ", "_"), "price": harga, "quantity": 1, "name": f"Paket {nama_paket} TOM'STT"}]
+    
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
     }
+    
+    payload = {
+        "transaction_details": {
+            "order_id": order_id,
+            "gross_amount": harga
+        },
+        "customer_details": {
+            "email": user_email
+        },
+	    "custom_field1": user_email,  # <--- TAMBAHKAN BARIS INI (Sangat Krusial)
+        "item_details": [{
+            "id": nama_paket.replace(" ", "_"),
+            "price": harga,
+            "quantity": 1,
+            "name": f"Paket {nama_paket} TOM'STT"
+        }]
+    }
+    
+    # Mengirim permintaan ke Midtrans
     response = requests.post(url, auth=(server_key, ''), json=payload, headers=headers)
-    if response.status_code == 201: return response.json().get("redirect_url")
-    else: st.error(f"Gagal menghubungi gateway pembayaran: {response.text}"); return None
+    
+    if response.status_code == 201:
+        return response.json().get("redirect_url")
+    else:
+        st.error(f"Gagal menghubungi gateway pembayaran. Pesan Error: {response.text}")
+        return None
 
 @st.dialog("🛒 Pilih Paket Kebutuhan Anda", width="large")
 def show_pricing_dialog():
@@ -242,9 +341,13 @@ def show_pricing_dialog():
         st.markdown("""
         📦 **PAKET STARTER**
         ### Rp 50.750
+        *Cocok untuk kebutuhan personal & tugas ringan.*
+        
         ✅ **5x** Ekstrak AI (Laporan/Notulen)
         ✅ Maks. Durasi Audio **1 Jam (~7.800 Kata)** / File
+        ✅ Masa Aktif **14 Hari**
         🎁 Bonus Saldo **Rp 3.000**
+        ⏳ Jalur Antrean Reguler
         """)
         if st.button("🛒 Beli Paket Starter", use_container_width=True, key="buy_starter"):
             with st.spinner("Mencetak tagihan..."):
@@ -255,9 +358,13 @@ def show_pricing_dialog():
         st.markdown("""
         💼 **PAKET PRO NOTULIS**
         ### Rp 101.500
+        *Standar profesional untuk notulis & sekretaris.*
+        
         ✅ **15x** Ekstrak AI (Laporan/Notulen)
         ✅ Maks. Durasi Audio **1,5 Jam (~11.700 Kata)** / File
+        ✅ Masa Aktif **30 Hari**
         🎁 Bonus Saldo **Rp 10.000**
+        ⏳ Jalur Antrean Reguler
         """)
         if st.button("🛒 Beli Paket Pro", use_container_width=True, key="buy_pro"):
             with st.spinner("Mencetak tagihan..."):
@@ -268,9 +375,12 @@ def show_pricing_dialog():
         st.markdown("""
         🏢 **PAKET EKSEKUTIF (Divisi)**
         ### Rp 304.500
+        *Pilihan tepat untuk intensitas rapat tinggi.*
+        
         ✅ **50x** Ekstrak AI (Laporan/Notulen)
         ✅ Maks. Durasi Audio **2 Jam (~15.600 Kata)** / File
         🎁 Bonus Saldo **Rp 20.000**
+        🚀 **Jalur Prioritas (Fast Track)**
         """)
         if st.button("🛒 Beli Paket Eksekutif", use_container_width=True, key="buy_exec"):
             with st.spinner("Mencetak tagihan..."):
@@ -279,11 +389,14 @@ def show_pricing_dialog():
             
         st.markdown("---")
         st.markdown("""
-        👑 **PAKET VIP INSTANSI**
+        👑 **PAKET VIP INSTANSI (Kuartal)**
         ### Rp 507.500
+        *Akses tanpa hambatan untuk level kementerian & instansi.*
+        
         ✅ **100x** Ekstrak AI (Laporan/Notulen)
         ✅ Maks. Durasi Audio **3 Jam (~23.400 Kata)** / File
         🎁 Bonus Saldo **Rp 35.000**
+        ⚡ **Jalur Prioritas VVIP**
         """)
         if st.button("🛒 Beli Paket VIP", use_container_width=True, key="buy_vip"):
             with st.spinner("Mencetak tagihan..."):
@@ -291,7 +404,12 @@ def show_pricing_dialog():
                 if link_bayar: st.link_button("💳 Bayar Sekarang (QRIS/VA)", link_bayar, use_container_width=True)
 
     st.markdown("---")
-    st.markdown("💡 **Informasi:** Sistem Adil (Fair Usage). 1 Kuota = 1x Pembuatan Dokumen. Kelebihan menit akan dipotong dari Saldo Darurat dengan tarif Rp350/menit.")
+    st.markdown("""
+    💡 **Informasi Penting Sebelum Membeli:**
+    * 📄 **1 Kuota = 1x Pembuatan Dokumen (Notulen/Laporan).** Jika dokumen gagal diproses oleh sistem AI karena gangguan server, kuota dan saldo Anda 100% aman (tidak dipotong).
+    * ⚖️ **Sistem Adil (Fair Usage):** Durasi maksimal dihitung berdasarkan *jumlah kata aktual* yang diucapkan (Rata-rata 130 kata/menit), bukan panjang waktu rekaman mentah. Anda tidak akan rugi jika terdapat banyak jeda hening/istirahat dalam rekaman.
+    * 🛡️ **Sistem Subsidi Silang (Anti-Tolak):** Jika rekaman Anda sangat panjang dan *melebihi* batas maksimal paket, sistem **tidak akan menolak** dokumen Anda. Kelebihan menit tersebut akan otomatis dibayar menggunakan *Bonus Saldo* Anda dengan tarif dasar **Rp 350 / Menit**.
+    """)
 
 with st.sidebar:
     st.header("⚙️ Status Sistem")
@@ -299,12 +417,14 @@ with st.sidebar:
     if st.session_state.logged_in:
         st.success(f"👤 Login as: {st.session_state.current_user}")
         
+        # --- MENARIK DATA DOMPET DARI FIREBASE ---
         user_data = get_user(st.session_state.current_user)
         
         if user_data:
             st.markdown("---")
             st.markdown("### 💼 Dompet Anda")
             
+            # CEK APAKAH DIA ADMIN ATAU USER BIASA
             if user_data.get("role") == "admin":
                 st.info("👑 Paket: **Super Admin (VIP)**")
                 col_k, col_b = st.columns(2)
@@ -312,12 +432,16 @@ with st.sidebar:
                 col_b.metric("Batas Paket", "∞")
                 st.metric("💳 Saldo Darurat", "∞")
             else:
+                # TAMPILAN UNTUK USER REGULER
                 paket = user_data.get("paket_aktif", "Freemium")
                 kuota = user_data.get("kuota", 0)
                 saldo = user_data.get("saldo", 0)
                 batas = user_data.get("batas_durasi", 10)
+                
+                # Format Rupiah
                 saldo_rp = f"Rp {saldo:,}".replace(",", ".")
                 
+                # UI Dashboard Mini
                 st.info(f"📦 Paket: **{paket}**")
                 
                 col_k, col_b = st.columns(2)
@@ -326,21 +450,22 @@ with st.sidebar:
                 
                 st.metric("💳 Saldo Darurat", saldo_rp)
                 
-                # 🚀 TOMBOL SEGARKAN DOMPET
+                # 🚀 TOMBOL BARU: SEGARKAN DOMPET
                 if st.button("🔄 Segarkan Dompet", use_container_width=True):
                     st.rerun()
                 
                 if st.button("🛒 Upgrade / Top-Up", use_container_width=True):
-                    show_pricing_dialog() 
+                    show_pricing_dialog()  # <--- MEMANGGIL POP-UP ETALASE
                 
             st.markdown("---")
 
-        if st.session_state.user_role == "admin": st.info("👑 Anda Administrator.")
+        if st.session_state.user_role == "admin": 
+            st.info("👑 Anda Administrator.")
             
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state.logged_in, st.session_state.current_user, st.session_state.user_role = False, "", ""
             st.session_state.ai_result = ""
-            st.query_params.clear() # 🚀 BERSIHKAN SESI URL SAAT LOGOUT
+            st.query_params.clear() # 🚀 BERSIHKAN URL SAAT LOGOUT
             st.rerun()
     else:
         st.caption("Silakan login di Tab '🔐 Akun'.")
@@ -356,11 +481,15 @@ if st.session_state.user_role == "admin": tab_titles.append("⚙️ Panel Admin"
 tabs = st.tabs(tab_titles)
 tab_upload, tab_rekam, tab_ai, tab_auth = tabs[0], tabs[1], tabs[2], tabs[3]
 
-audio_to_process, source_name, submit_btn, lang_code = None, "audio", False, "id-ID"
+audio_to_process, source_name = None, "audio"
+submit_btn = False
+lang_code = "id-ID"
 
+# TAB 1: UPLOAD FILE (Bebas Akses)
 with tab_upload:
     uploaded_file = st.file_uploader("Pilih File Audio", type=["aac", "mp3", "wav", "m4a", "opus", "mp4", "3gp", "amr", "ogg", "flac", "wma"])
     if uploaded_file: audio_to_process, source_name = uploaded_file, uploaded_file.name
+    
     st.write("") 
     c1, c2, c3 = st.columns([1, 4, 1]) 
     with c2:
@@ -370,13 +499,17 @@ with tab_upload:
             if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_up"):
                 submit_btn = True
                 lang_code = "id-ID" if lang_choice_upload == "Indonesia" else "en-US"
-        else: st.markdown('<div class="custom-info-box">👆 Silakan Upload terlebih dahulu.</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="custom-info-box">👆 Silakan Upload terlebih dahulu.</div>', unsafe_allow_html=True)
 
+# TAB 2: REKAM SUARA (Terkunci)
 with tab_rekam:
-    if not st.session_state.logged_in: st.markdown('<div class="custom-info-box">🔒 Silakan masuk (login) di tab <b>🔐 Akun</b> untuk merekam.</div>', unsafe_allow_html=True)
+    if not st.session_state.logged_in:
+        st.markdown('<div style="text-align: center; padding: 20px; background-color: #fdeced; border-radius: 10px; border: 1px solid #f5c6cb; margin-bottom: 20px;"><h3 style="color: #e74c3c; margin-top: 0;">🔒 Akses Terkunci!</h3><p style="color: #e74c3c; font-weight: 500;">Silakan masuk (login) atau daftar terlebih dahulu di tab <b>🔐 Akun</b> untuk menggunakan fitur rekam suara langsung.</p></div>', unsafe_allow_html=True)
     else:
         audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
         if audio_mic: audio_to_process, source_name = audio_mic, "rekaman_mic.wav"
+        
         st.write("") 
         c1, c2, c3 = st.columns([1, 4, 1]) 
         with c2:
@@ -386,12 +519,14 @@ with tab_rekam:
                 if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_mic"):
                     submit_btn = True
                     lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
-            else: st.markdown('<div class="custom-info-box">👆 Silakan Rekam terlebih dahulu.</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="custom-info-box">👆 Silakan Rekam terlebih dahulu.</div>', unsafe_allow_html=True)
 
 if submit_btn and audio_to_process:
     st.markdown("---")
     status_box, progress_bar, result_area = st.empty(), st.progress(0), st.empty()
     full_transcript = []
+    
     file_ext = ".wav" if source_name == "rekaman_mic.wav" else (os.path.splitext(source_name)[1] or ".wav")
     with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
         tmp_file.write(audio_to_process.getvalue())
@@ -404,13 +539,16 @@ if submit_btn and audio_to_process:
         chunk_len = 59 
         total_chunks = math.ceil(duration_sec / chunk_len)
         status_box.info(f"⏱️ Durasi: {duration_sec:.2f}s")
+        
         recognizer = sr.Recognizer()
         recognizer.energy_threshold, recognizer.dynamic_energy_threshold = 300, True 
 
         for i in range(total_chunks):
             start_time = i * chunk_len
             chunk_filename = f"temp_slice_{i}.wav"
-            subprocess.run([ffmpeg_cmd, "-y", "-i", input_path, "-ss", str(start_time), "-t", str(chunk_len), "-filter:a", "volume=3.0", "-ar", "16000", "-ac", "1", chunk_filename], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            cmd = [ffmpeg_cmd, "-y", "-i", input_path, "-ss", str(start_time), "-t", str(chunk_len), "-filter:a", "volume=3.0", "-ar", "16000", "-ac", "1", chunk_filename]
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
             try:
                 with sr.AudioFile(chunk_filename) as source:
                     audio_data = recognizer.record(source)
@@ -420,6 +558,7 @@ if submit_btn and audio_to_process:
             except: full_transcript.append("") 
             finally:
                 if os.path.exists(chunk_filename): os.remove(chunk_filename)
+            
             progress_bar.progress(int(((i + 1) / total_chunks) * 100))
             status_box.caption(f"Sedang memproses... ({int(((i + 1) / total_chunks) * 100)}%)")
 
@@ -428,18 +567,21 @@ if submit_btn and audio_to_process:
         st.session_state.transcript, st.session_state.filename = final_text, os.path.splitext(source_name)[0]
         st.session_state.ai_result = "" 
         st.download_button("💾 Download (.TXT)", final_text, f"{st.session_state.filename}.txt", "text/plain", use_container_width=True)
+
     except Exception as e: st.error(f"Error: {e}")
     finally:
         if os.path.exists(input_path): os.remove(input_path)
 
 # ==========================================
-# 5. TAB 3 (AKSES) & TAB 4 (EKSTRAK AI)
+# 5. TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
 # ==========================================
 with tab_auth:
     if not st.session_state.logged_in:
         st.markdown('<div class="login-box" style="text-align: center;"><h3>🔒 Portal Akses</h3><p>Silakan masuk atau buat akun baru untuk mulai menggunakan AI.</p></div>', unsafe_allow_html=True)
+        
         auth_tab1, auth_tab2 = st.tabs(["🔑 Masuk (Login)", "📝 Daftar Baru (Register)"])
         
+        # --- TAB LOGIN ---
         with auth_tab1:
             login_email = st.text_input("Email", key="log_email").strip()
             login_pwd = st.text_input("Password", type="password", key="log_pwd")
@@ -451,6 +593,8 @@ with tab_auth:
                     
                     if "idToken" in res:
                         id_token = res["idToken"]
+                        
+                        # CEK STATUS VERIFIKASI EMAIL DI FIREBASE
                         url_lookup = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={api_key}"
                         lookup_res = requests.post(url_lookup, json={"idToken": id_token}).json()
                         is_verified = lookup_res.get("users", [{}])[0].get("emailVerified", False)
@@ -458,10 +602,12 @@ with tab_auth:
                         user_data = get_user(login_email)
                         is_admin = user_data and user_data.get("role") == "admin"
                         
+                        # LOGIKA SATPAM: Tolak jika belum verifikasi (Kecuali Admin Utama)
                         if not is_verified and not is_admin:
                             st.error("❌ Akses Ditolak: Email Anda belum diverifikasi!")
-                            st.warning("📧 Silakan cek Inbox email Anda.")
+                            st.warning("📧 Silakan cek Inbox atau folder Spam di email Anda, lalu klik link verifikasi yang telah kami kirimkan saat Anda mendaftar.")
                         else:
+                            # Jika user lolos verifikasi, masukkan ke sistem!
                             if not user_data:
                                 save_user(login_email, login_pwd, "user")
                                 user_data = {"role": "user"}
@@ -470,36 +616,59 @@ with tab_auth:
                             st.session_state.current_user = login_email
                             st.session_state.user_role = user_data.get("role", "user")
                             
-                            # 🚀 SIMPAN SESI KE URL SAAT BERHASIL LOGIN
+                            # 🚀 SIMPAN SESI KE URL
                             st.query_params["user_session"] = login_email
                             st.query_params["user_role"] = user_data.get("role", "user")
                             
                             st.rerun()
-                    else: st.error("❌ Email atau Password salah!")
+                    else:
+                        err = res.get("error", {}).get("message", "Gagal")
+                        if err == "INVALID_LOGIN_CREDENTIALS": st.error("❌ Email atau Password salah!")
+                        else: st.error(f"❌ Akses Ditolak: {err}")
                         
+        # --- TAB REGISTER MANDIRI ---
         with auth_tab2:
             reg_email = st.text_input("Email Aktif", key="reg_email").strip()
             reg_pwd = st.text_input("Buat Password (Min. 6 Karakter)", type="password", key="reg_pwd")
-            if st.button("🎁 Daftar & Klaim Kuota", use_container_width=True):
-                if len(reg_pwd) < 6 or not reg_email: st.error("❌ Periksa kembali email dan password Anda!")
+            if st.button("🎁 Daftar & Klaim Kuota Gratis", use_container_width=True):
+                if len(reg_pwd) < 6:
+                    st.error("❌ Password terlalu pendek. Minimal 6 karakter!")
+                elif not reg_email:
+                    st.error("❌ Email tidak boleh kosong!")
                 else:
-                    with st.spinner("Mendaftarkan akun..."):
+                    with st.spinner("Mendaftarkan akun & mengirim email verifikasi..."):
                         api_key = st.secrets["firebase_web_api_key"]
                         url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={api_key}"
                         res = requests.post(url, json={"email": reg_email, "password": reg_pwd, "returnSecureToken": True}).json()
+                        
                         if "idToken" in res:
-                            requests.post(f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}", json={"requestType": "VERIFY_EMAIL", "idToken": res["idToken"]})
+                            id_token = res["idToken"]
+                            
+                            # PERINTAHKAN FIREBASE MENGIRIM EMAIL VERIFIKASI KE USER
+                            url_verify = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}"
+                            requests.post(url_verify, json={"requestType": "VERIFY_EMAIL", "idToken": id_token})
+                            
+                            # Simpan dompet Freemium di Firestore
                             save_user(reg_email, reg_pwd, "user")
-                            st.success("✅ Pembuatan akun berhasil! Cek email untuk verifikasi.")
-                        else: st.error("❌ Gagal mendaftar, email mungkin sudah ada.")
-    else: st.success(f"✅ Masuk sebagai: **{st.session_state.current_user}**")
+                            
+                            st.success("✅ Pembuatan akun berhasil!")
+                            st.info("🚨 **LANGKAH WAJIB:** Kami telah mengirimkan link verifikasi ke email Anda. Anda **TIDAK AKAN BISA LOGIN** sebelum mengeklik link tersebut. Jangan lupa cek folder Spam!")
+                        else:
+                            err = res.get("error", {}).get("message", "Gagal")
+                            if err == "EMAIL_EXISTS": st.error("❌ Email sudah terdaftar. Silakan langsung Login saja.")
+                            elif err == "INVALID_EMAIL": st.error("❌ Format email tidak valid. Gunakan email asli!")
+                            else: st.error(f"❌ Gagal mendaftar: {err}")
+    else:
+        st.success(f"✅ Anda saat ini masuk sebagai: **{st.session_state.current_user}**")
+        st.info("💡 Silakan beralih ke tab **✨ Ekstrak AI** atau **🎙️ Rekam Suara** untuk mulai menggunakan layanan.")
 
 with tab_ai:
-    if not st.session_state.logged_in: st.markdown('<div class="custom-info-box">🔒 Akses Terkunci! Silakan Login.</div>', unsafe_allow_html=True)
+    if not st.session_state.logged_in:
+        st.markdown('<div style="text-align: center; padding: 20px; background-color: #fdeced; border-radius: 10px; border: 1px solid #f5c6cb; margin-bottom: 20px;"><h3 style="color: #e74c3c; margin-top: 0;">🔒 Akses Terkunci!</h3><p style="color: #e74c3c; font-weight: 500;">Silakan masuk (login) atau daftar terlebih dahulu di tab <b>🔐 Akun</b> untuk menggunakan fitur AI.</p></div>', unsafe_allow_html=True)
     else:
         if not st.session_state.transcript:
-            st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia. Unggah file .txt:</div>', unsafe_allow_html=True)
-            uploaded_txt = st.file_uploader("Upload .txt", type=["txt"])
+            st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia.<br><strong>ATAU</strong> Unggah file .txt di bawah ini:</div>', unsafe_allow_html=True)
+            uploaded_txt = st.file_uploader("Upload File Transkrip (.txt)", type=["txt"])
             if uploaded_txt:
                 st.session_state.transcript, st.session_state.filename = uploaded_txt.read().decode("utf-8"), os.path.splitext(uploaded_txt.name)[0]
                 st.session_state.ai_result = "" 
@@ -511,91 +680,179 @@ with tab_ai:
                 st.session_state.transcript, st.session_state.ai_result = "", "" 
                 st.rerun()
                 
-            engine_choice = st.radio("Pilih Mesin AI:", ["Gemini", "Groq"])
+            st.write("")
+            st.markdown("#### ⚙️ Pilih Mesin AI")
+            engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini", "Groq"])
+            
+            # --- UI INDIKATOR TAGIHAN (TRANSPARANSI) ---
             durasi_teks = hitung_estimasi_menit(st.session_state.transcript)
-            st.info(f"📊 Beban Pemrosesan: **± {durasi_teks} Menit** pemakaian paket.")
+            jumlah_kata = len(st.session_state.transcript.split())
+            st.info(f"📊 **Analisis Teks:** Anda memiliki **{jumlah_kata:,} Kata**. (Sistem menghitung ini setara dengan **± {durasi_teks} Menit** pemakaian paket).")
+            st.write("")
             
             col1, col2 = st.columns(2)
             with col1: btn_notulen = st.button("📝 Buat Notulen", use_container_width=True)
             with col2: btn_laporan = st.button("📋 Buat Laporan", use_container_width=True)
 
             if btn_notulen or btn_laporan:
+                # 1. CEK BIAYA SEBELUM MEMANGGIL AI
                 bisa_bayar, pesan_bayar, p_kuota, p_saldo = cek_pembayaran(st.session_state.current_user, durasi_teks)
                 
-                if not bisa_bayar: st.error(f"❌ DITOLAK: {pesan_bayar}")
+                if not bisa_bayar:
+                    st.error(f"❌ TRANSAKSI DITOLAK: {pesan_bayar}")
+                    st.warning("💡 Silakan Top-Up Saldo atau Upgrade Paket Anda.")
                 else:
+                    # 2. LANJUT PROSES AI JIKA SALDO/KUOTA CUKUP
                     prompt_active = PROMPT_NOTULEN if btn_notulen else PROMPT_LAPORAN
-                    ai_result, active_keys, success_generation = None, get_active_keys(engine_choice), False
+                    ai_result = None
                     
-                    if not active_keys: st.error("❌ Sistem Sibuk: API Key habis limit.")
+                    active_keys = get_active_keys(engine_choice)
+                    
+                    if not active_keys:
+                        st.error(f"❌ Sistem Sibuk: Tidak ada API Key {engine_choice} yang aktif. Saldo/Kuota Anda AMAN (Tidak dipotong).")
                     else:
-                        with st.spinner(f"🚀 Memproses dengan {engine_choice}..."):
+                        success_generation = False
+                        
+                        with st.spinner(f"🚀 Memproses dengan {engine_choice} (Beban: {durasi_teks} Menit Kuota)..."):
                             for key_data in active_keys:
                                 try:
                                     if engine_choice == "Gemini":
                                         genai.configure(api_key=key_data["key"])
                                         model = genai.GenerativeModel('gemini-2.5-flash')
-                                        ai_result = model.generate_content(f"{prompt_active}\n\nTranskrip:\n{st.session_state.transcript}").text
+                                        response = model.generate_content(f"{prompt_active}\n\nBerikut teks transkripnya:\n{st.session_state.transcript}")
+                                        ai_result = response.text
+                                        
                                     elif engine_choice == "Groq":
                                         client = Groq(api_key=key_data["key"])
-                                        ai_result = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": prompt_active}, {"role": "user", "content": st.session_state.transcript}], temperature=0.4).choices[0].message.content
+                                        completion = client.chat.completions.create(
+                                            model="llama-3.3-70b-versatile",
+                                            messages=[{"role": "system", "content": prompt_active}, {"role": "user", "content": f"Berikut transkripnya:\n{st.session_state.transcript}"}],
+                                            temperature=0.4,
+                                        )
+                                        ai_result = completion.choices[0].message.content
+
                                     increment_api_usage(key_data["id"], key_data["used"])
                                     success_generation = True
                                     break 
-                                except: continue
+                                    
+                                except Exception as e:
+                                    st.toast(f"⚠️ Mencoba server cadangan...")
+                                    continue
                         
                         if success_generation and ai_result:
+                            # 3. POTONG SALDO KARENA HASIL BERHASIL DIBUAT!
                             eksekusi_pembayaran(st.session_state.current_user, p_kuota, p_saldo)
-                            st.success(f"✅ **Berhasil!** {pesan_bayar}")
+                            
+                            # MENGGANTI TOAST MENJADI KOTAK SUCCESS BESAR
+                            st.success(f"✅ **Proses Selesai!** {pesan_bayar}")
+                            
                             st.session_state.ai_result = ai_result
                             st.session_state.ai_prefix = "Notulen_" if btn_notulen else "Laporan_"
-                        else: st.error("❌ Server API gagal.")
+                        elif not success_generation:
+                            st.error("❌ Gagal memproses. Server API sedang gangguan. Saldo & Kuota Anda AMAN (Tidak dipotong).")
 
             if st.session_state.ai_result:
-                st.markdown("### ✨ Hasil Ekstrak AI")
+                st.markdown("---")
+                st.markdown("### ✨ Hasil Ekstrak AI (Super Mendetail)")
                 st.markdown(st.session_state.ai_result)
+                
                 prefix = st.session_state.ai_prefix
-                st.download_button("💾 Download (.TXT)", st.session_state.ai_result, f"{prefix}{st.session_state.filename}.txt", "text/plain", use_container_width=True)
-                st.download_button("📄 Download (.DOCX)", data=create_docx(st.session_state.ai_result, f"{prefix}{st.session_state.filename}"), file_name=f"{prefix}{st.session_state.filename}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                st.download_button("💾 Download Hasil AI (.TXT)", st.session_state.ai_result, f"{prefix}{st.session_state.filename}.txt", "text/plain", use_container_width=True)
+                docx_file = create_docx(st.session_state.ai_result, f"{prefix}{st.session_state.filename}")
+                st.download_button("📄 Download Hasil AI (.DOCX)", data=docx_file, file_name=f"{prefix}{st.session_state.filename}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
 
 # ==========================================
-# 6. TAB 5 (PANEL ADMIN)
+# 6. TAB 5 (PANEL ADMIN) - DATABASE API KEY & LIMIT
 # ==========================================
 if st.session_state.user_role == "admin":
     with tabs[4]:
-        st.markdown("#### ⚙️ Panel Admin")
-        with st.expander("➕ Tambah API Key"):
+        st.markdown("#### ⚙️ Pusat Kendali & Manajemen")
+        
+        # --- MANAJEMEN API KEY & LOAD BALANCER ---
+        st.markdown("#### 🏦 Bank API Key (Load Balancer)")
+        st.caption("Tambahkan API Key Anda. Sistem akan otomatis membagi beban dan melompat jika ada kunci yang error/habis limit.")
+        
+        with st.expander("➕ Tambah API Key Baru"):
             with st.form("form_add_key"):
-                c1, c2 = st.columns(2)
-                with c1:
+                col1, col2 = st.columns(2)
+                with col1:
                     new_provider = st.selectbox("Provider", ["Gemini", "Groq"])
-                    new_name = st.text_input("Nama Key")
-                with c2:
-                    new_limit = st.number_input("Batas Limit", min_value=1, value=200)
-                    new_key_str = st.text_input("API Key", type="password")
-                if st.form_submit_button("Simpan"):
-                    add_api_key(new_name, new_provider, new_key_str, new_limit); st.rerun()
+                    new_name = st.text_input("Nama Key (Misal: Akun Istri)")
+                with col2:
+                    new_limit = st.number_input("Batas Limit Kuota/Hari", min_value=1, value=200)
+                    new_key_str = st.text_input("Paste API Key", type="password")
+                
+                if st.form_submit_button("Simpan Kunci API"):
+                    if new_name and new_key_str:
+                        add_api_key(new_name, new_provider, new_key_str, new_limit)
+                        st.success("✅ API Key berhasil ditambahkan ke Bank!")
+                        st.rerun()
+                    else: st.error("Isi Nama dan API Key!")
 
-        st.markdown("#### 📋 API Keys")
-        for doc in db.collection('api_keys').stream():
+        st.markdown("#### 📋 Daftar API Key & Sisa Kuota")
+        keys_ref = db.collection('api_keys').stream()
+        
+        for doc in keys_ref:
             k = doc.to_dict()
-            st.markdown(f"**{k['name']}** ({k['provider']}) - Terpakai: {k['used']}/{k['limit']} - Status: {'AKTIF' if k['is_active'] else 'MATI'}")
-            ca1, ca2 = st.columns(2)
-            with ca1:
-                if st.button("Toggle Status", key=f"tog_{doc.id}", use_container_width=True): toggle_api_key(doc.id, k['is_active']); st.rerun()
-            with ca2:
-                if st.button("Hapus", key=f"del_{doc.id}", use_container_width=True): delete_api_key(doc.id); st.rerun()
-            st.write("---")
+            sisa_kuota = k['limit'] - k['used']
+            status_text = "🟢 AKTIF" if k['is_active'] else "🔴 NONAKTIF"
+            status_color = "#e6f3ff" if k['is_active'] else "#fdeced"
             
+            st.markdown(f"""
+            <div class="api-card" style="background-color: {status_color}; color: #111111 !important;">
+                <b style="color: #111111 !important;">{k['name']}</b> ({k['provider']}) <br>
+                Sisa Limit: <b style="color: #111111 !important;">{sisa_kuota}</b> / <span style="color: #111111 !important;">{k['limit']}</span> &nbsp;|&nbsp; Terpakai: <span style="color: #111111 !important;">{k['used']}</span> <br>
+                Status: <span style="color: #111111 !important; font-weight: bold;">{status_text}</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # FIX: Tombol dibuat seragam dan sejajar (tanpa HTML tambahan)
+            ca1, ca2 = st.columns([1, 1])
+            with ca1:
+                btn_label = "🔴 Matikan" if k['is_active'] else "🟢 Hidupkan"
+                if st.button(f"{btn_label} '{k['name']}'", key=f"tog_{doc.id}", use_container_width=True):
+                    toggle_api_key(doc.id, k['is_active'])
+                    st.rerun()
+            with ca2:
+                if st.button(f"🗑️ Hapus '{k['name']}'", key=f"del_{doc.id}", use_container_width=True):
+                    delete_api_key(doc.id)
+                    st.rerun()
+            st.write("---")
+        
+        # --- MANAJEMEN USER ---
         st.markdown("#### 👥 Manajemen User")
+        users_ref = db.collection('users').stream()
+        st.write("Daftar Pengguna Saat Ini:")
+        for doc in users_ref:
+            u_data = doc.to_dict()
+            st.markdown(f"- **{doc.id}** (Role: {u_data['role']})")
+            
         with st.form("user_form"):
-            add_email = st.text_input("Username")
-            add_pwd = st.text_input("Password", type="password")
+            add_email = st.text_input("Username Baru/Edit")
+            add_pwd = st.text_input("Password Baru", type="password")
             add_role = st.selectbox("Role", ["user", "admin"])
+            
+            # FIX: Tombol dibuat seragam dan sejajar (tanpa HTML tambahan)
             c_add, c_del = st.columns(2)
             with c_add:
-                if st.form_submit_button("Simpan User", use_container_width=True): save_user(add_email, add_pwd, add_role); st.rerun()
+                if st.form_submit_button("Simpan User", use_container_width=True):
+                    if add_email and add_pwd:
+                        save_user(add_email, add_pwd, add_role)
+                        st.success(f"✅ User {add_email} disimpan ke Firebase!")
+                        st.rerun()
+                    else: st.error("Isi Username dan Password!")
             with c_del:
-                if st.form_submit_button("Hapus User", use_container_width=True): delete_user(add_email); st.rerun()
+                if st.form_submit_button("Hapus User", use_container_width=True):
+                    if add_email:
+                        if get_user(add_email):
+                            if add_email == "admin": st.error("Dilarang menghapus Admin Utama!")
+                            else:
+                                delete_user(add_email)
+                                st.warning(f"🗑️ User {add_email} dihapus dari Firebase!")
+                                st.rerun()
+                        else: st.error("User tidak ditemukan.")
+                    else:
+                        st.error("Isi Username yang ingin dihapus!")
 
-st.markdown("<br><hr><div style='text-align: center; font-size: 13px; color: #888;'>Powered by <a href='https://espeje.com'>espeje.com</a></div>", unsafe_allow_html=True)
+st.markdown("<br><br><hr>", unsafe_allow_html=True) 
+st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
