@@ -14,6 +14,7 @@ from docx import Document
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+from datetime import datetime
 
 # ==========================================
 # 1. SETUP & CONFIG
@@ -36,8 +37,6 @@ def get_user(username):
     if not username: return None
     doc = db.collection('users').document(username).get()
     return doc.to_dict() if doc.exists else None
-
-from datetime import datetime
 
 def save_user(username, password, role):
     """Menyimpan user baru beserta dompetnya, atau mengupdate user lama"""
@@ -64,8 +63,6 @@ def delete_user(username):
     db.collection('users').document(username).delete()
     
 # --- FUNGSI KASIR & SUBSIDI SILANG ---
-import math
-
 def hitung_estimasi_menit(teks):
     """Estimasi durasi berdasarkan jumlah kata (Rata-rata bicara: 130 kata/menit)"""
     if not teks: return 0
@@ -391,7 +388,7 @@ if submit_btn and audio_to_process:
         if os.path.exists(input_path): os.remove(input_path)
 
 # ==========================================
-# 5. TAB 3 (EKSTRAK AI - DENGAN LOAD BALANCER)
+# 5. TAB 3 (EKSTRAK AI - DENGAN LOAD BALANCER & KASIR)
 # ==========================================
 with tab3:
     if not st.session_state.logged_in:
@@ -429,7 +426,7 @@ with tab3:
             with col1: btn_notulen = st.button("📝 Buat Notulen", use_container_width=True)
             with col2: btn_laporan = st.button("📋 Buat Laporan", use_container_width=True)
 
-if btn_notulen or btn_laporan:
+            if btn_notulen or btn_laporan:
                 # 1. CEK BIAYA SEBELUM MEMANGGIL AI
                 durasi_teks = hitung_estimasi_menit(st.session_state.transcript)
                 bisa_bayar, pesan_bayar, p_kuota, p_saldo = cek_pembayaran(st.session_state.current_user, durasi_teks)
@@ -484,52 +481,6 @@ if btn_notulen or btn_laporan:
                             st.session_state.ai_prefix = "Notulen_" if btn_notulen else "Laporan_"
                         elif not success_generation:
                             st.error("❌ Gagal memproses. Server API sedang gangguan. Saldo & Kuota Anda AMAN (Tidak dipotong).")
-
-                prompt_active = PROMPT_NOTULEN if btn_notulen else PROMPT_LAPORAN
-                ai_result = None
-                
-                # MENGAMBIL SEMUA API KEY YANG AKTIF & BELUM LIMIT
-                active_keys = get_active_keys(engine_choice)
-                
-                if not active_keys:
-                    st.error(f"❌ Tidak ada API Key {engine_choice} yang aktif atau semua Key sudah melebihi batas limit. Hubungi Admin!")
-                else:
-                    success_generation = False
-                    
-                    with st.spinner(f"🚀 Memproses dengan {engine_choice} (Load Balancer Aktif)..."):
-                        # LOOP LOAD BALANCER: COBA SATU PER SATU
-                        for key_data in active_keys:
-                            try:
-                                if engine_choice == "Gemini":
-                                    genai.configure(api_key=key_data["key"])
-                                    model = genai.GenerativeModel('gemini-2.5-flash')
-                                    response = model.generate_content(f"{prompt_active}\n\nBerikut teks transkripnya:\n{st.session_state.transcript}")
-                                    ai_result = response.text
-                                    
-                                elif engine_choice == "Groq":
-                                    client = Groq(api_key=key_data["key"])
-                                    completion = client.chat.completions.create(
-                                        model="llama-3.3-70b-versatile",
-                                        messages=[{"role": "system", "content": prompt_active}, {"role": "user", "content": f"Berikut teks transkripnya:\n{st.session_state.transcript}"}],
-                                        temperature=0.4,
-                                    )
-                                    ai_result = completion.choices[0].message.content
-
-                                # JIKA BERHASIL: Catat pemakaian, hentikan loop
-                                increment_api_usage(key_data["id"], key_data["used"])
-                                success_generation = True
-                                break 
-                                
-                            except Exception as e:
-                                # JIKA GAGAL: Lanjut ke kunci berikutnya diam-diam
-                                st.toast(f"⚠️ Kunci '{key_data['name']}' sibuk. Mencoba kunci cadangan...")
-                                continue
-                    
-                    if success_generation and ai_result:
-                        st.session_state.ai_result = ai_result
-                        st.session_state.ai_prefix = "Notulen_" if btn_notulen else "Laporan_"
-                    elif not success_generation:
-                        st.error("❌ Gagal memproses. Seluruh API Key cadangan sedang mengalami gangguan server. Silakan coba lagi nanti.")
 
             if st.session_state.ai_result:
                 st.markdown("---")
@@ -636,4 +587,3 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
-
