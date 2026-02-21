@@ -400,7 +400,7 @@ if submit_btn and audio_to_process:
 # 5. TAB 3 (EKSTRAK AI - DENGAN LOAD BALANCER & KASIR)
 # ==========================================
 with tab3:
-if not st.session_state.logged_in:
+    if not st.session_state.logged_in:
         st.markdown('<div class="login-box" style="text-align: center;"><h3>🔒 Portal Akses</h3><p>Silakan masuk atau buat akun baru untuk mulai menggunakan AI.</p></div>', unsafe_allow_html=True)
         
         auth_tab1, auth_tab2 = st.tabs(["🔑 Masuk (Login)", "📝 Daftar Baru (Register)"])
