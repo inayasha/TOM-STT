@@ -5,7 +5,7 @@ import subprocess
 import math
 import tempfile
 import io
-import requests    # <--- TAMBAHKAN BARIS INI
+import requests
 from shutil import which
 
 # Import Library AI, DOCX, & Firebase
@@ -145,10 +145,6 @@ def get_active_keys(provider):
         if data['used'] < data['limit']:
             valid_keys.append(data)
     return valid_keys
-
-# Bikin Default Admin jika belum ada di Firebase
-if not get_user("admin"):
-    save_user("admin", "payP@ssD97i0pal", "admin")
 
 # Inisialisasi Memori (Session State)
 if 'transcript' not in st.session_state: st.session_state.transcript = ""
