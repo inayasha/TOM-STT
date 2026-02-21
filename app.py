@@ -305,7 +305,7 @@ with st.sidebar:
             st.session_state.ai_result = ""
             st.rerun()
     else:
-        st.caption("Silakan login di Tab 'Ekstrak AI'.")
+        st.caption("Silakan login di Tab '🔐 Akses Akun'.")
 
 # ==========================================
 # 4. MAIN LAYOUT & TABS
@@ -313,23 +313,28 @@ with st.sidebar:
 st.markdown('<div class="main-header">🎙️ TOM\'<span style="color: #e74c3c;">STT</span></div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Speech-to-Text | Konversi Audio ke Teks</div>', unsafe_allow_html=True)
 
-tab_titles = ["📂 Upload File", "🎙️ Rekam Suara", "✨ Ekstrak AI"]
+tab_titles = ["📂 Upload File", "🎙️ Rekam Suara", "🔐 Akses Akun", "✨ Ekstrak AI"]
 if st.session_state.user_role == "admin": tab_titles.append("⚙️ Panel Admin")
 tabs = st.tabs(tab_titles)
-tab1, tab2, tab3 = tabs[0], tabs[1], tabs[2]
+tab_upload, tab_rekam, tab_auth, tab_ai = tabs[0], tabs[1], tabs[2], tabs[3]
 
 audio_to_process, source_name = None, "audio"
 
-# TAB 1 & 2: STT ENGINE
-with tab1:
+# TAB 1: UPLOAD FILE (Bebas Akses)
+with tab_upload:
     uploaded_file = st.file_uploader("Pilih File Audio", type=["aac", "mp3", "wav", "m4a", "opus", "mp4", "3gp", "amr", "ogg", "flac", "wma"])
     if uploaded_file: audio_to_process, source_name = uploaded_file, uploaded_file.name
 
-with tab2:
-    audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
-    if audio_mic: audio_to_process, source_name = audio_mic, "rekaman_mic.wav"
+# TAB 2: REKAM SUARA (Terkunci)
+with tab_rekam:
+    if not st.session_state.logged_in:
+        st.error("🔒 Akses Terkunci!")
+        st.warning("Silakan masuk (login) atau daftar terlebih dahulu di tab **🔐 Akses Akun** untuk menggunakan fitur rekam suara langsung.")
+    else:
+        audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
+        if audio_mic: audio_to_process, source_name = audio_mic, "rekaman_mic.wav"
 
-if tab1 or tab2:
+if tab_upload or tab_rekam:
     st.write("") 
     c1, c2, c3 = st.columns([1, 4, 1]) 
     with c2:
@@ -393,15 +398,15 @@ if submit_btn and audio_to_process:
         if os.path.exists(input_path): os.remove(input_path)
 
 # ==========================================
-# 5. TAB 3 (EKSTRAK AI - DENGAN LOAD BALANCER & KASIR)
+# 5. TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
 # ==========================================
-with tab3:
+with tab_auth:
     if not st.session_state.logged_in:
         st.markdown('<div class="login-box" style="text-align: center;"><h3>🔒 Portal Akses</h3><p>Silakan masuk atau buat akun baru untuk mulai menggunakan AI.</p></div>', unsafe_allow_html=True)
         
         auth_tab1, auth_tab2 = st.tabs(["🔑 Masuk (Login)", "📝 Daftar Baru (Register)"])
         
-# --- TAB LOGIN ---
+        # --- TAB LOGIN ---
         with auth_tab1:
             login_email = st.text_input("Email", key="log_email").strip()
             login_pwd = st.text_input("Password", type="password", key="log_pwd")
@@ -473,6 +478,14 @@ with tab3:
                             if err == "EMAIL_EXISTS": st.error("❌ Email sudah terdaftar. Silakan langsung Login saja.")
                             elif err == "INVALID_EMAIL": st.error("❌ Format email tidak valid. Gunakan email asli!")
                             else: st.error(f"❌ Gagal mendaftar: {err}")
+    else:
+        st.success(f"✅ Anda saat ini masuk sebagai: **{st.session_state.current_user}**")
+        st.info("💡 Silakan beralih ke tab **✨ Ekstrak AI** atau **🎙️ Rekam Suara** untuk mulai menggunakan layanan.")
+
+with tab_ai:
+    if not st.session_state.logged_in:
+        st.error("🔒 Akses Terkunci!")
+        st.warning("Silakan masuk (login) atau daftar terlebih dahulu di tab **🔐 Akses Akun** untuk menggunakan fitur AI.")
     else:
         if not st.session_state.transcript:
             st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia.<br><strong>ATAU</strong> Unggah file .txt di bawah ini:</div>', unsafe_allow_html=True)
@@ -570,10 +583,10 @@ with tab3:
                 st.download_button("📄 Download Hasil AI (.DOCX)", data=docx_file, file_name=f"{prefix}{st.session_state.filename}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
 
 # ==========================================
-# 6. TAB 4 (PANEL ADMIN) - DATABASE API KEY & LIMIT
+# 6. TAB 5 (PANEL ADMIN) - DATABASE API KEY & LIMIT
 # ==========================================
 if st.session_state.user_role == "admin":
-    with tabs[3]:
+    with tabs[4]:
         st.markdown("#### ⚙️ Pusat Kendali & Manajemen")
         
         # --- MANAJEMEN API KEY & LOAD BALANCER ---
