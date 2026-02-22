@@ -789,7 +789,32 @@ with tab_ai:
             # --- UI INDIKATOR TAGIHAN (TRANSPARANSI) ---
             durasi_teks = hitung_estimasi_menit(st.session_state.transcript)
             jumlah_kata = len(st.session_state.transcript.split())
-            st.info(f"📊 **Analisis Teks:** Anda memiliki **{jumlah_kata:,} Kata**. (Sistem menghitung ini setara dengan **± {durasi_teks} Menit** pemakaian paket).")
+            
+            # AMBIL DATA USER UNTUK CEK KONDISI TAGIHAN
+            user_info = get_user(st.session_state.current_user)
+            info_text = f"📊 **Analisis Teks:** Anda memiliki **{jumlah_kata:,} Kata**. (Setara dengan **± {durasi_teks} Menit** pemakaian sistem)."
+            
+            if user_info:
+                batas = user_info.get("batas_durasi", 10)
+                kuota = user_info.get("kuota", 0)
+                role = user_info.get("role", "user")
+                
+                if role == "admin":
+                    info_text += "\n\n👑 **Status:** Anda adalah Admin. Bebas kuota dan tanpa batas durasi."
+                elif kuota > 0:
+                    if durasi_teks > batas:
+                        kelebihan = durasi_teks - batas
+                        biaya = kelebihan * 350
+                        biaya_rp = f"Rp {biaya:,}".replace(",", ".")
+                        info_text += f"\n\n⚠️ **Subsidi Silang:** Durasi teks Anda melebihi kapasitas paket ({batas} Menit). Kelebihan **{kelebihan} Menit** akan memotong Saldo Utama Anda sebesar **{biaya_rp}**."
+                    else:
+                        info_text += f"\n\n✅ **Status Aman:** Durasi teks masih di bawah batas maksimal ({batas} Menit / Kuota). Tidak ada pemotongan saldo."
+                else:
+                    biaya_total = durasi_teks * 350
+                    biaya_rp = f"Rp {biaya_total:,}".replace(",", ".")
+                    info_text += f"\n\n⚠️ **Saldo Darurat:** Kuota Anda habis (0x). Seluruh pemrosesan (**{durasi_teks} Menit**) akan langsung memotong Saldo Utama Anda sebesar **{biaya_rp}**."
+                    
+            st.info(info_text)
             st.write("")
             
             col1, col2 = st.columns(2)
