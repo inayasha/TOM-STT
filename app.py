@@ -284,6 +284,28 @@ st.markdown("""
         background-color: #333333 !important; 
         transform: translateY(-2px) !important;
     }
+    /* Fix label Role di Form Admin agar rata kiri */
+    div[data-testid="stForm"] div[data-testid="stSelectbox"] label { width: auto !important; text-align: left !important; display: block !important; margin-bottom: 8px !important; }
+    
+    /* Tombol Hapus bergaya teks link merah (Tertiary) */
+    div.stButton > button[kind="tertiary"] {
+        background-color: transparent !important;
+        color: #e74c3c !important;
+        border: none !important;
+        padding: 0 !important;
+        font-weight: 700 !important;
+        box-shadow: none !important;
+        width: auto !important;
+        transform: none !important;
+        justify-content: flex-start !important;
+    }
+    div.stButton > button[kind="tertiary"] p { color: #e74c3c !important; font-size: 15px !important; }
+    div.stButton > button[kind="tertiary"]:hover {
+        background-color: transparent !important;
+        color: #c0392b !important;
+        text-decoration: underline !important;
+    }
+    div.stButton > button[kind="tertiary"]:hover p { color: #c0392b !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -407,8 +429,8 @@ def show_pricing_dialog():
             * ⏱️ **Kapasitas:** Maks. 1 Jam / File
             * 📅 **Masa Aktif:** 14 Hari
             * 🎁 **Bonus Saldo:** Rp 3.000
-            * &nbsp;
-            """)
+            <div style="height: 30px;"></div>
+            """, unsafe_allow_html=True)
             if st.button("🛒 Beli Starter - Rp 51.000", use_container_width=True, key="buy_starter"):
                 with st.spinner("Mencetak tagihan..."):
                     link_bayar = buat_tagihan_midtrans("Starter", 51000, user_email)
@@ -423,8 +445,8 @@ def show_pricing_dialog():
             * ⏱️ **Kapasitas:** Maks. 1,5 Jam / File
             * 📅 **Masa Aktif:** 30 Hari
             * 🎁 **Bonus Saldo:** Rp 10.000
-            * &nbsp;
-            """)
+            <div style="height: 30px;"></div>
+            """, unsafe_allow_html=True)
             if st.button("🛒 Beli Pro - Rp 102.000", use_container_width=True, key="buy_pro"):
                 with st.spinner("Mencetak tagihan..."):
                     link_bayar = buat_tagihan_midtrans("Pro", 102000, user_email)
@@ -960,6 +982,21 @@ if st.session_state.user_role == "admin":
         # --- MANAJEMEN USER ---
         st.markdown("#### 👥 Manajemen User")
         
+        # POP-UP KONFIRMASI HAPUS
+        @st.dialog("⚠️ Konfirmasi Hapus Akun")
+        def dialog_hapus_user(user_id):
+            st.warning(f"Anda yakin ingin menghapus pengguna **{user_id}** secara permanen?")
+            st.info("Tindakan ini akan menghapus dompet di Firestore dan akses login di Firebase Auth. Data tidak dapat dipulihkan.")
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("❌ Batal", use_container_width=True):
+                    st.rerun()
+            with c2:
+                if st.button("🚨 Ya, Hapus!", use_container_width=True, key=f"confirm_{user_id}"):
+                    delete_user(user_id)
+                    st.toast(f"✅ User {user_id} berhasil dihapus permanen!")
+                    st.rerun()
+        
         # 1. Mengambil data dari Firestore
         users_ref = db.collection('users').stream()
         all_users = []
@@ -971,13 +1008,12 @@ if st.session_state.user_role == "admin":
         # 2. Menyortir data (Terbaru di atas)
         def sort_by_date(user_dict):
             t = user_dict.get('created_at')
-            return t.timestamp() if t else 0 # Jika data lama tidak ada tanggal, taruh paling bawah
-            
+            return t.timestamp() if t else 0
         all_users.sort(key=sort_by_date, reverse=True)
 
         st.write("Daftar Pengguna Saat Ini:")
         
-        # 3. Menampilkan List dengan Tombol Hapus Inline (Sejajar)
+        # 3. Menampilkan List dengan Teks "Hapus User" Sejajar
         for u_data in all_users:
             user_id = u_data['id']
             role = u_data.get('role', 'user')
@@ -985,17 +1021,18 @@ if st.session_state.user_role == "admin":
             
             tgl_daftar = created_at.strftime("%d %b %Y") if created_at else "Data lama"
             
-            # Membagi rasio kolom: Kiri untuk info (80%), Kanan untuk tombol (20%)
+            # Membagi kolom agar tombol nempel dengan teks
             col_info, col_btn = st.columns([4, 1])
             with col_info:
-                st.markdown(f"👤 **{user_id}** | Role: `{role}` | 📅 **{tgl_daftar}**")
+                st.markdown(f"👤 **{user_id}** &nbsp;|&nbsp; Role: `{role}` &nbsp;|&nbsp; 📅 {tgl_daftar}")
             with col_btn:
-                # Mengunci tombol hapus jika itu adalah akun Admin yang sedang login (Mencegah bunuh diri sistem)
                 is_self = (user_id == st.session_state.current_user)
-                if st.button("🗑️ Hapus", key=f"del_usr_{user_id}", disabled=is_self, use_container_width=True):
-                    delete_user(user_id)
-                    st.toast(f"✅ User {user_id} berhasil dihapus permanen!")
-                    st.rerun()
+                if not is_self:
+                    # Menggunakan type="tertiary" agar disulap oleh CSS menjadi teks link merah
+                    if st.button("Hapus User", key=f"del_usr_{user_id}", type="tertiary"):
+                        dialog_hapus_user(user_id)
+                else:
+                    st.caption("*(Admin Aktif)*")
                     
         st.markdown("---")
         
