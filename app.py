@@ -546,7 +546,7 @@ with st.sidebar:
                 # UI Dashboard Mini Baru + TANGGAL
                 st.markdown(f"📦 **Paket Aktif:** {paket}")
                 st.markdown(f"📄 **Sisa Kuota:** {kuota}x")
-                st.markdown(f"⏱️ **Kapasitas:** Maks. {batas} Menit")
+                st.markdown(f"⏱️ **Kapasitas:** Maks. {batas} Menit per Kuota")
                 st.markdown(status_waktu) # <--- Tanggal Expired Muncul di Sini
                 st.markdown("---")
                 
