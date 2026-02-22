@@ -503,7 +503,7 @@ with st.sidebar:
         # --- MENARIK DATA DOMPET DARI FIREBASE ---
         user_data = get_user(st.session_state.current_user)
         
-if user_data:
+        if user_data:
             st.markdown("---")
             st.markdown("### 💼 Dompet Anda")
             
