@@ -429,8 +429,8 @@ def show_pricing_dialog():
             * ⏱️ **Kapasitas:** Maks. 1 Jam / File
             * 📅 **Masa Aktif:** 14 Hari
             * 🎁 **Bonus Saldo:** Rp 3.000
-            <div style="height: 30px;"></div>
-            """, unsafe_allow_html=True)
+            * &nbsp;
+            """)
             if st.button("🛒 Beli Starter - Rp 51.000", use_container_width=True, key="buy_starter"):
                 with st.spinner("Mencetak tagihan..."):
                     link_bayar = buat_tagihan_midtrans("Starter", 51000, user_email)
@@ -445,8 +445,8 @@ def show_pricing_dialog():
             * ⏱️ **Kapasitas:** Maks. 1,5 Jam / File
             * 📅 **Masa Aktif:** 30 Hari
             * 🎁 **Bonus Saldo:** Rp 10.000
-            <div style="height: 30px;"></div>
-            """, unsafe_allow_html=True)
+            * &nbsp;
+            """)
             if st.button("🛒 Beli Pro - Rp 102.000", use_container_width=True, key="buy_pro"):
                 with st.spinner("Mencetak tagihan..."):
                     link_bayar = buat_tagihan_midtrans("Pro", 102000, user_email)
