@@ -417,7 +417,7 @@ def show_pricing_dialog():
             """)
             if st.button("💳 Bayar Rp 10.200", use_container_width=True, key="topup_10"):
                 with st.spinner("Mencetak tagihan..."):
-                    link_bayar = buat_tagihan_midtrans("Topup10k", 102000, user_email) # Pastikan di worker harganya disesuaikan nanti
+                    link_bayar = buat_tagihan_midtrans("Topup10k", 102000, user_email) 
                     if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
             
             st.markdown("---")
@@ -975,5 +975,3 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
-
-
