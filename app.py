@@ -459,7 +459,7 @@ def show_pricing_dialog():
             """)
             if st.button("💳 Bayar Rp 10.200", use_container_width=True, key="topup_10"):
                 with st.spinner("Mencetak tagihan..."):
-                    link_bayar = buat_tagihan_midtrans("Topup10k", 102000, user_email) 
+                    link_bayar = buat_tagihan_midtrans("Topup10k", 10200, user_email) 
                     if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
             
             st.markdown("---")
@@ -470,7 +470,7 @@ def show_pricing_dialog():
             """)
             if st.button("💳 Bayar Rp 20.400", use_container_width=True, key="topup_20"):
                 with st.spinner("Mencetak tagihan..."):
-                    link_bayar = buat_tagihan_midtrans("Topup20k", 204000, user_email)
+                    link_bayar = buat_tagihan_midtrans("Topup20k", 20400, user_email)
                     if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
 
         with col_s2:
@@ -480,7 +480,7 @@ def show_pricing_dialog():
             """)
             if st.button("💳 Bayar Rp 30.600", use_container_width=True, key="topup_30"):
                 with st.spinner("Mencetak tagihan..."):
-                    link_bayar = buat_tagihan_midtrans("Topup30k", 306000, user_email)
+                    link_bayar = buat_tagihan_midtrans("Topup30k", 30600, user_email)
                     if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
             
             st.markdown("---")
@@ -491,7 +491,7 @@ def show_pricing_dialog():
             """)
             if st.button("💳 Bayar Rp 40.800", use_container_width=True, key="topup_40"):
                 with st.spinner("Mencetak tagihan..."):
-                    link_bayar = buat_tagihan_midtrans("Topup40k", 408000, user_email)
+                    link_bayar = buat_tagihan_midtrans("Topup40k", 40800, user_email)
                     if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
                     
 with st.sidebar:
