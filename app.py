@@ -765,11 +765,15 @@ with tab_auth:
         with auth_tab2:
             reg_email = st.text_input("Email Aktif", key="reg_email").strip()
             reg_pwd = st.text_input("Buat Password (Min. 6 Karakter)", type="password", key="reg_pwd")
+            reg_pwd_confirm = st.text_input("Ulangi Password", type="password", key="reg_pwd_confirm")
+            
             if st.button("🎁 Daftar & Klaim Kuota Gratis", use_container_width=True):
-                if len(reg_pwd) < 6:
-                    st.error("❌ Password terlalu pendek. Minimal 6 karakter!")
-                elif not reg_email:
+                if not reg_email:
                     st.error("❌ Email tidak boleh kosong!")
+                elif len(reg_pwd) < 6:
+                    st.error("❌ Password terlalu pendek. Minimal 6 karakter!")
+                elif reg_pwd != reg_pwd_confirm:
+                    st.error("❌ Konfirmasi password tidak cocok! Silakan periksa kembali ketikan Anda.")
                 else:
                     with st.spinner("Mendaftarkan akun & mengirim email verifikasi..."):
                         api_key = st.secrets["firebase_web_api_key"]
