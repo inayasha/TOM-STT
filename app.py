@@ -64,6 +64,47 @@ def save_user(username, password, role):
 def delete_user(username):
     db.collection('users').document(username).delete()
     
+def check_expired(username, user_data):
+    """SATPAM: Mengecek apakah paket user sudah kedaluwarsa. Jika ya, RESET semua."""
+    if not user_data or user_data.get("role") == "admin": 
+        return user_data # Lewati jika tidak ada data atau jika dia Admin
+    
+    exp_val = user_data.get("tanggal_expired")
+    
+    # Jika ada tanggal expired dan bukan 'Selamanya'
+    if exp_val and exp_val != "Selamanya":
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc)
+        
+        # Konversi jika format string (untuk berjaga-jaga), jika sudah datetime biarkan
+        try:
+            if isinstance(exp_val, str):
+                exp_date = datetime.datetime.fromisoformat(exp_val.replace("Z", "+00:00"))
+            else:
+                exp_date = exp_val # Format bawaan Firebase Admin
+                
+            # EKSEKUSI HUKUMAN JIKA LEWAT WAKTU
+            if now > exp_date:
+                st.toast("⚠️ Masa aktif paket habis. Kuota dan Saldo di-reset.", icon="🚨")
+                user_ref = db.collection('users').document(username)
+                user_ref.update({
+                    "paket_aktif": "Freemium",
+                    "kuota": 0,
+                    "saldo": 0,
+                    "batas_durasi": 10,
+                    "tanggal_expired": firestore.DELETE_FIELD
+                })
+                # Update data sementara agar UI langsung berubah di layar user
+                user_data["paket_aktif"] = "Freemium"
+                user_data["kuota"] = 0
+                user_data["saldo"] = 0
+                user_data["batas_durasi"] = 10
+                user_data.pop("tanggal_expired", None)
+        except Exception as e:
+            pass # Abaikan jika gagal parsing agar tidak error di layar
+            
+    return user_data
+    
 # --- FUNGSI KASIR & SUBSIDI SILANG ---
 def hitung_estimasi_menit(teks):
     """Estimasi durasi berdasarkan jumlah kata (Rata-rata bicara: 130 kata/menit)"""
@@ -271,7 +312,7 @@ Format:
 3. Keputusan: (Keputusan akhir dan alasannya).
 4. Tindak Lanjut: (Langkah teknis dan penanggung jawab)."""
 
-PROMPT_LAPORAN = """Kamu adalah ASN tingkat manajerial. Tugasmu menyusun ISI LAPORAN Memorandum dari transkrip.
+PROMPT_LAPORAN = """Kamu adalah ASN tingkat manajerial. Tugasmu menyusun ISI LAPORAN dari transkrip.
 INSTRUKSI MUTLAK:
 - TULIS SANGAT PANJANG, MENDETAIL, DAN KOMPREHENSIF.
 - JANGAN MERINGKAS. Jabarkan setiap topik yang dibahas, masalah yang ditemukan, dan solusi secara ekstensif.
@@ -281,7 +322,7 @@ Format:
 2. Uraian Hasil Pelaksanaan: (Penjabaran ekstensif seluruh dinamika, fakta, dan informasi dari transkrip).
 3. Kesimpulan & Analisis: (Analisis mendalam atas hasil pembahasan).
 4. Rekomendasi/Tindak Lanjut: (Saran konkret ke depan).
-5. Penutup: ('Demikian kami laporkan, mohon arahan Bapak Pimpinan lebih lanjut. Terima kasih.')."""
+5. Penutup: ('Demikian kami laporkan, mohon arahan Bapak/Ibu Pimpinan lebih lanjut. Terima kasih.')."""
 
 # ==========================================
 # 3. SIDEBAR & ETALASE HARGA (MIDTRANS SNAP)
@@ -337,9 +378,10 @@ def show_pricing_dialog():
     
     st.info("""
     💡 **Informasi Sistem & Ketentuan:**
-    * 🎟️ **Sistem Tiket:** 1 Kuota = 1x Pembuatan Dokumen.
-    * ⏱️ **Batas Maksimal:** Durasi per kuota adalah batas atas (Maksimal). Sisa menit dari audio yang lebih pendek *tidak* dapat diakumulasi.
-    * 💳 **Saldo Tambahan:** Jika durasi rekaman Anda melebihi batas maksimal, sistem otomatis menggunakan Saldo Utama Anda dengan tarif **Rp 350 / Menit**.
+    * 🎟️ **Sistem Tiket:** 1 Kuota = 1x Pembuatan Dokumen (Laporan/Notulen).
+    * ⚖️ **Tagihan Adil (Deteksi Jeda):** Durasi dihitung berdasarkan **jumlah kata aktual** yang diucapkan, BUKAN total waktu rekaman mentah. Waktu hening & jeda tidak memotong kuota Anda.
+    * 📅 **Akumulasi Masa Aktif:** Pembelian paket baru akan otomatis menambah sisa masa aktif Anda sebelumnya *(Maksimal akumulasi 365 Hari / 1 Tahun)*.
+    * 💳 **Saldo Tambahan:** Jika rekaman melebihi batas maksimal, sistem menggunakan Saldo Utama dengan tarif **Rp 350 / Menit**.
     """)
     
     tab_paket, tab_saldo = st.tabs(["📦 BELI PAKET KUOTA", "💳 TOP-UP SALDO"])
@@ -461,11 +503,13 @@ with st.sidebar:
         # --- MENARIK DATA DOMPET DARI FIREBASE ---
         user_data = get_user(st.session_state.current_user)
         
-        if user_data:
+if user_data:
             st.markdown("---")
             st.markdown("### 💼 Dompet Anda")
             
-            # CEK APAKAH DIA ADMIN ATAU USER BIASA
+            # 🚨 PANGGIL SATPAM: Cek expired sebelum dirender ke layar
+            user_data = check_expired(st.session_state.current_user, user_data)
+            
             if user_data.get("role") == "admin":
                 st.info("👑 Paket: **Super Admin (VIP)**")
                 col_k, col_b = st.columns(2)
@@ -473,34 +517,49 @@ with st.sidebar:
                 col_b.metric("Batas Paket", "∞")
                 st.metric("💳 Saldo Darurat", "∞")
             else:
-                # TAMPILAN UNTUK USER REGULER
                 paket = user_data.get("paket_aktif", "Freemium")
                 kuota = user_data.get("kuota", 0)
                 saldo = user_data.get("saldo", 0)
                 batas = user_data.get("batas_durasi", 10)
+                exp_val = user_data.get("tanggal_expired")
                 
-                # Menghitung estimasi sisa menit dari saldo (Saldo / 350)
+                # Format Tanggal untuk Tampilan
+                status_waktu = "⏳ **Status:** Kedaluwarsa (Freemium)"
+                if exp_val and exp_val != "Selamanya":
+                    import datetime
+                    try:
+                        if isinstance(exp_val, str):
+                            exp_date = datetime.datetime.fromisoformat(exp_val.replace("Z", "+00:00"))
+                        else:
+                            exp_date = exp_val
+                        # Ubah ke format "24 Mar 2026"
+                        status_waktu = f"⏳ **Berlaku hingga:** {exp_date.strftime('%d %b %Y')}"
+                    except:
+                        pass
+                elif paket != "Freemium":
+                    status_waktu = "⏳ **Berlaku hingga:** Selamanya"
+                
                 estimasi_menit = math.floor(saldo / 350)
                 saldo_rp = f"Rp {saldo:,}".replace(",", ".")
                 
-                # UI Dashboard Mini Baru
+                # UI Dashboard Mini Baru + TANGGAL
                 st.markdown(f"📦 **Paket Aktif:** {paket}")
                 st.markdown(f"📄 **Sisa Kuota:** {kuota}x")
-                st.markdown(f"⏱️ **Kapasitas / Kuota:** Maks. {batas} Menit")
+                st.markdown(f"⏱️ **Kapasitas:** Maks. {batas} Menit")
+                st.markdown(status_waktu) # <--- Tanggal Expired Muncul di Sini
                 st.markdown("---")
                 
                 st.metric("💳 Saldo Utama", saldo_rp)
                 st.caption(f"*(Melindungi ± {estimasi_menit} Menit kelebihan durasi)*")
                 
                 st.write("")
-                # 🚀 TOMBOL SEGARKAN & BELI
                 if st.button("🔄 Segarkan Dompet", use_container_width=True):
                     st.rerun()
                 if st.button("🛒 Beli Paket / Top-Up", use_container_width=True):
                     show_pricing_dialog()  
                 
             st.markdown("---")
-
+            
         if st.session_state.user_role == "admin": 
             st.info("👑 Anda Administrator.")
             
@@ -898,5 +957,6 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
 
 
