@@ -587,7 +587,7 @@ with st.sidebar:
                 st.caption(f"*(Melindungi ± {estimasi_menit} Menit kelebihan durasi)*")
                 
                 st.write("")
-                if st.button("🔄 Segarkan Dompet", use_container_width=True):
+                if st.button("⚡ Refresh Dompet", use_container_width=True):
                     st.rerun()
                 if st.button("🛒 Beli Paket / Top-Up", use_container_width=True):
                     show_pricing_dialog()  
