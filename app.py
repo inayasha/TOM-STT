@@ -959,48 +959,60 @@ if st.session_state.user_role == "admin":
         
         # --- MANAJEMEN USER ---
         st.markdown("#### 👥 Manajemen User")
+        
+        # 1. Mengambil data dari Firestore
         users_ref = db.collection('users').stream()
-        st.write("Daftar Pengguna Saat Ini:")
+        all_users = []
         for doc in users_ref:
             u_data = doc.to_dict()
+            u_data['id'] = doc.id
+            all_users.append(u_data)
             
-            # Tarik dan format tanggal pendaftaran
+        # 2. Menyortir data (Terbaru di atas)
+        def sort_by_date(user_dict):
+            t = user_dict.get('created_at')
+            return t.timestamp() if t else 0 # Jika data lama tidak ada tanggal, taruh paling bawah
+            
+        all_users.sort(key=sort_by_date, reverse=True)
+
+        st.write("Daftar Pengguna Saat Ini:")
+        
+        # 3. Menampilkan List dengan Tombol Hapus Inline (Sejajar)
+        for u_data in all_users:
+            user_id = u_data['id']
+            role = u_data.get('role', 'user')
             created_at = u_data.get('created_at')
-            if created_at:
-                # Mengubah format Timestamp Firebase menjadi teks cantik
-                tgl_daftar = created_at.strftime("%d %b %Y")
-            else:
-                tgl_daftar = "Data lama"
-                
-            # Menampilkan UI list user yang lebih lengkap
-            st.markdown(f"- 👤 **{doc.id}** | Role: `{u_data.get('role', 'user')}` | 📅 Terdaftar: **{tgl_daftar}**")
             
+            tgl_daftar = created_at.strftime("%d %b %Y") if created_at else "Data lama"
+            
+            # Membagi rasio kolom: Kiri untuk info (80%), Kanan untuk tombol (20%)
+            col_info, col_btn = st.columns([4, 1])
+            with col_info:
+                st.markdown(f"👤 **{user_id}** | Role: `{role}` | 📅 **{tgl_daftar}**")
+            with col_btn:
+                # Mengunci tombol hapus jika itu adalah akun Admin yang sedang login (Mencegah bunuh diri sistem)
+                is_self = (user_id == st.session_state.current_user)
+                if st.button("🗑️ Hapus", key=f"del_usr_{user_id}", disabled=is_self, use_container_width=True):
+                    delete_user(user_id)
+                    st.toast(f"✅ User {user_id} berhasil dihapus permanen!")
+                    st.rerun()
+                    
+        st.markdown("---")
+        
+        # 4. Form Tambah / Edit User Baru
+        st.markdown("#### ➕ Tambah / Edit Akun")
         with st.form("user_form"):
-            add_email = st.text_input("Username Baru/Edit")
-            add_pwd = st.text_input("Password Baru", type="password")
+            add_email = st.text_input("Email / Username Baru")
+            add_pwd = st.text_input("Password", type="password")
             add_role = st.selectbox("Role", ["user", "admin"])
             
-            # FIX: Tombol dibuat seragam dan sejajar (tanpa HTML tambahan)
-            c_add, c_del = st.columns(2)
-            with c_add:
-                if st.form_submit_button("Simpan User", use_container_width=True):
-                    if add_email and add_pwd:
-                        save_user(add_email, add_pwd, add_role)
-                        st.success(f"✅ User {add_email} disimpan ke Firebase!")
-                        st.rerun()
-                    else: st.error("Isi Username dan Password!")
-            with c_del:
-                if st.form_submit_button("Hapus User", use_container_width=True):
-                    if add_email:
-                        if get_user(add_email):
-                            if add_email == "admin": st.error("Dilarang menghapus Admin Utama!")
-                            else:
-                                delete_user(add_email)
-                                st.warning(f"🗑️ User {add_email} dihapus dari Firebase!")
-                                st.rerun()
-                        else: st.error("User tidak ditemukan.")
-                    else:
-                        st.error("Isi Username yang ingin dihapus!")
+            if st.form_submit_button("💾 Simpan Data User", use_container_width=True):
+                if add_email and add_pwd:
+                    save_user(add_email, add_pwd, add_role)
+                    st.success(f"✅ User {add_email} berhasil disimpan!")
+                    st.rerun()
+                else: 
+                    st.error("❌ Isi Username dan Password!")
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
