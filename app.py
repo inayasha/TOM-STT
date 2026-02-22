@@ -524,15 +524,14 @@ with st.sidebar:
                 exp_val = user_data.get("tanggal_expired")
                 
                 # Format Tanggal untuk Tampilan
-                status_waktu = "⏳ **Status:** Kedaluwarsa (Freemium)"
-                if exp_val and exp_val != "Selamanya":
+                status_waktu = "⏳ **Berlaku hingga:** Selamanya" # Default murni untuk Freemium
+                if paket != "Freemium" and exp_val and exp_val != "Selamanya":
                     import datetime
                     try:
                         if isinstance(exp_val, str):
                             exp_date = datetime.datetime.fromisoformat(exp_val.replace("Z", "+00:00"))
                         else:
                             exp_date = exp_val
-                        # Ubah ke format "24 Mar 2026"
                         status_waktu = f"⏳ **Berlaku hingga:** {exp_date.strftime('%d %b %Y')}"
                     except:
                         pass
