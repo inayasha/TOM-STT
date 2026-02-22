@@ -16,6 +16,7 @@ from docx import Document
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+from firebase_admin import auth
 from datetime import datetime
 
 # ==========================================
@@ -62,7 +63,17 @@ def save_user(username, password, role):
         })
 
 def delete_user(username):
+    # 1. Hapus data dompet dari Firestore Database
     db.collection('users').document(username).delete()
+    
+    # 2. Hapus kredensial login dari Firebase Authentication
+    try:
+        # Cari UID user berdasarkan emailnya, lalu musnahkan
+        user_record = auth.get_user_by_email(username)
+        auth.delete_user(user_record.uid)
+    except Exception as e:
+        # Abaikan secara diam-diam jika user ternyata sudah tidak ada di Auth
+        pass
     
 def check_expired(username, user_data):
     """SATPAM: Mengecek apakah paket user sudah kedaluwarsa. Jika ya, RESET semua."""
@@ -952,7 +963,17 @@ if st.session_state.user_role == "admin":
         st.write("Daftar Pengguna Saat Ini:")
         for doc in users_ref:
             u_data = doc.to_dict()
-            st.markdown(f"- **{doc.id}** (Role: {u_data['role']})")
+            
+            # Tarik dan format tanggal pendaftaran
+            created_at = u_data.get('created_at')
+            if created_at:
+                # Mengubah format Timestamp Firebase menjadi teks cantik
+                tgl_daftar = created_at.strftime("%d %b %Y")
+            else:
+                tgl_daftar = "Data lama"
+                
+            # Menampilkan UI list user yang lebih lengkap
+            st.markdown(f"- 👤 **{doc.id}** | Role: `{u_data.get('role', 'user')}` | 📅 Terdaftar: **{tgl_daftar}**")
             
         with st.form("user_form"):
             add_email = st.text_input("Username Baru/Edit")
