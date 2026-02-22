@@ -156,12 +156,6 @@ if 'user_role' not in st.session_state: st.session_state.user_role = ""
 if 'ai_result' not in st.session_state: st.session_state.ai_result = "" 
 if 'ai_prefix' not in st.session_state: st.session_state.ai_prefix = "" 
 
-# 🚀 ANTI-LOGOUT: Membaca Sesi dari URL Browser
-if "user_session" in st.query_params and "user_role" in st.query_params:
-    st.session_state.logged_in = True
-    st.session_state.current_user = st.query_params["user_session"]
-    st.session_state.user_role = st.query_params["user_role"]
-
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
@@ -332,8 +326,132 @@ def buat_tagihan_midtrans(nama_paket, harga, user_email):
         st.error(f"Gagal menghubungi gateway pembayaran. Pesan Error: {response.text}")
         return None
 
-@st.dialog("🛒 Pilih Paket Kebutuhan Anda", width="large")
+@st.dialog("🛒 Beli Paket & Top-Up Saldo", width="large")
 def show_pricing_dialog():
+    user_email = st.session_state.current_user
+    
+    st.markdown("""
+    > ⚡ **Investasi Waktu Terbaik Anda**
+    > Dapatkan kembali waktu istirahat Anda. Biarkan AI kami yang bekerja keras menyusun laporan rumit hanya dengan biaya setara segelas kopi per dokumen!
+    """)
+    
+    st.info("""
+    💡 **Informasi Sistem & Ketentuan:**
+    * 🎟️ **Sistem Tiket:** 1 Kuota = 1x Pembuatan Dokumen.
+    * ⏱️ **Batas Maksimal:** Durasi per kuota adalah batas atas (Maksimal). Sisa menit dari audio yang lebih pendek *tidak* dapat diakumulasi.
+    * 💳 **Saldo Tambahan:** Jika durasi rekaman Anda melebihi batas maksimal, sistem otomatis menggunakan Saldo Utama Anda dengan tarif **Rp 350 / Menit**.
+    """)
+    
+    tab_paket, tab_saldo = st.tabs(["📦 BELI PAKET KUOTA", "💳 TOP-UP SALDO"])
+    
+    with tab_paket:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **1. Paket Starter**
+            *Cocok untuk kebutuhan personal & tugas ringan.*
+            * 📄 **5x** Ekstrak AI (Laporan/Notulen)
+            * ⏱️ **Kapasitas:** Maks. 1 Jam / File
+            * 📅 **Masa Aktif:** 14 Hari
+            * 🎁 **Bonus Saldo:** Rp 3.000
+            """)
+            if st.button("🛒 Beli Starter - Rp 51.000", use_container_width=True, key="buy_starter"):
+                with st.spinner("Mencetak tagihan..."):
+                    link_bayar = buat_tagihan_midtrans("Starter", 51000, user_email)
+                    if link_bayar: st.link_button("💳 Lanjut Bayar (Termasuk 2% Biaya Layanan)", link_bayar, use_container_width=True)
+            
+            st.markdown("---")
+            
+            st.markdown("""
+            **2. Paket Pro Notulis**
+            *Standar profesional untuk notulis & sekretaris.*
+            * 📄 **15x** Ekstrak AI (Laporan/Notulen)
+            * ⏱️ **Kapasitas:** Maks. 1,5 Jam / File
+            * 📅 **Masa Aktif:** 30 Hari
+            * 🎁 **Bonus Saldo:** Rp 10.000
+            """)
+            if st.button("🛒 Beli Pro - Rp 102.000", use_container_width=True, key="buy_pro"):
+                with st.spinner("Mencetak tagihan..."):
+                    link_bayar = buat_tagihan_midtrans("Pro", 102000, user_email)
+                    if link_bayar: st.link_button("💳 Lanjut Bayar (Termasuk 2% Biaya Layanan)", link_bayar, use_container_width=True)
+
+        with col2:
+            st.markdown("""
+            **3. Paket Eksekutif**
+            *Pilihan tepat untuk intensitas rapat tinggi.*
+            * 📄 **50x** Ekstrak AI (Laporan/Notulen)
+            * ⏱️ **Kapasitas:** Maks. 2 Jam / File
+            * 📅 **Masa Aktif:** 45 Hari
+            * 🎁 **Bonus Saldo:** Rp 20.000
+            * 🛡️ **Jaminan Akses:** Multi-Server API (Anti-Limit)
+            """)
+            if st.button("🛒 Beli Eksekutif - Rp 306.000", use_container_width=True, key="buy_exec"):
+                with st.spinner("Mencetak tagihan..."):
+                    link_bayar = buat_tagihan_midtrans("Eksekutif", 306000, user_email)
+                    if link_bayar: st.link_button("💳 Lanjut Bayar (Termasuk 2% Biaya Layanan)", link_bayar, use_container_width=True)
+            
+            st.markdown("---")
+            
+            st.markdown("""
+            **4. Paket VIP Instansi**
+            *Akses maksimal untuk kementerian/instansi.*
+            * 📄 **100x** Ekstrak AI (Laporan/Notulen)
+            * ⏱️ **Kapasitas:** Maks. 3 Jam / File
+            * 📅 **Masa Aktif:** 60 Hari
+            * 🎁 **Bonus Saldo:** Rp 35.000
+            * 🛡️ **Jaminan Akses:** Multi-Server API (Anti-Limit)
+            """)
+            if st.button("🛒 Beli VIP - Rp 510.000", use_container_width=True, key="buy_vip"):
+                with st.spinner("Mencetak tagihan..."):
+                    link_bayar = buat_tagihan_midtrans("VIP", 510000, user_email)
+                    if link_bayar: st.link_button("💳 Lanjut Bayar (Termasuk 2% Biaya Layanan)", link_bayar, use_container_width=True)
+
+    with tab_saldo:
+        st.warning("ℹ️ **Catatan:** Saldo yang Anda beli masuk utuh 100% ke dompet Anda. Kami hanya menambahkan 2% pada tombol bayar sebagai Biaya Layanan (Payment Gateway).")
+        
+        col_s1, col_s2 = st.columns(2)
+        with col_s1:
+            st.markdown("""
+            **Saldo Rp 10.000**
+            * ⏱️ Melindungi **± 28 Menit**
+            """)
+            if st.button("💳 Bayar Rp 10.200", use_container_width=True, key="topup_10"):
+                with st.spinner("Mencetak tagihan..."):
+                    link_bayar = buat_tagihan_midtrans("Topup10k", 102000, user_email) # Pastikan di worker harganya disesuaikan nanti
+                    if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
+            
+            st.markdown("---")
+            
+            st.markdown("""
+            **Saldo Rp 20.000**
+            * ⏱️ Melindungi **± 57 Menit**
+            """)
+            if st.button("💳 Bayar Rp 20.400", use_container_width=True, key="topup_20"):
+                with st.spinner("Mencetak tagihan..."):
+                    link_bayar = buat_tagihan_midtrans("Topup20k", 204000, user_email)
+                    if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
+
+        with col_s2:
+            st.markdown("""
+            **Saldo Rp 30.000**
+            * ⏱️ Melindungi **± 85 Menit**
+            """)
+            if st.button("💳 Bayar Rp 30.600", use_container_width=True, key="topup_30"):
+                with st.spinner("Mencetak tagihan..."):
+                    link_bayar = buat_tagihan_midtrans("Topup30k", 306000, user_email)
+                    if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
+            
+            st.markdown("---")
+            
+            st.markdown("""
+            **Saldo Rp 40.000**
+            * ⏱️ Melindungi **± 114 Menit**
+            """)
+            if st.button("💳 Bayar Rp 40.800", use_container_width=True, key="topup_40"):
+                with st.spinner("Mencetak tagihan..."):
+                    link_bayar = buat_tagihan_midtrans("Topup40k", 408000, user_email)
+                    if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
+                    
     user_email = st.session_state.current_user
     col1, col2 = st.columns(2)
     
@@ -438,24 +556,25 @@ with st.sidebar:
                 saldo = user_data.get("saldo", 0)
                 batas = user_data.get("batas_durasi", 10)
                 
-                # Format Rupiah
+                # Menghitung estimasi sisa menit dari saldo (Saldo / 350)
+                estimasi_menit = math.floor(saldo / 350)
                 saldo_rp = f"Rp {saldo:,}".replace(",", ".")
                 
-                # UI Dashboard Mini
-                st.info(f"📦 Paket: **{paket}**")
+                # UI Dashboard Mini Baru
+                st.markdown(f"📦 **Paket Aktif:** {paket}")
+                st.markdown(f"📄 **Sisa Kuota:** {kuota}x")
+                st.markdown(f"⏱️ **Kapasitas / Kuota:** Maks. {batas} Menit")
+                st.markdown("---")
                 
-                col_k, col_b = st.columns(2)
-                col_k.metric("Sisa Kuota", f"{kuota}x")
-                col_b.metric("Batas Paket", f"{batas} Menit")
+                st.metric("💳 Saldo Utama", saldo_rp)
+                st.caption(f"*(Melindungi ± {estimasi_menit} Menit kelebihan durasi)*")
                 
-                st.metric("💳 Saldo Darurat", saldo_rp)
-                
-                # 🚀 TOMBOL BARU: SEGARKAN DOMPET
+                st.write("")
+                # 🚀 TOMBOL SEGARKAN & BELI
                 if st.button("🔄 Segarkan Dompet", use_container_width=True):
                     st.rerun()
-                
-                if st.button("🛒 Upgrade / Top-Up", use_container_width=True):
-                    show_pricing_dialog()  # <--- MEMANGGIL POP-UP ETALASE
+                if st.button("🛒 Beli Paket / Top-Up", use_container_width=True):
+                    show_pricing_dialog()  
                 
             st.markdown("---")
 
@@ -465,7 +584,6 @@ with st.sidebar:
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state.logged_in, st.session_state.current_user, st.session_state.user_role = False, "", ""
             st.session_state.ai_result = ""
-            st.query_params.clear() # 🚀 BERSIHKAN URL SAAT LOGOUT
             st.rerun()
     else:
         st.caption("Silakan login di Tab '🔐 Akun'.")
@@ -474,7 +592,13 @@ with st.sidebar:
 # 4. MAIN LAYOUT & TABS
 # ==========================================
 st.markdown('<div class="main-header">🎙️ TOM\'<span style="color: #e74c3c !important;">STT</span></div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Speech-to-Text | Konversi Audio ke Teks</div>', unsafe_allow_html=True)
+
+# KOTAK SELAMAT DATANG (COPYWRITING BARU)
+st.info("""
+🚀 **Otomatisasi Notulen & Laporan dalam Hitungan Menit** Mengubah rekaman rapat berjam-jam menjadi teks manual bisa menyita 1-2 hari kerja Anda. Dengan mesin AI TOM'STT, semuanya selesai secara instan!
+
+🧠 **Bukan Sekadar Transkrip Biasa:** AI kami telah diprogram khusus untuk langsung mengekstrak **Notulen Rapat** atau **Laporan Memorandum** siap cetak—lengkap dengan latar belakang, analisis, dan tindak lanjut berstandar profesional.
+""")
 
 tab_titles = ["📂 Upload File", "🎙️ Rekam Suara", "✨ Ekstrak AI", "🔐 Akun"]
 if st.session_state.user_role == "admin": tab_titles.append("⚙️ Panel Admin")
@@ -615,11 +739,6 @@ with tab_auth:
                             st.session_state.logged_in = True
                             st.session_state.current_user = login_email
                             st.session_state.user_role = user_data.get("role", "user")
-                            
-                            # 🚀 SIMPAN SESI KE URL
-                            st.query_params["user_session"] = login_email
-                            st.query_params["user_role"] = user_data.get("role", "user")
-                            
                             st.rerun()
                     else:
                         err = res.get("error", {}).get("message", "Gagal")
@@ -856,3 +975,5 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
+
