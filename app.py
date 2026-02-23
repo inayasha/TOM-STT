@@ -891,7 +891,7 @@ with tab_auth:
                             if err == "EMAIL_EXISTS": st.error("❌ Email sudah terdaftar. Silakan langsung Login saja.")
                             elif err == "INVALID_EMAIL": st.error("❌ Format email tidak valid. Gunakan email asli!")
                             else: st.error(f"❌ Gagal mendaftar: {err}")
-else:
+    else:
         # HEADER PROFIL PREMIUM (Teks Rata Tengah & Warna Merah Aksen)
         st.markdown(f"""
         <div style="text-align: center; padding: 20px 0;">
