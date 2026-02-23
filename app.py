@@ -290,7 +290,13 @@ if not st.session_state.logged_in:
     if 'retry_cookie' not in st.session_state:
         st.session_state.retry_cookie = 0
         
-    saved_user = cookie_manager.get('tomstt_session')
+    saved_user = None
+    try:
+        # Mencoba mengambil cookie. Akan ditahan jika Javascript browser belum siap
+        saved_user = cookie_manager.get('tomstt_session')
+    except Exception:
+        # Mengabaikan TypeError di milidetik pertama
+        pass
     
     if saved_user:
         user_data = get_user(saved_user)
@@ -298,10 +304,11 @@ if not st.session_state.logged_in:
             st.session_state.logged_in = True
             st.session_state.current_user = saved_user
             st.session_state.user_role = user_data.get("role", "user")
+            st.session_state.retry_cookie = 0 # Reset counter jika berhasil
             st.rerun()
     else:
-        # Jika cookie kosong, tunggu 0.5 detik dan paksa cek ulang (Maks 2x percobaan)
-        if st.session_state.retry_cookie < 2:
+        # Jika cookie kosong/belum siap, tunggu 0.5 detik dan paksa cek ulang (Maks 3x percobaan)
+        if st.session_state.retry_cookie < 3:
             import time
             st.session_state.retry_cookie += 1
             time.sleep(0.5)
