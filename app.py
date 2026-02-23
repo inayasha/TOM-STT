@@ -331,66 +331,76 @@ def create_docx(text, title):
     doc.add_heading(title, level=1)
     
     for line in text.split('\n'):
+        # Abaikan baris yang kosong
         if not line.strip(): 
             continue
             
-        # 1. Deteksi Garis Pembatas (---)
+        # 1. Deteksi Garis Pembatas Markdown (---)
         if re.match(r'^\s*---\s*$', line):
-            doc.add_paragraph("_" * 50) # Membuat garis visual sederhana di Word
+            doc.add_paragraph("_" * 50)
             continue
         
-        # 2. Deteksi Judul/Heading Markdown (##, ###)
+        # 2. Deteksi Heading Markdown (#, ##, ###)
         heading_match = re.match(r'^(#+)\s+(.*)', line.strip())
         if heading_match:
             level = len(heading_match.group(1))
             doc.add_heading(heading_match.group(2), level=min(level, 9))
             continue
             
-        # 3. Deteksi Bullet Point (* atau -) dan Sub-Bullet
-        # Menangkap spasi di depan untuk menentukan level indentasi
+        # 3. Deteksi Bullet Point (*, -, atau angka) dan indentasi
         bullet_match = re.match(r'^(\s*)[\*\-]\s+(.*)', line)
         number_match = re.match(r'^(\s*)\d+\.\s+(.*)', line)
         
+        p = None
         if bullet_match:
             indent_spaces = len(bullet_match.group(1))
-            # Jika ada spasi di depan (biasanya 4 spasi), jadikan Sub-Bullet (Level 2)
-            style_name = 'List Bullet 2' if indent_spaces >= 2 else 'List Bullet'
-            p = doc.add_paragraph(style=style_name)
+            try:
+                # Gunakan List Bullet 2 jika menjorok ke dalam
+                style_name = 'List Bullet 2' if indent_spaces >= 2 else 'List Bullet'
+                p = doc.add_paragraph(style=style_name)
+            except:
+                # Fallback aman jika List Bullet 2 tidak ada di template
+                p = doc.add_paragraph(style='List Bullet')
             line_content = bullet_match.group(2)
+            
         elif number_match:
             indent_spaces = len(number_match.group(1))
-            style_name = 'List Number 2' if indent_spaces >= 2 else 'List Number'
-            p = doc.add_paragraph(style=style_name)
+            try:
+                style_name = 'List Number 2' if indent_spaces >= 2 else 'List Number'
+                p = doc.add_paragraph(style=style_name)
+            except:
+                p = doc.add_paragraph(style='List Number')
             line_content = number_match.group(2)
+            
         else:
+            # Teks Paragraf Biasa
             p = doc.add_paragraph()
             line_content = line.strip()
             
-        # 4. Deteksi Teks Tebal (Bold **) dan Miring (Italic *) secara bersamaan
-        # Pertama: Pecah berdasarkan Bold (**)
-        parts = re.split(r'\*\*(.*?)\*\*', line_content)
-        for i, part in enumerate(parts):
-            if not part: continue
-            
-            if i % 2 != 0: 
-                # Jika index ganjil, ini adalah teks BOLD
-                run = p.add_run(part)
+        # 4. PARSING INLINE CANGGIH (Bold & Italic) dengan "Regex Tokenizer"
+        # Memecah string menjadi token-token teks biasa, **tebal**, atau *miring*
+        tokens = re.split(r'(\*\*.*?\*\*|\*.*?\*)', line_content)
+        
+        for token in tokens:
+            if not token: 
+                continue
+                
+            if token.startswith('**') and token.endswith('**') and len(token) > 4:
+                # Jika token adalah **Teks**, hapus 2 bintang di depan & belakang, lalu jadikan TEBAL
+                run = p.add_run(token[2:-2])
                 run.bold = True
-            else: 
-                # Kedua: Jika bukan Bold, cek apakah di dalamnya ada Italic (*)
-                italic_parts = re.split(r'\*(.*?)\*', part)
-                for j, i_part in enumerate(italic_parts):
-                    if not i_part: continue
-                    
-                    run = p.add_run(i_part)
-                    if j % 2 != 0:
-                        # Index ganjil di sini berarti teks ITALIC
-                        run.italic = True
+            elif token.startswith('*') and token.endswith('*') and len(token) > 2:
+                # Jika token adalah *Teks*, hapus 1 bintang di depan & belakang, lalu jadikan MIRING
+                run = p.add_run(token[1:-1])
+                run.italic = True
+            else:
+                # Jika teks biasa, cetak normal
+                p.add_run(token)
 
     bio = io.BytesIO()
     doc.save(bio)
     return bio.getvalue()
-
+    
 PROMPT_NOTULEN = """Kamu adalah Sekretaris Profesional. Tugasmu membuat Notulen Rapat dari transkrip yang diberikan.
 INSTRUKSI MUTLAK:
 - TULIS SANGAT PANJANG, MENDETAIL, DAN KOMPREHENSIF. 
