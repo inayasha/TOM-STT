@@ -1017,7 +1017,7 @@ if submit_btn and audio_to_process:
                 "draft_ai_prefix": ""
             })
         
-        st.download_button("💾 Download Mentahan (.TXT)", partial_text, f"{st.session_state.filename}.txt", "text/plain", use_container_width=True)
+        st.download_button("💾 Download Hasil Transkrip (.TXT)", partial_text, f"{st.session_state.filename}.txt", "text/plain", use_container_width=True)
 
     except Exception as e: 
         status_box.empty()
