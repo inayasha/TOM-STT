@@ -892,24 +892,24 @@ with tab_auth:
                             elif err == "INVALID_EMAIL": st.error("❌ Format email tidak valid. Gunakan email asli!")
                             else: st.error(f"❌ Gagal mendaftar: {err}")
     else:
-        # HEADER PROFIL PREMIUM (Teks Rata Tengah & Warna Merah Aksen)
+        # HEADER PROFIL PREMIUM (Email Diperkecil & Bold)
         st.markdown(f"""
-        <div style="text-align: center; padding: 20px 0;">
-            <p style="color: #666; font-size: 16px; margin-bottom: 5px;">Anda saat ini masuk sebagai:</p>
-            <h2 style="margin-top: 0;"><font color="#e74c3c">{st.session_state.current_user}</font></h2>
+        <div style="text-align: center; padding: 15px 0;">
+            <p style="color: #666; font-size: 15px; margin-bottom: 5px;">Anda saat ini masuk sebagai:</p>
+            <div style="font-size: 22px;"><b><font color="#e74c3c">{st.session_state.current_user}</font></b></div>
         </div>
         """, unsafe_allow_html=True)
         
         st.markdown("---")
         
-        # DASBOR NILAI PLUS (VALUE PROPOSITION) - 3 KOLOM
+        # DASBOR NILAI PLUS (Ikon Rata Tengah Sempurna)
         col_vp1, col_vp2, col_vp3 = st.columns(3)
         with col_vp1:
-            st.markdown("<div style='text-align: center; padding: 10px;'><h3>⚡</h3><b style='color:#111; font-size: 16px;'>Hemat Waktu</b><br><span style='font-size:14px; color:#555;'>Selesai dalam hitungan menit, bukan berhari-hari.</span></div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; padding: 5px;'><div style='font-size: 35px; margin-bottom: 8px;'>⚡</div><b style='color:#111; font-size: 16px;'>Hemat Waktu</b><br><div style='font-size:14px; color:#555; margin-top: 4px;'>Selesai dalam hitungan menit, bukan berhari-hari.</div></div>", unsafe_allow_html=True)
         with col_vp2:
-            st.markdown("<div style='text-align: center; padding: 10px;'><h3>🧠</h3><b style='color:#111; font-size: 16px;'>AI Pintar</b><br><span style='font-size:14px; color:#555;'>Otomatis susun Laporan & Notulen siap cetak.</span></div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; padding: 5px;'><div style='font-size: 35px; margin-bottom: 8px;'>🧠</div><b style='color:#111; font-size: 16px;'>AI Pintar</b><br><div style='font-size:14px; color:#555; margin-top: 4px;'>Otomatis susun Laporan & Notulen siap cetak.</div></div>", unsafe_allow_html=True)
         with col_vp3:
-            st.markdown("<div style='text-align: center; padding: 10px;'><h3>⚖️</h3><b style='color:#111; font-size: 16px;'>Sistem Adil</b><br><span style='font-size:14px; color:#555;'>Jeda hening tidak memotong tagihan kuota Anda.</span></div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; padding: 5px;'><div style='font-size: 35px; margin-bottom: 8px;'>⚖️</div><b style='color:#111; font-size: 16px;'>Sistem Adil</b><br><div style='font-size:14px; color:#555; margin-top: 4px;'>Jeda hening tidak memotong tagihan kuota Anda.</div></div>", unsafe_allow_html=True)
         
         st.write("")
 
@@ -1169,7 +1169,3 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
-
-
-
-
