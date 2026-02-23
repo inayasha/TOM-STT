@@ -1243,31 +1243,60 @@ with tab_ai:
                     else:
                         success_generation = False
                         
-                        with st.spinner(f"🚀 Memproses dengan {engine_choice} (Beban: {durasi_teks} Menit Kuota)..."):
-                            for key_data in active_keys:
-                                try:
-                                    if engine_choice == "Gemini":
-                                        genai.configure(api_key=key_data["key"])
-                                        model = genai.GenerativeModel('gemini-2.5-flash')
-                                        response = model.generate_content(f"{prompt_active}\n\nBerikut teks transkripnya:\n{st.session_state.transcript}")
-                                        ai_result = response.text
-                                        
-                                    elif engine_choice == "Groq":
-                                        client = Groq(api_key=key_data["key"])
-                                        completion = client.chat.completions.create(
-                                            model="llama-3.3-70b-versatile",
-                                            messages=[{"role": "system", "content": prompt_active}, {"role": "user", "content": f"Berikut transkripnya:\n{st.session_state.transcript}"}],
-                                            temperature=0.4,
-                                        )
-                                        ai_result = completion.choices[0].message.content
-
-                                    increment_api_usage(key_data["id"], key_data["used"])
-                                    success_generation = True
-                                    break 
+                        # --- 1. MUNCULKAN LAYAR LOADING MEGAH (OVERLAY) ---
+                        loading_overlay = st.empty()
+                        loading_overlay.markdown(f"""
+                        <style>
+                        .loading-screen {{
+                            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                            background-color: rgba(255, 255, 255, 0.92);
+                            display: flex; flex-direction: column; justify-content: center; align-items: center;
+                            z-index: 999999; backdrop-filter: blur(8px);
+                        }}
+                        .spinner-large {{
+                            width: 80px; height: 80px; border: 8px solid #F0F2F6; border-top: 8px solid #e74c3c;
+                            border-radius: 50%; animation: spin-large 1s linear infinite; margin-bottom: 25px;
+                            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.2);
+                        }}
+                        @keyframes spin-large {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
+                        .loading-title {{ font-size: 24px; font-weight: 800; color: #111; margin-bottom: 10px; text-align: center; }}
+                        .loading-subtitle {{ font-size: 15px; color: #666; font-weight: 500; text-align: center; padding: 0 20px; }}
+                        </style>
+                        <div class="loading-screen">
+                            <div class="spinner-large"></div>
+                            <div class="loading-title">🚀 AI Sedang Bekerja...</div>
+                            <div class="loading-subtitle">Memproses dengan {engine_choice} (Beban: {durasi_teks} Menit).<br>Mohon jangan tutup atau keluar dari halaman ini.</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # --- 2. JALANKAN PROSES AI (DI BALIK LAYAR) ---
+                        for key_data in active_keys:
+                            try:
+                                if engine_choice == "Gemini":
+                                    genai.configure(api_key=key_data["key"])
+                                    model = genai.GenerativeModel('gemini-2.5-flash')
+                                    response = model.generate_content(f"{prompt_active}\n\nBerikut teks transkripnya:\n{st.session_state.transcript}")
+                                    ai_result = response.text
                                     
-                                except Exception as e:
-                                    st.toast(f"⚠️ Mencoba server cadangan...")
-                                    continue
+                                elif engine_choice == "Groq":
+                                    client = Groq(api_key=key_data["key"])
+                                    completion = client.chat.completions.create(
+                                        model="llama-3.3-70b-versatile",
+                                        messages=[{"role": "system", "content": prompt_active}, {"role": "user", "content": f"Berikut transkripnya:\n{st.session_state.transcript}"}],
+                                        temperature=0.4,
+                                    )
+                                    ai_result = completion.choices[0].message.content
+
+                                increment_api_usage(key_data["id"], key_data["used"])
+                                success_generation = True
+                                break 
+                                
+                            except Exception as e:
+                                st.toast(f"⚠️ Mencoba server cadangan...")
+                                continue
+                                
+                        # --- 3. HAPUS LAYAR LOADING SETELAH AI SELESAI ---
+                        loading_overlay.empty()
                         
                         if success_generation and ai_result:
                             # 3. POTONG SALDO & INVENTORI KARENA BERHASIL!
