@@ -988,6 +988,32 @@ with tab_auth:
                         if err == "INVALID_LOGIN_CREDENTIALS": st.error("❌ Email atau Password salah!")
                         else: st.error(f"❌ Akses Ditolak: {err}")
                         
+                    # --- FITUR LUPA PASSWORD ---
+                    st.write("")
+                    with st.expander("Lupa Password?"):
+                        st.caption("Masukkan email terdaftar Anda di bawah ini. Kami akan mengirimkan tautan aman untuk membuat password baru.")
+                        reset_email = st.text_input("Email untuk Reset", key="reset_email").strip()
+                        
+                        if st.button("Kirim Link Reset Password", use_container_width=True):
+                            if reset_email:
+                                with st.spinner("Mengirim tautan..."):
+                                    api_key = st.secrets["firebase_web_api_key"]
+                                    url_reset = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}"
+                                    payload = {"requestType": "PASSWORD_RESET", "email": reset_email}
+                                    
+                                    res_reset = requests.post(url_reset, json=payload).json()
+                                    
+                                    if "email" in res_reset:
+                                        st.success("✅ Tautan reset password berhasil dikirim! Silakan periksa kotak masuk (Inbox) atau folder Spam pada email Anda.")
+                                    else:
+                                        err_msg = res_reset.get("error", {}).get("message", "Gagal")
+                                        if err_msg == "EMAIL_NOT_FOUND":
+                                            st.error("❌ Email tersebut tidak ditemukan atau belum terdaftar di sistem kami.")
+                                        else:
+                                            st.error(f"❌ Gagal mengirim tautan: {err_msg}")
+                            else:
+                                st.warning("⚠️ Silakan ketik alamat email Anda terlebih dahulu.")
+                        
         # --- TAB REGISTER MANDIRI ---
         with auth_tab2:
             reg_email = st.text_input("Email Aktif", key="reg_email").strip()
