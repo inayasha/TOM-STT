@@ -669,7 +669,7 @@ with st.sidebar:
             st.session_state.ai_result = ""
             st.rerun()
     else:
-        st.caption("Silakan login di Tab '🔐 Akun'.")
+        st.caption("Silakan login di Tab 🔐 Akun.")
 
 # ==========================================
 # 4. MAIN LAYOUT & TABS
@@ -697,21 +697,45 @@ lang_code = "id-ID"
 
 # TAB 1: UPLOAD FILE (Bebas Akses)
 with tab_upload:
+    # 1. Tentukan Limitasi Berdasarkan Status Login & Paket
+    limit_mb = 10 # Default Freemium (Belum login / Paket Freemium)
+    if st.session_state.logged_in:
+        user_info = get_user(st.session_state.current_user)
+        if user_info:
+            role = user_info.get("role", "user")
+            paket = user_info.get("paket_aktif", "Freemium")
+            if role == "admin" or paket != "Freemium":
+                limit_mb = 200 # Premium / Admin mendapat 200MB
+    
+    # 2. Teks Edukasi Transparan
+    st.markdown(f"<p style='text-align: center; color: #666; font-size: 14px; margin-bottom: 10px;'>Batas ukuran file: <b>10MB</b> (Freemium) | <b>200MB</b> (Premium)</p>", unsafe_allow_html=True)
+    
     uploaded_file = st.file_uploader("Pilih File Audio", type=["aac", "mp3", "wav", "m4a", "opus", "mp4", "3gp", "amr", "ogg", "flac", "wma"])
-    if uploaded_file: audio_to_process, source_name = uploaded_file, uploaded_file.name
+    
+    # 3. Sistem Pencegat (Interceptor)
+    file_diizinkan = False
+    if uploaded_file:
+        file_size_mb = uploaded_file.size / (1024 * 1024)
+        if file_size_mb > limit_mb:
+            st.error(f"❌ File terlalu besar! ({file_size_mb:.1f} MB). Batas akun Anda saat ini adalah {limit_mb} MB.")
+            if limit_mb == 10:
+                st.warning("💡 Silakan login dan Beli Paket di tab **🔐 Akun** untuk mengunggah file hingga 200MB.")
+        else:
+            audio_to_process, source_name = uploaded_file, uploaded_file.name
+            file_diizinkan = True
     
     st.write("") 
     c1, c2, c3 = st.columns([1, 4, 1]) 
     with c2:
         lang_choice_upload = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_up")
         st.write("") 
-        if uploaded_file:
+        if file_diizinkan: # Tombol Mulai HANYA muncul jika file lolos limit
             if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_up"):
                 submit_btn = True
                 lang_code = "id-ID" if lang_choice_upload == "Indonesia" else "en-US"
-        else:
+        elif not uploaded_file:
             st.markdown('<div class="custom-info-box">👆 Silakan Upload terlebih dahulu.</div>', unsafe_allow_html=True)
-
+            
 # TAB 2: REKAM SUARA (Terkunci)
 with tab_rekam:
     if not st.session_state.logged_in:
@@ -867,9 +891,27 @@ with tab_auth:
                             if err == "EMAIL_EXISTS": st.error("❌ Email sudah terdaftar. Silakan langsung Login saja.")
                             elif err == "INVALID_EMAIL": st.error("❌ Format email tidak valid. Gunakan email asli!")
                             else: st.error(f"❌ Gagal mendaftar: {err}")
-    else:
-        st.success(f"✅ Anda saat ini masuk sebagai: **{st.session_state.current_user}**")
-        st.info("💡 Silakan beralih ke tab **✨ Ekstrak AI** atau **🎙️ Rekam Suara** untuk mulai menggunakan layanan.")
+else:
+        # HEADER PROFIL PREMIUM (Teks Rata Tengah & Warna Merah Aksen)
+        st.markdown(f"""
+        <div style="text-align: center; padding: 20px 0;">
+            <p style="color: #666; font-size: 16px; margin-bottom: 5px;">Anda saat ini masuk sebagai:</p>
+            <h2 style="margin-top: 0;"><font color="#e74c3c">{st.session_state.current_user}</font></h2>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # DASBOR NILAI PLUS (VALUE PROPOSITION) - 3 KOLOM
+        col_vp1, col_vp2, col_vp3 = st.columns(3)
+        with col_vp1:
+            st.markdown("<div style='text-align: center; padding: 10px;'><h3>⚡</h3><b style='color:#111; font-size: 16px;'>Hemat Waktu</b><br><span style='font-size:14px; color:#555;'>Selesai dalam hitungan menit, bukan berhari-hari.</span></div>", unsafe_allow_html=True)
+        with col_vp2:
+            st.markdown("<div style='text-align: center; padding: 10px;'><h3>🧠</h3><b style='color:#111; font-size: 16px;'>AI Pintar</b><br><span style='font-size:14px; color:#555;'>Otomatis susun Laporan & Notulen siap cetak.</span></div>", unsafe_allow_html=True)
+        with col_vp3:
+            st.markdown("<div style='text-align: center; padding: 10px;'><h3>⚖️</h3><b style='color:#111; font-size: 16px;'>Sistem Adil</b><br><span style='font-size:14px; color:#555;'>Jeda hening tidak memotong tagihan kuota Anda.</span></div>", unsafe_allow_html=True)
+        
+        st.write("")
 
 with tab_ai:
     if not st.session_state.logged_in:
