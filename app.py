@@ -561,7 +561,7 @@ def show_pricing_dialog():
             st.markdown("""
             **1. Paket Starter**
             *Cocok untuk kebutuhan personal & tugas ringan.*
-            * 📄 **5x** Ekstrak AI (Laporan/Notulen)
+            * 📄 **3x** Ekstrak AI (Laporan/Notulen)
             * ⏱️ **Kapasitas:** Maks. 1 Jam / File
             * 📅 **Masa Aktif:** 14 Hari
             * 🎁 **Bonus Saldo:** Rp 3.000
@@ -577,7 +577,7 @@ def show_pricing_dialog():
             st.markdown("""
             **2. Paket Pro Notulis**
             *Standar profesional untuk notulis & sekretaris.*
-            * 📄 **15x** Ekstrak AI (Laporan/Notulen)
+            * 📄 **8x** Ekstrak AI (Laporan/Notulen)
             * ⏱️ **Kapasitas:** Maks. 1,5 Jam / File
             * 📅 **Masa Aktif:** 30 Hari
             * 🎁 **Bonus Saldo:** Rp 10.000
@@ -592,7 +592,7 @@ def show_pricing_dialog():
             st.markdown("""
             **3. Paket Eksekutif**
             *Pilihan tepat untuk intensitas rapat tinggi.*
-            * 📄 **50x** Ekstrak AI (Laporan/Notulen)
+            * 📄 **28x** Ekstrak AI (Laporan/Notulen)
             * ⏱️ **Kapasitas:** Maks. 2 Jam / File
             * 📅 **Masa Aktif:** 45 Hari
             * 🎁 **Bonus Saldo:** Rp 20.000
@@ -606,9 +606,9 @@ def show_pricing_dialog():
             st.markdown("---")
             
             st.markdown("""
-            **4. Paket VIP Instansi**
+            **4. Paket VIP**
             *Akses maksimal untuk kementerian/instansi.*
-            * 📄 **100x** Ekstrak AI (Laporan/Notulen)
+            * 📄 **50x** Ekstrak AI (Laporan/Notulen)
             * ⏱️ **Kapasitas:** Maks. 3 Jam / File
             * 📅 **Masa Aktif:** 60 Hari
             * 🎁 **Bonus Saldo:** Rp 35.000
@@ -1294,7 +1294,7 @@ if st.session_state.user_role == "admin":
         
         with st.expander("➕ Buat Voucher Baru"):
             with st.form("form_voucher"):
-                v_paket = st.selectbox("Pilih Paket yang Diberikan", ["Starter", "Pro Notulis", "Eksekutif", "VIP Instansi"])
+                v_paket = st.selectbox("Pilih Paket yang Diberikan", ["Starter", "Pro Notulis", "Eksekutif", "VIP"])
                 v_kode = st.text_input("Custom Kode Voucher (Kosongkan jika ingin dibuat acak otomatis)", placeholder="Contoh: BAPPEDA-VIP-01").strip().upper()
                 
                 col_t1, col_t2 = st.columns(2)
@@ -1307,10 +1307,10 @@ if st.session_state.user_role == "admin":
                     if not v_kode: v_kode = "TOM-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
                     
                     paket_map = {
-                        "Starter": {"k": 5, "d": 60},
-                        "Pro Notulis": {"k": 15, "d": 90},
-                        "Eksekutif": {"k": 50, "d": 120},
-                        "VIP Instansi": {"k": 100, "d": 180}
+                        "Starter": {"k": 3, "d": 60},
+                        "Pro Notulis": {"k": 8, "d": 90},
+                        "Eksekutif": {"k": 28, "d": 120},
+                        "VIP": {"k": 50, "d": 180}
                     }
                     
                     max_k = 1 if v_tipe == "Eksklusif (1x Pakai)" else v_kuota_klaim
