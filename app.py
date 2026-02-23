@@ -828,8 +828,10 @@ with tab_upload:
         user_info = get_user(st.session_state.current_user)
         if user_info:
             role = user_info.get("role", "user")
-            paket = user_info.get("paket_aktif", "Freemium")
-            if role == "admin" or paket != "Freemium":
+            # Logika Baru: Cek apakah rak inventori ada isinya
+            inventori = user_info.get("inventori", [])
+            
+            if role == "admin" or len(inventori) > 0:
                 limit_mb = 200 # Premium / Admin mendapat 200MB
     
     # 2. Teks Edukasi Transparan
@@ -1449,4 +1451,3 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
-
