@@ -7,6 +7,7 @@ import math
 import tempfile
 import io
 import requests
+import re
 from shutil import which
 
 # Import Library AI, DOCX, & Firebase
@@ -328,8 +329,64 @@ def get_duration(file_path):
 def create_docx(text, title):
     doc = Document()
     doc.add_heading(title, level=1)
+    
     for line in text.split('\n'):
-        if line.strip() != "": doc.add_paragraph(line)
+        if not line.strip(): 
+            continue
+            
+        # 1. Deteksi Garis Pembatas (---)
+        if re.match(r'^\s*---\s*$', line):
+            doc.add_paragraph("_" * 50) # Membuat garis visual sederhana di Word
+            continue
+        
+        # 2. Deteksi Judul/Heading Markdown (##, ###)
+        heading_match = re.match(r'^(#+)\s+(.*)', line.strip())
+        if heading_match:
+            level = len(heading_match.group(1))
+            doc.add_heading(heading_match.group(2), level=min(level, 9))
+            continue
+            
+        # 3. Deteksi Bullet Point (* atau -) dan Sub-Bullet
+        # Menangkap spasi di depan untuk menentukan level indentasi
+        bullet_match = re.match(r'^(\s*)[\*\-]\s+(.*)', line)
+        number_match = re.match(r'^(\s*)\d+\.\s+(.*)', line)
+        
+        if bullet_match:
+            indent_spaces = len(bullet_match.group(1))
+            # Jika ada spasi di depan (biasanya 4 spasi), jadikan Sub-Bullet (Level 2)
+            style_name = 'List Bullet 2' if indent_spaces >= 2 else 'List Bullet'
+            p = doc.add_paragraph(style=style_name)
+            line_content = bullet_match.group(2)
+        elif number_match:
+            indent_spaces = len(number_match.group(1))
+            style_name = 'List Number 2' if indent_spaces >= 2 else 'List Number'
+            p = doc.add_paragraph(style=style_name)
+            line_content = number_match.group(2)
+        else:
+            p = doc.add_paragraph()
+            line_content = line.strip()
+            
+        # 4. Deteksi Teks Tebal (Bold **) dan Miring (Italic *) secara bersamaan
+        # Pertama: Pecah berdasarkan Bold (**)
+        parts = re.split(r'\*\*(.*?)\*\*', line_content)
+        for i, part in enumerate(parts):
+            if not part: continue
+            
+            if i % 2 != 0: 
+                # Jika index ganjil, ini adalah teks BOLD
+                run = p.add_run(part)
+                run.bold = True
+            else: 
+                # Kedua: Jika bukan Bold, cek apakah di dalamnya ada Italic (*)
+                italic_parts = re.split(r'\*(.*?)\*', part)
+                for j, i_part in enumerate(italic_parts):
+                    if not i_part: continue
+                    
+                    run = p.add_run(i_part)
+                    if j % 2 != 0:
+                        # Index ganjil di sini berarti teks ITALIC
+                        run.italic = True
+
     bio = io.BytesIO()
     doc.save(bio)
     return bio.getvalue()
@@ -917,7 +974,7 @@ with tab_ai:
 
             if st.session_state.ai_result:
                 st.markdown("---")
-                st.markdown("### ✨ Hasil Ekstrak AI (Super Mendetail)")
+                st.markdown("### ✨ Hasil Ekstrak AI")
                 st.markdown(st.session_state.ai_result)
                 
                 prefix = st.session_state.ai_prefix
@@ -1057,6 +1114,7 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
 
 
 
