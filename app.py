@@ -292,10 +292,8 @@ if not st.session_state.logged_in:
         
     saved_user = None
     try:
-        # Mencoba mengambil cookie. Akan ditahan jika Javascript browser belum siap
         saved_user = cookie_manager.get('tomstt_session')
     except Exception:
-        # Mengabaikan TypeError di milidetik pertama
         pass
     
     if saved_user:
@@ -304,7 +302,14 @@ if not st.session_state.logged_in:
             st.session_state.logged_in = True
             st.session_state.current_user = saved_user
             st.session_state.user_role = user_data.get("role", "user")
-            st.session_state.retry_cookie = 0 # Reset counter jika berhasil
+            
+            # --- INJEKSI DRAFT KE MEMORI SEBELUM REFRESH UI ---
+            st.session_state.transcript = user_data.get("draft_transcript", "")
+            st.session_state.filename = user_data.get("draft_filename", "Hasil_STT")
+            st.session_state.ai_result = user_data.get("draft_ai_result", "")
+            st.session_state.ai_prefix = user_data.get("draft_ai_prefix", "")
+            
+            st.session_state.retry_cookie = 0 
             st.rerun()
     else:
         # Jika cookie kosong/belum siap, tunggu 0.5 detik dan paksa cek ulang (Maks 3x percobaan)
@@ -314,16 +319,14 @@ if not st.session_state.logged_in:
             time.sleep(0.5)
             st.rerun()
 
-# --- PENGAMANAN DRAFT (RESTORASI GLOBAL) ---
-# Menarik data persis setelah user berhasil login/terdeteksi aktif
-if st.session_state.logged_in and not st.session_state.transcript:
+# --- PENGAMANAN DRAFT (RESTORASI GLOBAL SAAT LOGIN MANUAL) ---
+if st.session_state.logged_in and not st.session_state.transcript and not st.session_state.ai_result:
     user_info = get_user(st.session_state.current_user)
-    if user_info and user_info.get("draft_transcript"):
-        # Penambahan 'or ""' memaksa data menjadi string meskipun terbaca None
-        st.session_state.transcript = user_info.get("draft_transcript") or ""
-        st.session_state.filename = user_info.get("draft_filename") or "Hasil_STT"
-        st.session_state.ai_result = user_info.get("draft_ai_result") or ""
-        st.session_state.ai_prefix = user_info.get("draft_ai_prefix") or ""
+    if user_info and ("draft_transcript" in user_info or "draft_ai_result" in user_info):
+        st.session_state.transcript = user_info.get("draft_transcript", "")
+        st.session_state.filename = user_info.get("draft_filename", "Hasil_STT")
+        st.session_state.ai_result = user_info.get("draft_ai_result", "")
+        st.session_state.ai_prefix = user_info.get("draft_ai_prefix", "")
 
 # --- CUSTOM CSS ---
 st.markdown("""
@@ -1142,9 +1145,19 @@ with tab_ai:
         if not st.session_state.transcript:
             st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia.<br><strong>ATAU</strong> Unggah file .txt di bawah ini:</div>', unsafe_allow_html=True)
             uploaded_txt = st.file_uploader("Upload File Transkrip (.txt)", type=["txt"])
+            
             if uploaded_txt:
                 st.session_state.transcript, st.session_state.filename = uploaded_txt.read().decode("utf-8"), os.path.splitext(uploaded_txt.name)[0]
                 st.session_state.ai_result = "" 
+                
+                # KUNCI PERBAIKAN: Simpan ke Firebase agar tidak hilang saat di-refresh!
+                if st.session_state.logged_in:
+                    db.collection('users').document(st.session_state.current_user).update({
+                        "draft_transcript": st.session_state.transcript,
+                        "draft_filename": st.session_state.filename,
+                        "draft_ai_result": "",
+                        "draft_ai_prefix": ""
+                    })
                 st.rerun()
         else:
             st.success("✅ Teks Transkrip Siap Diproses!")
@@ -1265,6 +1278,8 @@ with tab_ai:
                             
                             # CHECKPOINT 2: Simpan Hasil AI ke Firebase
                             db.collection('users').document(st.session_state.current_user).update({
+                                "draft_transcript": st.session_state.transcript, # PASTIKAN TEKS JUGA IKUT DISIMPAN BERSAMAAN
+                                "draft_filename": st.session_state.filename,
                                 "draft_ai_result": st.session_state.ai_result,
                                 "draft_ai_prefix": st.session_state.ai_prefix
                             })
