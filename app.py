@@ -286,22 +286,27 @@ if 'ai_result' not in st.session_state: st.session_state.ai_result = ""
 if 'ai_prefix' not in st.session_state: st.session_state.ai_prefix = "" 
 
 # --- SISTEM AUTO-LOGIN (MENCEGAH LOGOUT DI HP) ---
-if not st.session_state.logged_in:
-    # Mengambil token dari browser user
+if not st.session_state.get('logged_in', False):
+    # Memberikan jeda sangat singkat agar komponen cookie sempat berkomunikasi dengan browser
+    import time
+    
+    # Ambil data cookie
     saved_user = cookie_manager.get('tomstt_session')
     
+    # Jika pada detik pertama belum terbaca, kita tunggu 0.1 detik lagi (opsional tapi membantu di HP)
+    if saved_user is None:
+        time.sleep(0.1)
+        saved_user = cookie_manager.get('tomstt_session')
+
     if saved_user:
-        # Menarik data user dari Firebase berdasarkan email di cookie
-        user_data = get_user(saved_user)
-        if user_data: 
-            st.session_state.logged_in = True
-            st.session_state.current_user = saved_user
-            st.session_state.user_role = user_data.get("role", "user")
-            
-            # --- KUNCI PERBAIKAN: Paksa aplikasi memuat ulang UI ---
-            # Tanpa ini, Streamlit akan tetap menampilkan layar login 
-            # sampai user melakukan interaksi manual.
-            st.rerun()
+        with st.spinner("Memulihkan sesi..."):
+            user_data = get_user(saved_user)
+            if user_data: 
+                st.session_state.logged_in = True
+                st.session_state.current_user = saved_user
+                st.session_state.user_role = user_data.get("role", "user")
+                # PAKSA REFRESH UI agar dompet langsung muncul
+                st.rerun()
 
 # --- CUSTOM CSS ---
 st.markdown("""
