@@ -285,28 +285,38 @@ if 'user_role' not in st.session_state: st.session_state.user_role = ""
 if 'ai_result' not in st.session_state: st.session_state.ai_result = "" 
 if 'ai_prefix' not in st.session_state: st.session_state.ai_prefix = "" 
 
-# --- SISTEM AUTO-LOGIN (MENCEGAH LOGOUT DI HP) ---
-if not st.session_state.get('logged_in', False):
-    # Memberikan jeda sangat singkat agar komponen cookie sempat berkomunikasi dengan browser
-    import time
-    
-    # Ambil data cookie
+# --- SISTEM AUTO-LOGIN (BUFFER ANTI-LOGOUT) ---
+if not st.session_state.logged_in:
+    if 'retry_cookie' not in st.session_state:
+        st.session_state.retry_cookie = 0
+        
     saved_user = cookie_manager.get('tomstt_session')
     
-    # Jika pada detik pertama belum terbaca, kita tunggu 0.1 detik lagi (opsional tapi membantu di HP)
-    if saved_user is None:
-        time.sleep(0.1)
-        saved_user = cookie_manager.get('tomstt_session')
-
     if saved_user:
-        with st.spinner("Memulihkan sesi..."):
-            user_data = get_user(saved_user)
-            if user_data: 
-                st.session_state.logged_in = True
-                st.session_state.current_user = saved_user
-                st.session_state.user_role = user_data.get("role", "user")
-                # PAKSA REFRESH UI agar dompet langsung muncul
-                st.rerun()
+        user_data = get_user(saved_user)
+        if user_data: 
+            st.session_state.logged_in = True
+            st.session_state.current_user = saved_user
+            st.session_state.user_role = user_data.get("role", "user")
+            st.rerun()
+    else:
+        # Jika cookie kosong, tunggu 0.5 detik dan paksa cek ulang (Maks 2x percobaan)
+        if st.session_state.retry_cookie < 2:
+            import time
+            st.session_state.retry_cookie += 1
+            time.sleep(0.5)
+            st.rerun()
+
+# --- PENGAMANAN DRAFT (RESTORASI GLOBAL) ---
+# Menarik data persis setelah user berhasil login/terdeteksi aktif
+if st.session_state.logged_in and not st.session_state.transcript:
+    user_info = get_user(st.session_state.current_user)
+    if user_info and user_info.get("draft_transcript"):
+        # Penambahan 'or ""' memaksa data menjadi string meskipun terbaca None
+        st.session_state.transcript = user_info.get("draft_transcript") or ""
+        st.session_state.filename = user_info.get("draft_filename") or "Hasil_STT"
+        st.session_state.ai_result = user_info.get("draft_ai_result") or ""
+        st.session_state.ai_prefix = user_info.get("draft_ai_prefix") or ""
 
 # --- CUSTOM CSS ---
 st.markdown("""
@@ -1122,14 +1132,6 @@ with tab_ai:
     else:
         user_info = get_user(st.session_state.current_user)
         
-        # LOGIKA PENGAMANAN: Coba tarik draft dari Firebase jika RAM HP ke-reset
-        if not st.session_state.transcript and user_info and user_info.get("draft_transcript"):
-            st.session_state.transcript = user_info["draft_transcript"]
-            st.session_state.filename = user_info.get("draft_filename", "Hasil_STT")
-            st.session_state.ai_result = user_info.get("draft_ai_result", "")
-            st.session_state.ai_prefix = user_info.get("draft_ai_prefix", "")
-            st.toast("♻️ Memuat ulang draft terakhir Anda yang tersimpan aman.")
-
         if not st.session_state.transcript:
             st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia.<br><strong>ATAU</strong> Unggah file .txt di bawah ini:</div>', unsafe_allow_html=True)
             uploaded_txt = st.file_uploader("Upload File Transkrip (.txt)", type=["txt"])
