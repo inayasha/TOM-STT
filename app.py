@@ -400,6 +400,9 @@ def get_duration(file_path):
     except: return 0.0
 
 def create_docx(text, title):
+    from docx import Document
+    from docx.shared import Pt  # Modul tambahan untuk mengatur jarak spasi (indentasi)
+    
     doc = Document()
     doc.add_heading(title, level=1)
     
@@ -420,9 +423,11 @@ def create_docx(text, title):
             doc.add_heading(heading_match.group(2), level=min(level, 9))
             continue
             
-        # 3. Deteksi Bullet Point (*, -, atau angka) dan indentasi
-        bullet_match = re.match(r'^(\s*)[\*\-]\s+(.*)', line)
-        number_match = re.match(r'^(\s*)\d+\.\s+(.*)', line)
+        # 3. Deteksi Bullet Point (*, -, atau +) dan indentasi
+        bullet_match = re.match(r'^(\s*)[\*\-\+]\s+(.*)', line)
+        
+        # 4. Deteksi Numbering & Alphabet (1., 12., A., B., a., b.)
+        number_match = re.match(r'^(\s*)([A-Za-z0-9]+[\.\)])\s+(.*)', line)
         
         p = None
         if bullet_match:
@@ -432,26 +437,30 @@ def create_docx(text, title):
                 style_name = 'List Bullet 2' if indent_spaces >= 2 else 'List Bullet'
                 p = doc.add_paragraph(style=style_name)
             except:
-                # Fallback aman jika List Bullet 2 tidak ada di template
                 p = doc.add_paragraph(style='List Bullet')
             line_content = bullet_match.group(2)
             
         elif number_match:
             indent_spaces = len(number_match.group(1))
-            try:
-                style_name = 'List Number 2' if indent_spaces >= 2 else 'List Number'
-                p = doc.add_paragraph(style=style_name)
-            except:
-                p = doc.add_paragraph(style='List Number')
-            line_content = number_match.group(2)
+            
+            # KUNCI PERBAIKAN: Gunakan paragraf normal agar angka tidak di-reset oleh Word menjadi (1, 1, 1)
+            p = doc.add_paragraph()
+            
+            # Berikan efek menjorok ke dalam (indentasi) jika ini adalah sub-list
+            if indent_spaces > 0:
+                try:
+                    p.paragraph_format.left_indent = Pt(18) 
+                except: pass
+                
+            # KEMBALIKAN angka/huruf aslinya (Misal: "11. " atau "A. ") ke dalam teks
+            line_content = number_match.group(2) + " " + number_match.group(3)
             
         else:
             # Teks Paragraf Biasa
             p = doc.add_paragraph()
             line_content = line.strip()
             
-        # 4. PARSING INLINE CANGGIH (Bold & Italic) dengan "Regex Tokenizer"
-        # Memecah string menjadi token-token teks biasa, **tebal**, atau *miring*
+        # 5. PARSING INLINE CANGGIH (Bold & Italic) dengan "Regex Tokenizer"
         tokens = re.split(r'(\*\*.*?\*\*|\*.*?\*)', line_content)
         
         for token in tokens:
@@ -459,15 +468,15 @@ def create_docx(text, title):
                 continue
                 
             if token.startswith('**') and token.endswith('**') and len(token) > 4:
-                # Jika token adalah **Teks**, hapus 2 bintang di depan & belakang, lalu jadikan TEBAL
+                # Cetak Tebal
                 run = p.add_run(token[2:-2])
                 run.bold = True
             elif token.startswith('*') and token.endswith('*') and len(token) > 2:
-                # Jika token adalah *Teks*, hapus 1 bintang di depan & belakang, lalu jadikan MIRING
+                # Cetak Miring
                 run = p.add_run(token[1:-1])
                 run.italic = True
             else:
-                # Jika teks biasa, cetak normal
+                # Teks Normal
                 p.add_run(token)
 
     bio = io.BytesIO()
