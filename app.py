@@ -150,6 +150,81 @@ def eksekusi_pembayaran(username, user_data, index_paket, potong_saldo):
             
     user_ref.update(updates)
     
+def redeem_voucher(username, kode_voucher):
+    """Mengecek dan mengeksekusi voucher dengan aman, serta menambah masa aktif max 90 hari."""
+    kode_voucher = kode_voucher.upper().strip()
+    v_ref = db.collection('vouchers').document(kode_voucher)
+    v_doc = v_ref.get()
+    
+    if not v_doc.exists:
+        return False, "❌ Voucher tidak ditemukan atau salah ketik."
+        
+    v_data = v_doc.to_dict()
+    
+    # 1. Cek Kuota & Riwayat (Sistem Anti-Curang)
+    if v_data.get('jumlah_terklaim', 0) >= v_data.get('max_klaim', 1):
+        return False, "❌ Kuota klaim voucher ini sudah habis."
+    if username in v_data.get('riwayat_pengguna', []):
+        return False, "❌ Anda sudah pernah mengklaim voucher ini."
+        
+    user_ref = db.collection('users').document(username)
+    
+    # 2. Transaksi Aman (Mencegah bentrokan jika diklik bersamaan oleh banyak orang)
+    @firestore.transactional
+    def eksekusi_klaim(transaction, user_ref, v_ref):
+        u_snap = user_ref.get(transaction=transaction)
+        u_data = u_snap.to_dict()
+        v_latest = v_ref.get(transaction=transaction).to_dict()
+        
+        # Hitung Tanggal Expired (Maksimal 90 Hari dari sekarang)
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc)
+        current_exp = u_data.get("tanggal_expired")
+        
+        if current_exp and current_exp != "Selamanya":
+            try:
+                exp_date = current_exp if not isinstance(current_exp, str) else datetime.datetime.fromisoformat(current_exp.replace("Z", "+00:00"))
+                base_date = now if exp_date < now else exp_date
+            except: base_date = now
+        else:
+            base_date = now
+            
+        # Tentukan tambahan hari sesuai paket
+        hari_tambah = 14
+        if "Pro" in v_latest['nama_paket']: hari_tambah = 30
+        elif "Eksekutif" in v_latest['nama_paket']: hari_tambah = 45
+        elif "VIP" in v_latest['nama_paket']: hari_tambah = 60
+        
+        new_exp_date = base_date + datetime.timedelta(days=hari_tambah)
+        max_exp_date = now + datetime.timedelta(days=90)
+        
+        if new_exp_date > max_exp_date: new_exp_date = max_exp_date # Kunci di batas max 90 hari
+            
+        # Suntikkan Paket ke Array Inventori
+        inventori = u_data.get("inventori", [])
+        ditemukan = False
+        for pkt in inventori:
+            # Jika paketnya sama persis, tambahkan saja angkanya agar tidak menuhi rak
+            if pkt['nama'] == v_latest['nama_paket'] and pkt['batas_durasi'] == v_latest['batas_durasi']:
+                pkt['kuota'] += v_latest['kuota_paket']
+                ditemukan = True
+                break
+        if not ditemukan:
+            inventori.append({"nama": v_latest['nama_paket'], "kuota": v_latest['kuota_paket'], "batas_durasi": v_latest['batas_durasi']})
+            
+        # Eksekusi Pembaruan Database
+        transaction.update(user_ref, {"inventori": inventori, "tanggal_expired": new_exp_date})
+        transaction.update(v_ref, {"jumlah_terklaim": firestore.Increment(1), "riwayat_pengguna": firestore.ArrayUnion([username])})
+        
+        return True, f"🎉 Selamat! Paket {v_latest['nama_paket']} berhasil ditambahkan ke inventori Anda."
+        
+    transaction = db.transaction()
+    try:
+        success, msg = eksekusi_klaim(transaction, user_ref, v_ref)
+        return success, msg
+    except Exception as e:
+        return False, f"Terjadi kesalahan sistem: {str(e)}"
+    
 # --- FUNGSI DATABASE FIREBASE (API KEYS & LOAD BALANCER) ---
 def add_api_key(name, provider, key_string, limit):
     db.collection('api_keys').add({
@@ -460,9 +535,29 @@ def show_pricing_dialog():
     💡 **Informasi Sistem & Ketentuan:**
     * 🎟️ **Sistem Tiket:** 1 Kuota = 1x Pembuatan Dokumen (Laporan/Notulen).
     * ⚖️ **Tagihan Adil (Deteksi Jeda):** Durasi dihitung berdasarkan **jumlah kata aktual** yang diucapkan, BUKAN total waktu rekaman mentah. Waktu hening & jeda tidak memotong kuota Anda.
-    * 📅 **Akumulasi Masa Aktif:** Pembelian paket baru akan otomatis menambah sisa masa aktif Anda sebelumnya *(Maksimal akumulasi 365 Hari / 1 Tahun)*.
+    * 📅 **Akumulasi Masa Aktif:** Pembelian paket baru akan otomatis menambah sisa masa aktif Anda sebelumnya *(Maksimal akumulasi 90 Hari / 3 Bulan)*.
     * 💳 **Saldo Tambahan:** Jika rekaman melebihi batas maksimal, sistem menggunakan Saldo Utama dengan tarif **Rp 350 / Menit**.
     """)
+    
+    # KOTAK REDEEM VOUCHER
+    st.markdown("---")
+    col_v1, col_v2 = st.columns([3, 1])
+    with col_v1:
+        input_voucher = st.text_input("🎁 Punya Kode Voucher / Promo?", placeholder="Masukkan kode di sini...", key="input_vc").strip().upper()
+    with col_v2:
+        st.write("") # Spacer agar sejajar
+        if st.button("Klaim Voucher", use_container_width=True, type="primary"):
+            if input_voucher:
+                with st.spinner("Memeriksa kode..."):
+                    sukses, pesan = redeem_voucher(user_email, input_voucher)
+                    if sukses:
+                        st.success(pesan)
+                        st.balloons()
+                    else:
+                        st.error(pesan)
+            else:
+                st.warning("Silakan masukkan kode terlebih dahulu.")
+    st.markdown("---")
     
     tab_paket, tab_saldo = st.tabs(["📦 BELI PAKET KUOTA", "💳 TOP-UP SALDO"])
     
@@ -1087,6 +1182,61 @@ if st.session_state.user_role == "admin":
                     delete_api_key(doc.id)
                     st.rerun()
             st.write("---")
+            
+        # --- GENERATOR VOUCHER ---
+        st.markdown("#### 🎫 Generator Voucher Promo / B2B")
+        st.caption("Buat kode akses untuk diberikan secara manual kepada instansi/klien atau sebagai promo gratis.")
+        
+        with st.expander("➕ Buat Voucher Baru"):
+            with st.form("form_voucher"):
+                v_paket = st.selectbox("Pilih Paket yang Diberikan", ["Starter", "Pro Notulis", "Eksekutif", "VIP Instansi"])
+                v_kode = st.text_input("Custom Kode Voucher (Kosongkan jika ingin dibuat acak otomatis)", placeholder="Contoh: BAPPEDA-VIP-01").strip().upper()
+                
+                col_t1, col_t2 = st.columns(2)
+                with col_t1: v_tipe = st.radio("Tipe Voucher", ["Eksklusif (1x Pakai)", "Massal (Multi-Klaim)"])
+                with col_t2: v_kuota_klaim = st.number_input("Batas Klaim (Untuk Massal)", min_value=1, value=10, disabled=(v_tipe == "Eksklusif (1x Pakai)"))
+                
+                if st.form_submit_button("🔨 Generate Voucher"):
+                    import random, string
+                    if not v_kode: v_kode = "TOM-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                    
+                    paket_map = {
+                        "Starter": {"k": 5, "d": 60},
+                        "Pro Notulis": {"k": 15, "d": 90},
+                        "Eksekutif": {"k": 50, "d": 120},
+                        "VIP Instansi": {"k": 100, "d": 180}
+                    }
+                    
+                    max_k = 1 if v_tipe == "Eksklusif (1x Pakai)" else v_kuota_klaim
+                    
+                    # Cek apakah kode sudah ada
+                    if db.collection('vouchers').document(v_kode).get().exists:
+                        st.error(f"❌ Kode '{v_kode}' sudah pernah dibuat! Silakan gunakan kode lain.")
+                    else:
+                        db.collection('vouchers').document(v_kode).set({
+                            "kode_voucher": v_kode,
+                            "nama_paket": v_paket,
+                            "kuota_paket": paket_map[v_paket]["k"],
+                            "batas_durasi": paket_map[v_paket]["d"],
+                            "tipe": v_tipe,
+                            "max_klaim": int(max_k),
+                            "jumlah_terklaim": 0,
+                            "riwayat_pengguna": [],
+                            "created_at": firestore.SERVER_TIMESTAMP
+                        })
+                        st.success(f"✅ Berhasil! Kode Voucher: **{v_kode}** siap digunakan.")
+                        st.rerun()
+
+        st.write("")
+        # Menampilkan Tabel/Daftar Voucher Aktif secara sederhana
+        if st.checkbox("Lihat Daftar Voucher Aktif"):
+            vouchers_ref = db.collection('vouchers').order_by('created_at', direction=firestore.Query.DESCENDING).limit(10).stream()
+            for v in vouchers_ref:
+                vd = v.to_dict()
+                sisa = vd['max_klaim'] - vd['jumlah_terklaim']
+                status_v = "🟢 AKTIF" if sisa > 0 else "🔴 HABIS"
+                st.markdown(f"**{vd['kode_voucher']}** &nbsp;|&nbsp; Paket: {vd['nama_paket']} &nbsp;|&nbsp; Sisa Klaim: **{sisa}** &nbsp;|&nbsp; {status_v}")
+        st.markdown("---")
         
         # --- MANAJEMEN USER ---
         st.markdown("#### 👥 Manajemen User")
@@ -1162,7 +1312,3 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
-
-
-
-
