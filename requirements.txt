@@ -5,3 +5,4 @@ groq
 python-docx
 firebase-admin
 requests
+streamlit-cookies-controller==0.0.3
