@@ -27,6 +27,8 @@ from streamlit_cookies_controller import CookieController
 # ==========================================
 st.set_page_config(page_title="TOM'STT AI", page_icon="🎙️", layout="centered", initial_sidebar_state="expanded")
 
+cookie_manager = CookieController()
+
 # --- FIREBASE INITIALIZATION ---
 if "firebase" not in st.secrets:
     st.error("⚠️ Kredensial Firebase belum di-set di Streamlit Secrets. Ikuti panduan untuk memasukkan JSON Firebase.")
