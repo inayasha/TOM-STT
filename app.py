@@ -1,5 +1,6 @@
 import uuid
 import streamlit as st
+import streamlit.components.v1 as components
 import speech_recognition as sr
 import os
 import subprocess
@@ -759,6 +760,31 @@ st.info("""
 🧠 **Bukan Sekadar Transkrip Biasa:** AI kami telah diprogram khusus untuk langsung mengekstrak **Notulen Rapat** atau **Laporan Memorandum** siap cetak—lengkap dengan latar belakang, analisis, dan tindak lanjut berstandar profesional.
 """)
 
+# --- FITUR WAKE LOCK (ANTI-LAYAR MATI) ---
+components.html(
+    """
+    <script>
+    async function requestWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                const wakeLock = await navigator.wakeLock.request('screen');
+                console.log('Wake Lock aktif: Layar tidak akan mati.');
+                document.addEventListener('visibilitychange', async () => {
+                    if (document.visibilityState === 'visible') {
+                        await navigator.wakeLock.request('screen');
+                    }
+                });
+            }
+        } catch (err) {
+            console.log('Wake Lock error: ' + err.message);
+        }
+    }
+    requestWakeLock();
+    </script>
+    """,
+    height=0, width=0
+)
+
 tab_titles = ["📂 Upload File", "🎙️ Rekam Suara", "✨ Ekstrak AI", "🔐 Akun"]
 if st.session_state.user_role == "admin": tab_titles.append("⚙️ Panel Admin")
 tabs = st.tabs(tab_titles)
@@ -873,6 +899,14 @@ if submit_btn and audio_to_process:
         final_text = " ".join(full_transcript)
         st.session_state.transcript, st.session_state.filename = final_text, os.path.splitext(source_name)[0]
         st.session_state.ai_result = "" 
+        # CHECKPOINT 1: Simpan Transkrip ke Firebase (Auto-Save)
+        if st.session_state.logged_in:
+            db.collection('users').document(st.session_state.current_user).update({
+                "draft_transcript": st.session_state.transcript,
+                "draft_filename": st.session_state.filename,
+                "draft_ai_result": "",
+                "draft_ai_prefix": ""
+            })
         st.download_button("💾 Download (.TXT)", final_text, f"{st.session_state.filename}.txt", "text/plain", use_container_width=True)
 
     except Exception as e: st.error(f"Error: {e}")
@@ -990,6 +1024,16 @@ with tab_ai:
     if not st.session_state.logged_in:
         st.markdown('<div style="text-align: center; padding: 20px; background-color: #fdeced; border-radius: 10px; border: 1px solid #f5c6cb; margin-bottom: 20px;"><h3 style="color: #e74c3c; margin-top: 0;">🔒 Akses Terkunci!</h3><p style="color: #e74c3c; font-weight: 500;">Silakan masuk (login) atau daftar terlebih dahulu di tab <b>🔐 Akun</b> untuk menggunakan fitur AI.</p></div>', unsafe_allow_html=True)
     else:
+        user_info = get_user(st.session_state.current_user)
+        
+        # LOGIKA PENGAMANAN: Coba tarik draft dari Firebase jika RAM HP ke-reset
+        if not st.session_state.transcript and user_info and user_info.get("draft_transcript"):
+            st.session_state.transcript = user_info["draft_transcript"]
+            st.session_state.filename = user_info.get("draft_filename", "Hasil_STT")
+            st.session_state.ai_result = user_info.get("draft_ai_result", "")
+            st.session_state.ai_prefix = user_info.get("draft_ai_prefix", "")
+            st.toast("♻️ Memuat ulang draft terakhir Anda yang tersimpan aman.")
+
         if not st.session_state.transcript:
             st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia.<br><strong>ATAU</strong> Unggah file .txt di bawah ini:</div>', unsafe_allow_html=True)
             uploaded_txt = st.file_uploader("Upload File Transkrip (.txt)", type=["txt"])
@@ -1002,6 +1046,8 @@ with tab_ai:
             st.text_area("📄 Teks Saat Ini:", st.session_state.transcript, height=150, disabled=True)
             if st.button("🗑️ Hapus Teks"): 
                 st.session_state.transcript, st.session_state.ai_result = "", "" 
+                if user_info:
+                    db.collection('users').document(st.session_state.current_user).update({"draft_transcript": "", "draft_ai_result": ""})
                 st.rerun()
                 
             st.write("")
@@ -1108,10 +1154,16 @@ with tab_ai:
                             # 3. POTONG SALDO & INVENTORI KARENA BERHASIL!
                             eksekusi_pembayaran(st.session_state.current_user, user_info, selected_index_paket, p_saldo)
                             
-                            st.success(f"✅ **Proses Selesai!** {pesan_bayar}")
-                            
                             st.session_state.ai_result = ai_result
                             st.session_state.ai_prefix = "Notulen_" if btn_notulen else "Laporan_"
+                            
+                            # CHECKPOINT 2: Simpan Hasil AI ke Firebase
+                            db.collection('users').document(st.session_state.current_user).update({
+                                "draft_ai_result": st.session_state.ai_result,
+                                "draft_ai_prefix": st.session_state.ai_prefix
+                            })
+                            
+                            st.success(f"✅ **Proses Selesai!** {pesan_bayar}")
                         elif not success_generation:
                             st.error("❌ Gagal memproses. Server API sedang gangguan. Saldo & Kuota Anda AMAN (Tidak dipotong).")
 
