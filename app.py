@@ -944,7 +944,8 @@ with tab_rekam:
 
 if submit_btn and audio_to_process:
     st.markdown("---")
-    status_box, progress_bar, result_area = st.empty(), st.progress(0), st.empty()
+    
+    stt_display = st.empty()
     full_transcript = []
     
     file_ext = ".wav" if source_name == "rekaman_mic.wav" else (os.path.splitext(source_name)[1] or ".wav")
@@ -958,7 +959,6 @@ if submit_btn and audio_to_process:
         
         chunk_len = 59 
         total_chunks = math.ceil(duration_sec / chunk_len)
-        status_box.info(f"⏱️ Durasi: {duration_sec:.2f}s")
         
         recognizer = sr.Recognizer()
         recognizer.energy_threshold, recognizer.dynamic_energy_threshold = 300, True 
@@ -974,29 +974,93 @@ if submit_btn and audio_to_process:
                     audio_data = recognizer.record(source)
                     text = recognizer.recognize_google(audio_data, language=lang_code)
                     full_transcript.append(text)
-                    result_area.text_area("📝 Live Preview:", " ".join(full_transcript), height=250)
             except: full_transcript.append("") 
             finally:
                 if os.path.exists(chunk_filename): os.remove(chunk_filename)
             
-            progress_bar.progress(int(((i + 1) / total_chunks) * 100))
-            status_box.caption(f"Sedang memproses... ({int(((i + 1) / total_chunks) * 100)}%)")
+            # --- 1. FITUR AUTO-SAVE REALTIME (ANTI HILANG SAAT REFRESH) ---
+            partial_text = " ".join(full_transcript)
+            st.session_state.transcript = partial_text
+            st.session_state.filename = os.path.splitext(source_name)[0]
+            
+            if st.session_state.logged_in:
+                db.collection('users').document(st.session_state.current_user).update({
+                    "draft_transcript": partial_text,
+                    "draft_filename": st.session_state.filename
+                })
+            
+            # --- 2. TAMPILAN OVERLAY MEGAH DENGAN CSS ANTI-TERPOTONG ---
+            progress_percent = int(((i + 1) / total_chunks) * 100)
+            stt_display.markdown(f"""
+            <style>
+            .stt-overlay {{
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background-color: rgba(255, 255, 255, 0.98);
+                display: flex; flex-direction: column; justify-content: center; align-items: center;
+                z-index: 999999; backdrop-filter: blur(8px);
+                overflow-y: auto; padding: 20px; box-sizing: border-box;
+            }}
+            .stt-spinner {{
+                width: 70px; height: 70px; border: 6px solid #F0F2F6; border-top: 6px solid #3498db;
+                border-radius: 50%; animation: stt-spin 1s linear infinite; margin-bottom: 15px;
+                box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2); flex-shrink: 0;
+            }}
+            @keyframes stt-spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
+            .stt-progress-container {{ width: 90%; max-width: 500px; background-color: #E0E0E0; border-radius: 10px; margin: 15px 0; height: 18px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0; }}
+            .stt-progress-bar {{ width: {progress_percent}%; height: 100%; background-color: #3498db; transition: width 0.3s; }}
+            
+            /* CSS Pembungkus Teks Paksa (Menggantikan Textarea) */
+            .stt-preview {{ 
+                width: 90%; max-width: 700px; height: 150px; max-height: 35vh; 
+                background: #F8F9FA; border: 1px solid #DDD; border-radius: 10px; 
+                padding: 15px; overflow-y: auto; color: #333; font-size: 13px; 
+                text-align: left; margin-top: 10px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); 
+                line-height: 1.6; flex-shrink: 0;
+                white-space: pre-wrap !important; 
+                word-wrap: break-word !important; 
+                overflow-wrap: break-word !important; 
+            }}
+            
+            @media (max-width: 768px) {{
+                .stt-overlay h2 {{ font-size: 20px !important; margin-top: 10px; }}
+                .stt-overlay p {{ font-size: 13px !important; }}
+                .stt-spinner {{ width: 50px; height: 50px; border-width: 5px; margin-bottom: 10px; }}
+            }}
+            </style>
+            <div class="stt-overlay">
+                <div class="stt-spinner"></div>
+                <h2 style="color: #111; margin-bottom: 5px; font-weight: 800; text-align: center;">🎧 Mesin Transkrip Berjalan...</h2>
+                <p style="color: #e74c3c; font-weight: bold; text-align: center; margin-bottom: 0;">Mohon JANGAN TUTUP atau REFRESH layar ini!</p>
+                
+                <div class="stt-progress-container">
+                    <div class="stt-progress-bar"></div>
+                </div>
+                <p style="color: #555; font-weight: 800; margin-bottom: 0;">Progress: {progress_percent}%</p>
+                
+                <div class="stt-preview">
+                    <b style="color: #3498db;">Live Preview:</b><br>
+                    {partial_text}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        status_box.success("✅ Selesai! Transkrip tersimpan. Silakan klik Tab '✨ Ekstrak AI'.")
-        final_text = " ".join(full_transcript)
-        st.session_state.transcript, st.session_state.filename = final_text, os.path.splitext(source_name)[0]
+        # --- SAAT PROSES SELESAI ---
+        stt_display.empty() # Hilangkan Overlay Layar Penuh
+        
+        # Kosongkan Hasil AI sebelumnya jika user membuat transkrip baru
         st.session_state.ai_result = "" 
-        # CHECKPOINT 1: Simpan Transkrip ke Firebase (Auto-Save)
         if st.session_state.logged_in:
             db.collection('users').document(st.session_state.current_user).update({
-                "draft_transcript": st.session_state.transcript,
-                "draft_filename": st.session_state.filename,
                 "draft_ai_result": "",
                 "draft_ai_prefix": ""
             })
-        st.download_button("💾 Download (.TXT)", final_text, f"{st.session_state.filename}.txt", "text/plain", use_container_width=True)
+        
+        st.success("✅ **Selesai!** Transkrip tersimpan aman di Memori & Database. Silakan klik Tab **✨ Ekstrak AI** di bagian atas.")
+        st.download_button("💾 Download Mentahan (.TXT)", partial_text, f"{st.session_state.filename}.txt", "text/plain", use_container_width=True)
 
-    except Exception as e: st.error(f"Error: {e}")
+    except Exception as e: 
+        stt_display.empty()
+        st.error(f"Error: {e}")
     finally:
         if os.path.exists(input_path): os.remove(input_path)
 
