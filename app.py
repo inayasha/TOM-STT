@@ -287,13 +287,21 @@ if 'ai_prefix' not in st.session_state: st.session_state.ai_prefix = ""
 
 # --- SISTEM AUTO-LOGIN (MENCEGAH LOGOUT DI HP) ---
 if not st.session_state.logged_in:
+    # Mengambil token dari browser user
     saved_user = cookie_manager.get('tomstt_session')
+    
     if saved_user:
+        # Menarik data user dari Firebase berdasarkan email di cookie
         user_data = get_user(saved_user)
-        if user_data: # Jika user valid di database
+        if user_data: 
             st.session_state.logged_in = True
             st.session_state.current_user = saved_user
             st.session_state.user_role = user_data.get("role", "user")
+            
+            # --- KUNCI PERBAIKAN: Paksa aplikasi memuat ulang UI ---
+            # Tanpa ini, Streamlit akan tetap menampilkan layar login 
+            # sampai user melakukan interaksi manual.
+            st.rerun()
 
 # --- CUSTOM CSS ---
 st.markdown("""
