@@ -20,6 +20,7 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 from firebase_admin import auth
 from datetime import datetime
+from streamlit_cookies_controller import CookieController
 
 # ==========================================
 # 1. SETUP & CONFIG
@@ -282,6 +283,16 @@ if 'user_role' not in st.session_state: st.session_state.user_role = ""
 if 'ai_result' not in st.session_state: st.session_state.ai_result = "" 
 if 'ai_prefix' not in st.session_state: st.session_state.ai_prefix = "" 
 
+# --- SISTEM AUTO-LOGIN (MENCEGAH LOGOUT DI HP) ---
+if not st.session_state.logged_in:
+    saved_user = cookie_manager.get('tomstt_session')
+    if saved_user:
+        user_data = get_user(saved_user)
+        if user_data: # Jika user valid di database
+            st.session_state.logged_in = True
+            st.session_state.current_user = saved_user
+            st.session_state.user_role = user_data.get("role", "user")
+
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
@@ -322,6 +333,8 @@ st.markdown("""
     .mobile-tips { background-color: #FFF3CD; color: #856404; padding: 12px; border-radius: 10px; font-size: 0.9rem; text-align: center; margin-bottom: 25px; border: 1px solid #FFEEBA; }
     .custom-info-box { background-color: #e6f3ff; color: #0068c9; padding: 15px; border-radius: 10px; text-align: center; font-weight: 600; border: 1px solid #cce5ff; margin-bottom: 20px; }
     .login-box { background-color: #F8F9FA; padding: 25px; border-radius: 12px; border: 1px solid #E0E0E0; margin-bottom: 20px; }
+    .mobile-warning-box { background-color: #fff8e1; color: #b78103; padding: 12px 15px; border-radius: 10px; border-left: 5px solid #ffc107; font-size: 0.9rem; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: left; }
+    .mobile-warning-box b { color: #8f6200; }
     .footer-link { text-decoration: none; font-weight: 700; color: #e74c3c !important; }
     
     /* Box Data API Key */
@@ -765,6 +778,7 @@ with st.sidebar:
             st.info("👑 Anda Administrator.")
             
         if st.button("🚪 Logout", use_container_width=True):
+            cookie_manager.remove('tomstt_session') # HAPUS COOKIE DARI HP
             st.session_state.logged_in, st.session_state.current_user, st.session_state.user_role = False, "", ""
             st.session_state.ai_result = ""
             st.rerun()
@@ -820,6 +834,14 @@ audio_to_process, source_name = None, "audio"
 submit_btn = False
 lang_code = "id-ID"
 
+def show_mobile_warning():
+    st.markdown("""
+    <div class="mobile-warning-box">
+        📱 <b>Peringatan untuk Pengguna HP:</b><br>
+        Harap biarkan layar tetap menyala dan <b>jangan berpindah ke aplikasi lain</b> (seperti WA/IG) selama proses berjalan agar sistem tidak terputus di tengah jalan.
+    </div>
+    """, unsafe_allow_html=True)
+
 # TAB 1: UPLOAD FILE (Bebas Akses)
 with tab_upload:
     # 1. Tentukan Limitasi Berdasarkan Status Login & Paket
@@ -857,6 +879,7 @@ with tab_upload:
         lang_choice_upload = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_up")
         st.write("") 
         if file_diizinkan: # Tombol Mulai HANYA muncul jika file lolos limit
+            show_mobile_warning()
             if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_up"):
                 submit_btn = True
                 lang_code = "id-ID" if lang_choice_upload == "Indonesia" else "en-US"
@@ -877,6 +900,7 @@ with tab_rekam:
             lang_choice_mic = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_mic")
             st.write("") 
             if audio_mic:
+                show_mobile_warning()
                 if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_mic"):
                     submit_btn = True
                     lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
@@ -981,6 +1005,8 @@ with tab_auth:
                             if not user_data:
                                 save_user(login_email, login_pwd, "user")
                                 user_data = {"role": "user"}
+                            
+                            cookie_manager.set('tomstt_session', login_email, max_age=30*86400)
                                 
                             st.session_state.logged_in = True
                             st.session_state.current_user = login_email
@@ -1155,6 +1181,7 @@ with tab_ai:
                 st.info("👑 Anda menggunakan akses Super Admin (Gratis tanpa batas).")
                 
             st.write("")
+            show_mobile_warning()
             
             col1, col2 = st.columns(2)
             with col1: btn_notulen = st.button("📝 Buat Notulen", use_container_width=True)
