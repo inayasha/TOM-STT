@@ -603,13 +603,14 @@ with st.sidebar:
                 saldo = user_data.get("saldo", 0)
                 exp_val = user_data.get("tanggal_expired")
                 
-                # Menampilkan Rak Inventori
+                # Menampilkan Rak Inventori (Format Baru & Lebih Rapi)
                 st.markdown("📦 **Inventori Paket Anda:**")
                 if not inventori:
                     st.markdown("<span style='color:#e74c3c;'><i>Belum ada paket aktif.</i></span>", unsafe_allow_html=True)
                 else:
                     for pkt in inventori:
-                        st.markdown(f"- **{pkt['nama']}** (Maks {pkt['batas_durasi']}m **per Kuota**) : **{pkt['kuota']}x**")
+                        # Menurunkan batas menit ke baris baru agar lebih lega
+                        st.markdown(f"**{pkt['nama']} : {pkt['kuota']}x**<br><span style='color:#666; font-size:14px;'>(Maks. {pkt['batas_durasi']} menit per Kuota)</span>", unsafe_allow_html=True)
                 
                 # Format Tanggal Expired Global
                 status_waktu = "⏳ **Berlaku hingga:** Selamanya"
@@ -629,6 +630,13 @@ with st.sidebar:
                 st.metric("💳 Saldo Utama", saldo_rp)
                 st.caption(f"*(Melindungi ± {estimasi_menit} Menit kelebihan durasi)*")
                 
+                # MENGEMBALIKAN KEDUA TOMBOL YANG HILANG
+                st.write("")
+                if st.button("⚡ Refresh Dompet", use_container_width=True):
+                    st.rerun()
+                if st.button("🛒 Beli Paket / Top-Up", use_container_width=True):
+                    show_pricing_dialog()
+                    
             st.markdown("---")
             
         if st.session_state.user_role == "admin": 
@@ -1154,4 +1162,7 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
+
+
 
