@@ -1002,10 +1002,8 @@ if submit_btn and audio_to_process:
             
             # --- 3. LIVE PREVIEW INLINE (KOTAK RAPI ANTI-TERPOTONG) ---
             live_preview_box.markdown(f"""
-            <div style="background: #F8F9FA; border: 1px solid #DDD; border-radius: 10px; padding: 15px; color: #333; font-size: 13px; line-height: 1.6; max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; margin-top: 15px;">
-                <b style="color: #3498db;">Live Preview:</b><br>
-                {partial_text}
-            </div>
+            <b style="color: #3498db; font-size: 14px; display: block; margin-bottom: 5px;">Live Preview:</b>
+            <div style="background: #F8F9FA; border: 1px solid #DDD; border-radius: 10px; padding: 15px; color: #333; font-size: 13px; line-height: 1.6; max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;">{partial_text}</div>
             """, unsafe_allow_html=True)
 
         # --- SAAT PROSES SELESAI ---
