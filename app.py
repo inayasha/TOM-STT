@@ -152,7 +152,7 @@ def eksekusi_pembayaran(username, user_data, index_paket, potong_saldo):
     user_ref.update(updates)
     
 def redeem_voucher(username, kode_voucher):
-    """Mengecek dan mengeksekusi voucher dengan aman, serta menambah masa aktif max 90 hari."""
+    """Mengecek dan mengeksekusi voucher dengan aman, menambah masa aktif max 90 hari, dan memberikan BONUS SALDO."""
     kode_voucher = kode_voucher.upper().strip()
     v_ref = db.collection('vouchers').document(kode_voucher)
     v_doc = v_ref.get()
@@ -170,14 +170,17 @@ def redeem_voucher(username, kode_voucher):
         
     user_ref = db.collection('users').document(username)
     
-    # 2. Transaksi Aman (Mencegah bentrokan jika diklik bersamaan oleh banyak orang)
+    # 2. Transaksi Aman 
     @firestore.transactional
     def eksekusi_klaim(transaction, user_ref, v_ref):
         u_snap = user_ref.get(transaction=transaction)
         u_data = u_snap.to_dict()
         v_latest = v_ref.get(transaction=transaction).to_dict()
         
-        # Hitung Tanggal Expired (Maksimal 90 Hari dari sekarang)
+        # Ambil Saldo Saat Ini
+        current_saldo = u_data.get("saldo", 0)
+        
+        # Hitung Tanggal Expired
         import datetime
         now = datetime.datetime.now(datetime.timezone.utc)
         current_exp = u_data.get("tanggal_expired")
@@ -190,22 +193,29 @@ def redeem_voucher(username, kode_voucher):
         else:
             base_date = now
             
-        # Tentukan tambahan hari sesuai paket
+        # Tentukan tambahan hari & BONUS SALDO sesuai paket
         hari_tambah = 14
-        if "Pro" in v_latest['nama_paket']: hari_tambah = 30
-        elif "Eksekutif" in v_latest['nama_paket']: hari_tambah = 45
-        elif "VIP" in v_latest['nama_paket']: hari_tambah = 60
+        bonus_saldo = 3000
         
+        if "Pro" in v_latest['nama_paket']: 
+            hari_tambah = 30
+            bonus_saldo = 10000
+        elif "Eksekutif" in v_latest['nama_paket']: 
+            hari_tambah = 45
+            bonus_saldo = 20000
+        elif "VIP" in v_latest['nama_paket']: 
+            hari_tambah = 60
+            bonus_saldo = 35000
+        
+        # Kalkulasi Expired (Maks 90 Hari)
         new_exp_date = base_date + datetime.timedelta(days=hari_tambah)
         max_exp_date = now + datetime.timedelta(days=90)
-        
-        if new_exp_date > max_exp_date: new_exp_date = max_exp_date # Kunci di batas max 90 hari
+        if new_exp_date > max_exp_date: new_exp_date = max_exp_date 
             
         # Suntikkan Paket ke Array Inventori
         inventori = u_data.get("inventori", [])
         ditemukan = False
         for pkt in inventori:
-            # Jika paketnya sama persis, tambahkan saja angkanya agar tidak menuhi rak
             if pkt['nama'] == v_latest['nama_paket'] and pkt['batas_durasi'] == v_latest['batas_durasi']:
                 pkt['kuota'] += v_latest['kuota_paket']
                 ditemukan = True
@@ -213,11 +223,18 @@ def redeem_voucher(username, kode_voucher):
         if not ditemukan:
             inventori.append({"nama": v_latest['nama_paket'], "kuota": v_latest['kuota_paket'], "batas_durasi": v_latest['batas_durasi']})
             
-        # Eksekusi Pembaruan Database
-        transaction.update(user_ref, {"inventori": inventori, "tanggal_expired": new_exp_date})
+        # Eksekusi Pembaruan Database (Tambahkan Inventori, Expired, dan SALDO BARU)
+        new_saldo = current_saldo + bonus_saldo
+        transaction.update(user_ref, {
+            "inventori": inventori, 
+            "tanggal_expired": new_exp_date,
+            "saldo": new_saldo
+        })
         transaction.update(v_ref, {"jumlah_terklaim": firestore.Increment(1), "riwayat_pengguna": firestore.ArrayUnion([username])})
         
-        return True, f"🎉 Selamat! Paket {v_latest['nama_paket']} berhasil ditambahkan ke inventori Anda."
+        # Tampilkan pesan sukses dengan nominal bonus
+        pesan_sukses = f"🎉 Paket {v_latest['nama_paket']} + Bonus Saldo Rp {bonus_saldo:,} berhasil ditambahkan!"
+        return True, pesan_sukses.replace(',', '.')
         
     transaction = db.transaction()
     try:
@@ -225,7 +242,7 @@ def redeem_voucher(username, kode_voucher):
         return success, msg
     except Exception as e:
         return False, f"Terjadi kesalahan sistem: {str(e)}"
-    
+        
 # --- FUNGSI DATABASE FIREBASE (API KEYS & LOAD BALANCER) ---
 def add_api_key(name, provider, key_string, limit):
     db.collection('api_keys').add({
