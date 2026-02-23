@@ -999,30 +999,10 @@ if submit_btn and audio_to_process:
             .stt-progress-container {{ width: 90%; max-width: 500px; background-color: #E0E0E0; border-radius: 10px; margin: 15px 0; height: 18px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0; }}
             .stt-progress-bar {{ width: {progress_percent}%; height: 100%; background-color: #3498db; transition: width 0.3s; }}
             
-            /* KUNCI PERBAIKAN MUTLAK */
-            .stt-preview {{ 
-                width: 90%; max-width: 700px; height: 150px; max-height: 35vh; 
-                background: #F8F9FA; border: 1px solid #DDD; border-radius: 10px; 
-                padding: 15px; color: #333; font-size: 13px; 
-                text-align: left; margin-top: 10px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); 
-                line-height: 1.6; flex-shrink: 0;
-                
-                /* Mematikan scroll horizontal secara paksa */
-                overflow-x: hidden !important; 
-                overflow-y: auto !important; 
-                
-                /* Memaksa Teks Turun ke Bawah (Opsi Nuklir) */
-                white-space: normal !important; 
-                word-wrap: break-word !important; 
-                overflow-wrap: break-word !important; 
-                word-break: break-word !important; 
-            }}
-            
             @media (max-width: 768px) {{
                 .stt-overlay h2 {{ font-size: 20px !important; margin-top: 10px; }}
                 .stt-overlay p {{ font-size: 13px !important; }}
                 .stt-spinner {{ width: 50px; height: 50px; border-width: 5px; margin-bottom: 10px; }}
-                .stt-preview {{ height: 120px; padding: 10px; }}
             }}
             </style>
             <div class="stt-overlay">
@@ -1035,11 +1015,9 @@ if submit_btn and audio_to_process:
                 </div>
                 <p style="color: #555; font-weight: 800; margin-bottom: 0;">Progress: {progress_percent}%</p>
                 
-                <div class="stt-preview">
-                    <b style="color: #3498db;">Live Preview:</b><br>
-                    <div style="white-space: normal !important; word-wrap: break-word !important; margin-top: 5px;">
-                        {" ".join(full_transcript)}
-                    </div>
+                <div style="width: 90%; max-width: 700px; margin-top: 15px; flex-shrink: 0;">
+                    <b style="color: #3498db; font-size: 14px; display: block; margin-bottom: 8px; text-align: left;">Live Preview:</b>
+                    <textarea readonly style="width: 100%; height: 150px; background: #F8F9FA; border: 1px solid #DDD; border-radius: 10px; padding: 15px; color: #333; font-size: 13px; line-height: 1.6; resize: none; box-sizing: border-box; font-family: inherit; overflow-y: auto;">{" ".join(full_transcript)}</textarea>
                 </div>
             </div>
             """, unsafe_allow_html=True)
