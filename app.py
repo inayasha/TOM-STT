@@ -877,72 +877,87 @@ def show_mobile_warning():
     </div>
     """, unsafe_allow_html=True)
 
-# TAB 1: UPLOAD FILE (Bebas Akses)
-with tab_upload:
-    # 1. Tentukan Limitasi Berdasarkan Status Login & Paket
-    limit_mb = 10 # Default Freemium (Belum login / Paket Freemium)
-    if st.session_state.logged_in:
-        user_info = get_user(st.session_state.current_user)
-        if user_info:
-            role = user_info.get("role", "user")
-            # Logika Baru: Cek apakah rak inventori ada isinya
-            inventori = user_info.get("inventori", [])
+# --- FUNGSI MESIN TRANSKRIP BARU ---
+def jalankan_proses_transkrip(audio_to_process, source_name, lang_code):
+    st.markdown("---")
+    
+    status_box = st.empty()
+    progress_bar = st.progress(0)
+    live_preview_box = st.empty()
+    
+    full_transcript = []
+    
+    file_ext = ".wav" if source_name == "rekaman_mic.wav" else (os.path.splitext(source_name)[1] or ".wav")
+    with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
+        tmp_file.write(audio_to_process.getvalue())
+        input_path = tmp_file.name
+
+    try:
+        duration_sec = get_duration(input_path)
+        if duration_sec == 0: st.error("Gagal membaca audio."); st.stop()
+        
+        chunk_len = 59 
+        total_chunks = math.ceil(duration_sec / chunk_len)
+        
+        recognizer = sr.Recognizer()
+        recognizer.energy_threshold, recognizer.dynamic_energy_threshold = 300, True 
+
+        status_box.info("⏳ Mempersiapkan mesin transkrip...")
+
+        for i in range(total_chunks):
+            start_time = i * chunk_len
+            chunk_filename = f"temp_slice_{i}.wav"
+            cmd = [ffmpeg_cmd, "-y", "-i", input_path, "-ss", str(start_time), "-t", str(chunk_len), "-filter:a", "volume=3.0", "-ar", "16000", "-ac", "1", chunk_filename]
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             
-            if role == "admin" or len(inventori) > 0:
-                limit_mb = 200 # Premium / Admin mendapat 200MB
-    
-    # 2. Teks Edukasi Transparan
-    st.markdown(f"<p style='text-align: center; color: #666; font-size: 14px; margin-bottom: 10px;'>Batas ukuran file: <b>10MB</b> (Freemium) | <b>200MB</b> (Premium)</p>", unsafe_allow_html=True)
-    
-    uploaded_file = st.file_uploader("Pilih File Audio", type=["aac", "mp3", "wav", "m4a", "opus", "mp4", "3gp", "amr", "ogg", "flac", "wma"])
-    
-    # 3. Sistem Pencegat (Interceptor)
-    file_diizinkan = False
-    if uploaded_file:
-        file_size_mb = uploaded_file.size / (1024 * 1024)
-        if file_size_mb > limit_mb:
-            st.error(f"❌ File terlalu besar! ({file_size_mb:.1f} MB). Batas akun Anda saat ini adalah {limit_mb} MB.")
-            if limit_mb == 10:
-                st.warning("💡 Silakan login dan Beli Paket di tab **🔐 Akun** untuk mengunggah file hingga 200MB.")
-        else:
-            audio_to_process, source_name = uploaded_file, uploaded_file.name
-            file_diizinkan = True
-    
-    st.write("") 
-    c1, c2, c3 = st.columns([1, 4, 1]) 
-    with c2:
-        lang_choice_upload = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_up")
-        st.write("") 
-        if file_diizinkan: # Tombol Mulai HANYA muncul jika file lolos limit
-            show_mobile_warning()
-            if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_up"):
-                submit_btn = True
-                lang_code = "id-ID" if lang_choice_upload == "Indonesia" else "en-US"
-        elif not uploaded_file:
-            st.markdown('<div class="custom-info-box">👆 Silakan Upload terlebih dahulu.</div>', unsafe_allow_html=True)
+            try:
+                with sr.AudioFile(chunk_filename) as source:
+                    audio_data = recognizer.record(source)
+                    text = recognizer.recognize_google(audio_data, language=lang_code)
+                    full_transcript.append(text)
+            except: full_transcript.append("") 
+            finally:
+                if os.path.exists(chunk_filename): os.remove(chunk_filename)
             
-# TAB 2: REKAM SUARA (Terkunci)
-with tab_rekam:
-    if not st.session_state.logged_in:
-        st.markdown('<div style="text-align: center; padding: 20px; background-color: #fdeced; border-radius: 10px; border: 1px solid #f5c6cb; margin-bottom: 20px;"><h3 style="color: #e74c3c; margin-top: 0;">🔒 Akses Terkunci!</h3><p style="color: #e74c3c; font-weight: 500;">Silakan masuk (login) atau daftar terlebih dahulu di tab <b>🔐 Akun</b> untuk menggunakan fitur rekam suara langsung.</p></div>', unsafe_allow_html=True)
-    else:
-        audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
-        if audio_mic: audio_to_process, source_name = audio_mic, "rekaman_mic.wav"
+            progress_percent = int(((i + 1) / total_chunks) * 100)
+            progress_bar.progress(progress_percent)
+            status_box.caption(f"🔄 Sedang memproses... ({progress_percent}%) - Mohon JANGAN tutup layar ini!")
+            
+            partial_text = " ".join(full_transcript)
+            st.session_state.transcript = partial_text
+            st.session_state.filename = os.path.splitext(source_name)[0]
+            
+            if st.session_state.logged_in:
+                db.collection('users').document(st.session_state.current_user).update({
+                    "draft_transcript": partial_text,
+                    "draft_filename": st.session_state.filename
+                })
+            
+            live_preview_box.markdown(f"""
+            <b style="color: #3498db; font-size: 14px; display: block; margin-bottom: 5px;">Live Preview:</b>
+            <div style="background: #F8F9FA; border: 1px solid #DDD; border-radius: 10px; padding: 15px; color: #333; font-size: 13px; line-height: 1.6; max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 20px;">{partial_text}</div>
+            """, unsafe_allow_html=True)
+
+        status_box.success("✅ **Selesai!** Transkrip tersimpan aman. Silakan klik Tab **✨ Ekstrak AI** di bagian atas.")
+        
+        st.session_state.ai_result = "" 
+        if st.session_state.logged_in:
+            db.collection('users').document(st.session_state.current_user).update({
+                "draft_ai_result": "",
+                "draft_ai_prefix": ""
+            })
         
         st.write("") 
-        c1, c2, c3 = st.columns([1, 4, 1]) 
-        with c2:
-            lang_choice_mic = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_mic")
-            st.write("") 
-            if audio_mic:
-                show_mobile_warning()
-                if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_mic"):
-                    submit_btn = True
-                    lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
-            else:
-                st.markdown('<div class="custom-info-box">👆 Silakan Rekam terlebih dahulu.</div>', unsafe_allow_html=True)
+        st.download_button("💾 Download Hasil Transkrip (.TXT)", partial_text, f"{st.session_state.filename}.txt", "text/plain", use_container_width=True)
 
-if submit_btn and audio_to_process:
+    except Exception as e: 
+        status_box.empty()
+        st.error(f"Error: {e}")
+    finally:
+        if os.path.exists(input_path): os.remove(input_path)
+
+# --- BUNGKUS MESIN TRANSKRIP MENJADI FUNGSI AGAR BISA DIPANGGIL DI DALAM TAB ---
+def proses_transkrip_audio(audio_to_process, source_name, lang_code):
     st.markdown("---")
     
     # KEMBALI KE UI LAMA (INLINE PROGRESS BAR)
@@ -1003,7 +1018,7 @@ if submit_btn and audio_to_process:
             # --- 3. LIVE PREVIEW INLINE (KOTAK RAPI ANTI-TERPOTONG) ---
             live_preview_box.markdown(f"""
             <b style="color: #3498db; font-size: 14px; display: block; margin-bottom: 5px;">Live Preview:</b>
-            <div style="background: #F8F9FA; border: 1px solid #DDD; border-radius: 10px; padding: 15px; color: #333; font-size: 13px; line-height: 1.6; max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;">{partial_text}</div>
+            <div style="background: #F8F9FA; border: 1px solid #DDD; border-radius: 10px; padding: 15px; color: #333; font-size: 13px; line-height: 1.6; max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 20px;">{partial_text}</div>
             """, unsafe_allow_html=True)
 
         # --- SAAT PROSES SELESAI ---
@@ -1026,6 +1041,86 @@ if submit_btn and audio_to_process:
         st.error(f"Error: {e}")
     finally:
         if os.path.exists(input_path): os.remove(input_path)
+
+# ==========================================
+# TAB 1: UPLOAD FILE (Bebas Akses)
+# ==========================================
+with tab_upload:
+    # 1. Tentukan Limitasi Berdasarkan Status Login & Paket
+    limit_mb = 10 # Default Freemium (Belum login / Paket Freemium)
+    if st.session_state.logged_in:
+        user_info = get_user(st.session_state.current_user)
+        if user_info:
+            role = user_info.get("role", "user")
+            # Logika Baru: Cek apakah rak inventori ada isinya
+            inventori = user_info.get("inventori", [])
+            
+            if role == "admin" or len(inventori) > 0:
+                limit_mb = 200 # Premium / Admin mendapat 200MB
+    
+    # 2. Teks Edukasi Transparan
+    st.markdown(f"<p style='text-align: center; color: #666; font-size: 14px; margin-bottom: 10px;'>Batas ukuran file: <b>10MB</b> (Freemium) | <b>200MB</b> (Premium)</p>", unsafe_allow_html=True)
+    
+    uploaded_file = st.file_uploader("Pilih File Audio", type=["aac", "mp3", "wav", "m4a", "opus", "mp4", "3gp", "amr", "ogg", "flac", "wma"])
+    
+    # 3. Sistem Pencegat (Interceptor)
+    file_diizinkan = False
+    if uploaded_file:
+        file_size_mb = uploaded_file.size / (1024 * 1024)
+        if file_size_mb > limit_mb:
+            st.error(f"❌ File terlalu besar! ({file_size_mb:.1f} MB). Batas akun Anda saat ini adalah {limit_mb} MB.")
+            if limit_mb == 10:
+                st.warning("💡 Silakan login dan Beli Paket di tab **🔐 Akun** untuk mengunggah file hingga 200MB.")
+        else:
+            audio_to_process, source_name = uploaded_file, uploaded_file.name
+            file_diizinkan = True
+    
+    st.write("") 
+    submit_upload = False
+    c1, c2, c3 = st.columns([1, 4, 1]) 
+    with c2:
+        lang_choice_upload = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_up")
+        st.write("") 
+        if file_diizinkan: # Tombol Mulai HANYA muncul jika file lolos limit
+            show_mobile_warning()
+            if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_up"):
+                submit_upload = True
+                lang_code = "id-ID" if lang_choice_upload == "Indonesia" else "en-US"
+        elif not uploaded_file:
+            st.markdown('<div class="custom-info-box">👆 Silakan Upload terlebih dahulu.</div>', unsafe_allow_html=True)
+            
+    # Eksekusi dilakukan di dalam `with tab_upload:` agar UI terkunci di Tab 1
+    if submit_upload:
+        proses_transkrip_audio(audio_to_process, source_name, lang_code)
+
+
+# ==========================================
+# TAB 2: REKAM SUARA (Terkunci)
+# ==========================================
+with tab_rekam:
+    if not st.session_state.logged_in:
+        st.markdown('<div style="text-align: center; padding: 20px; background-color: #fdeced; border-radius: 10px; border: 1px solid #f5c6cb; margin-bottom: 20px;"><h3 style="color: #e74c3c; margin-top: 0;">🔒 Akses Terkunci!</h3><p style="color: #e74c3c; font-weight: 500;">Silakan masuk (login) atau daftar terlebih dahulu di tab <b>🔐 Akun</b> untuk menggunakan fitur rekam suara langsung.</p></div>', unsafe_allow_html=True)
+    else:
+        audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
+        if audio_mic: audio_to_process, source_name = audio_mic, "rekaman_mic.wav"
+        
+        st.write("") 
+        submit_rekam = False
+        c1, c2, c3 = st.columns([1, 4, 1]) 
+        with c2:
+            lang_choice_mic = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_mic")
+            st.write("") 
+            if audio_mic:
+                show_mobile_warning()
+                if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_mic"):
+                    submit_rekam = True
+                    lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
+            else:
+                st.markdown('<div class="custom-info-box">👆 Silakan Rekam terlebih dahulu.</div>', unsafe_allow_html=True)
+                
+        # Eksekusi dilakukan di dalam `with tab_rekam:` agar UI terkunci di Tab 2
+        if submit_rekam:
+            proses_transkrip_audio(audio_to_process, source_name, lang_code)
 
 # ==========================================
 # 5. TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
