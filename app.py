@@ -675,7 +675,7 @@ with st.sidebar:
 # 4. MAIN LAYOUT & TABS
 # ==========================================
 st.markdown(
-    "<div class='main-header'>🎙️ TOM'<span style='color: #e74c3c !important;'>STT</span> AI</div>", 
+    "<div class='main-header'>🎙️ TOM'<font color='#e74c3c'>STT</font> AI</div>", 
     unsafe_allow_html=True
 )
 
