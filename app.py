@@ -1040,11 +1040,8 @@ if submit_btn and audio_to_process:
         st.error(f"Error: {e}")
     finally:
         if os.path.exists(input_path): os.remove(input_path)
-            
-            progress_bar.progress(int(((i + 1) / total_chunks) * 100))
-            status_box.caption(f"Sedang memproses... ({int(((i + 1) / total_chunks) * 100)}%)")
 
-        status_box.success("✅ Selesai! Transkrip tersimpan. Silakan klik Tab '✨ Ekstrak AI'.")
+		status_box.success("✅ Selesai! Transkrip tersimpan. Silakan klik Tab '✨ Ekstrak AI'.")
         final_text = " ".join(full_transcript)
         st.session_state.transcript, st.session_state.filename = final_text, os.path.splitext(source_name)[0]
         st.session_state.ai_result = "" 
@@ -1608,3 +1605,4 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
