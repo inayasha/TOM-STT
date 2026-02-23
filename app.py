@@ -195,17 +195,17 @@ def redeem_voucher(username, kode_voucher):
             
         # Tentukan tambahan hari & BONUS SALDO sesuai paket
         hari_tambah = 14
-        bonus_saldo = 3000
+        bonus_saldo = 0  # Starter tidak dapat bonus
         
         if "Pro" in v_latest['nama_paket']: 
             hari_tambah = 30
-            bonus_saldo = 10000
+            bonus_saldo = 5000
         elif "Eksekutif" in v_latest['nama_paket']: 
             hari_tambah = 45
-            bonus_saldo = 20000
+            bonus_saldo = 12000
         elif "VIP" in v_latest['nama_paket']: 
             hari_tambah = 60
-            bonus_saldo = 35000
+            bonus_saldo = 20000
         
         # Kalkulasi Expired (Maks 90 Hari)
         new_exp_date = base_date + datetime.timedelta(days=hari_tambah)
@@ -561,10 +561,10 @@ def show_pricing_dialog():
             st.markdown("""
             **1. Paket Starter**
             *Cocok untuk kebutuhan personal & tugas ringan.*
-            * 📄 **3x** Ekstrak AI (Laporan/Notulen)
-            * ⏱️ **Kapasitas:** Maks. 1 Jam / File
+            * 📄 **2x** Ekstrak AI (Laporan/Notulen)
+            * ⏱️ **Kapasitas:** Maks. 45 Menit / File
             * 📅 **Masa Aktif:** 14 Hari
-            * 🎁 **Bonus Saldo:** Rp 3.000
+            * 🎁 **Bonus Saldo:** Rp 0
             * 🛡️ **Akses:** Server API Terjamin
             """)
             if st.button("🛒 Beli Starter - Rp 51.000", use_container_width=True, key="buy_starter"):
@@ -577,10 +577,10 @@ def show_pricing_dialog():
             st.markdown("""
             **2. Paket Pro Notulis**
             *Standar profesional untuk notulis & sekretaris.*
-            * 📄 **8x** Ekstrak AI (Laporan/Notulen)
-            * ⏱️ **Kapasitas:** Maks. 1,5 Jam / File
+            * 📄 **5x** Ekstrak AI (Laporan/Notulen)
+            * ⏱️ **Kapasitas:** Maks. 1 Jam / File
             * 📅 **Masa Aktif:** 30 Hari
-            * 🎁 **Bonus Saldo:** Rp 10.000
+            * 🎁 **Bonus Saldo:** Rp 5.000
             * 🛡️ **Akses:** Server API Terjamin
             """)
             if st.button("🛒 Beli Pro - Rp 102.000", use_container_width=True, key="buy_pro"):
@@ -592,10 +592,10 @@ def show_pricing_dialog():
             st.markdown("""
             **3. Paket Eksekutif**
             *Pilihan tepat untuk intensitas rapat tinggi.*
-            * 📄 **28x** Ekstrak AI (Laporan/Notulen)
-            * ⏱️ **Kapasitas:** Maks. 2 Jam / File
+            * 📄 **18x** Ekstrak AI (Laporan/Notulen)
+            * ⏱️ **Kapasitas:** Maks. 1,5 Jam / File
             * 📅 **Masa Aktif:** 45 Hari
-            * 🎁 **Bonus Saldo:** Rp 20.000
+            * 🎁 **Bonus Saldo:** Rp 12.000
             * 🛡️ **Jaminan Akses:** Multi-Server API (Anti-Limit)
             """)
             if st.button("🛒 Beli Eksekutif - Rp 306.000", use_container_width=True, key="buy_exec"):
@@ -608,10 +608,10 @@ def show_pricing_dialog():
             st.markdown("""
             **4. Paket VIP**
             *Akses maksimal untuk kementerian/instansi.*
-            * 📄 **50x** Ekstrak AI (Laporan/Notulen)
+            * 📄 **35x** Ekstrak AI (Laporan/Notulen)
             * ⏱️ **Kapasitas:** Maks. 3 Jam / File
             * 📅 **Masa Aktif:** 60 Hari
-            * 🎁 **Bonus Saldo:** Rp 35.000
+            * 🎁 **Bonus Saldo:** Rp 20.000
             * 🛡️ **Jaminan Akses:** Multi-Server API (Anti-Limit)
             """)
             if st.button("🛒 Beli VIP - Rp 510.000", use_container_width=True, key="buy_vip"):
@@ -1307,10 +1307,10 @@ if st.session_state.user_role == "admin":
                     if not v_kode: v_kode = "TOM-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
                     
                     paket_map = {
-                        "Starter": {"k": 3, "d": 60},
-                        "Pro Notulis": {"k": 8, "d": 90},
-                        "Eksekutif": {"k": 28, "d": 120},
-                        "VIP": {"k": 50, "d": 180}
+                        "Starter": {"k": 2, "d": 45},
+                        "Pro Notulis": {"k": 5, "d": 60},
+                        "Eksekutif": {"k": 18, "d": 90},
+                        "VIP": {"k": 35, "d": 180}
                     }
                     
                     max_k = 1 if v_tipe == "Eksklusif (1x Pakai)" else v_kuota_klaim
