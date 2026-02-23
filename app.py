@@ -1307,19 +1307,45 @@ if st.session_state.user_role == "admin":
 
         st.write("")
         # Menampilkan Tabel/Daftar Voucher Aktif + Riwayat Penebus
-        if st.checkbox("Lihat Daftar Voucher Aktif"):
+        if st.checkbox("Lihat Daftar Voucher Aktif & Riwayat"):
             vouchers_ref = db.collection('vouchers').order_by('created_at', direction=firestore.Query.DESCENDING).limit(10).stream()
             for v in vouchers_ref:
                 vd = v.to_dict()
+                kode_v = vd.get('kode_voucher', v.id)
                 sisa = vd['max_klaim'] - vd.get('jumlah_terklaim', 0)
                 status_v = "🟢 AKTIF" if sisa > 0 else "🔴 HABIS"
-                st.markdown(f"**{vd.get('kode_voucher', '')}** &nbsp;|&nbsp; Paket: {vd.get('nama_paket', '')} &nbsp;|&nbsp; Sisa Klaim: **{sisa}** &nbsp;|&nbsp; {status_v}")
-                
-                # FITUR BARU: Menampilkan siapa saja yang sudah klaim
                 riwayat = vd.get('riwayat_pengguna', [])
-                if riwayat:
-                    teks_riwayat = ", ".join(riwayat)
-                    st.caption(f"👤 *Diklaim oleh: {teks_riwayat}*")
+                
+                # Membagi kolom agar tombol sejajar dengan teks
+                col_info, col_btn1, col_btn2 = st.columns([5, 1.5, 1.5])
+                
+                with col_info:
+                    st.markdown(f"**{kode_v}** &nbsp;|&nbsp; Paket: {vd.get('nama_paket', '')} &nbsp;|&nbsp; Sisa Klaim: **{sisa}** &nbsp;|&nbsp; {status_v}")
+                    if riwayat:
+                        teks_riwayat = ", ".join(riwayat)
+                        st.caption(f"👤 *Diklaim oleh: {teks_riwayat}*")
+                
+                with col_btn1:
+                    # Hanya muncul jika voucher masih AKTIF
+                    if sisa > 0: 
+                        if st.button("Hapus Voucher", key=f"del_v_{kode_v}", type="tertiary"):
+                            db.collection('vouchers').document(kode_v).delete()
+                            st.rerun()
+                
+                with col_btn2:
+                    if sisa == 0:
+                        # Jika HABIS, tombol Hapus Log akan menghapus dokumen untuk bersih-bersih
+                        if st.button("Hapus Log", key=f"del_log_habis_{kode_v}", type="tertiary"):
+                            db.collection('vouchers').document(kode_v).delete()
+                            st.rerun()
+                    elif len(riwayat) > 0:
+                        # Jika AKTIF tapi sudah ada yang pakai, Hapus Log akan MERESET riwayat klaimnya
+                        if st.button("Hapus Log", key=f"del_log_aktif_{kode_v}", type="tertiary"):
+                            db.collection('vouchers').document(kode_v).update({
+                                "riwayat_pengguna": [],
+                                "jumlah_terklaim": 0
+                            })
+                            st.rerun()
         st.markdown("---")
         
         # --- MANAJEMEN USER ---
