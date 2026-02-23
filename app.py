@@ -526,39 +526,6 @@ def buat_tagihan_midtrans(nama_paket, harga, user_email):
 def show_pricing_dialog():
     user_email = st.session_state.current_user
     
-    st.markdown("""
-    > ⚡ **Investasi Waktu Terbaik Anda**
-    > Dapatkan kembali waktu istirahat Anda. Biarkan AI kami yang bekerja keras menyusun laporan rumit hanya dengan biaya setara segelas kopi per dokumen!
-    """)
-    
-    st.info("""
-    💡 **Informasi Sistem & Ketentuan:**
-    * 🎟️ **Sistem Tiket:** 1 Kuota = 1x Pembuatan Dokumen (Laporan/Notulen).
-    * ⚖️ **Tagihan Adil (Deteksi Jeda):** Durasi dihitung berdasarkan **jumlah kata aktual** yang diucapkan, BUKAN total waktu rekaman mentah. Waktu hening & jeda tidak memotong kuota Anda.
-    * 📅 **Akumulasi Masa Aktif:** Pembelian paket baru akan otomatis menambah sisa masa aktif Anda sebelumnya *(Maksimal akumulasi 90 Hari / 3 Bulan)*.
-    * 💳 **Saldo Tambahan:** Jika rekaman melebihi batas maksimal, sistem menggunakan Saldo Utama dengan tarif **Rp 350 / Menit**.
-    """)
-    
-    # KOTAK REDEEM VOUCHER
-    st.markdown("---")
-    col_v1, col_v2 = st.columns([3, 1])
-    with col_v1:
-        input_voucher = st.text_input("🎁 Punya Kode Voucher / Promo?", placeholder="Masukkan kode di sini...", key="input_vc").strip().upper()
-    with col_v2:
-        st.write("") # Spacer agar sejajar
-        if st.button("Klaim Voucher", use_container_width=True, type="primary"):
-            if input_voucher:
-                with st.spinner("Memeriksa kode..."):
-                    sukses, pesan = redeem_voucher(user_email, input_voucher)
-                    if sukses:
-                        st.success(pesan)
-                        st.balloons()
-                    else:
-                        st.error(pesan)
-            else:
-                st.warning("Silakan masukkan kode terlebih dahulu.")
-    st.markdown("---")
-    
     tab_paket, tab_saldo = st.tabs(["📦 BELI PAKET KUOTA", "💳 TOP-UP SALDO"])
     
     with tab_paket:
@@ -670,6 +637,39 @@ def show_pricing_dialog():
                 with st.spinner("Mencetak tagihan..."):
                     link_bayar = buat_tagihan_midtrans("Topup40k", 40800, user_email)
                     if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
+                    
+    # KOTAK REDEEM VOUCHER
+    st.markdown("---")
+    col_v1, col_v2 = st.columns([3, 1])
+    with col_v1:
+        input_voucher = st.text_input("🎁 Punya Kode Voucher / Promo?", placeholder="Masukkan kode di sini...", key="input_vc").strip().upper()
+    with col_v2:
+        st.write("") 
+        if st.button("Klaim Voucher", use_container_width=True, type="primary"):
+            if input_voucher:
+                with st.spinner("Memeriksa kode..."):
+                    sukses, pesan = redeem_voucher(user_email, input_voucher)
+                    if sukses:
+                        st.success(pesan)
+                        st.balloons()
+                    else:
+                        st.error(pesan)
+            else:
+                st.warning("Silakan masukkan kode terlebih dahulu.")
+    st.markdown("---")
+
+    # KOTAK INFO PINDAH KE BAWAH
+    st.markdown("""
+    > ⚡ **Investasi Waktu Terbaik Anda**
+    > Dapatkan kembali waktu istirahat Anda. Biarkan AI kami yang bekerja keras menyusun laporan rumit hanya dengan biaya setara segelas kopi per dokumen!
+    """)
+    st.info("""
+    💡 **Informasi Sistem & Ketentuan:**
+    * 🎟️ **Sistem Tiket:** 1 Kuota = 1x Pembuatan Dokumen (Laporan/Notulen).
+    * ⚖️ **Tagihan Adil (Deteksi Jeda):** Durasi dihitung berdasarkan **jumlah kata aktual** yang diucapkan, BUKAN total waktu rekaman mentah. Waktu hening & jeda tidak memotong kuota Anda.
+    * 📅 **Akumulasi Masa Aktif:** Pembelian paket baru otomatis menambah sisa masa aktif Anda *(Maksimal 90 Hari / 3 Bulan)*.
+    * 💳 **Saldo Tambahan:** Jika rekaman melebihi batas maksimal, sistem menggunakan Saldo Utama dengan tarif **Rp 350 / Menit**.
+    """)
                     
 with st.sidebar:
     st.header("⚙️ Status Sistem")
@@ -1194,7 +1194,8 @@ if st.session_state.user_role == "admin":
                 
                 col_t1, col_t2 = st.columns(2)
                 with col_t1: v_tipe = st.radio("Tipe Voucher", ["Eksklusif (1x Pakai)", "Massal (Multi-Klaim)"])
-                with col_t2: v_kuota_klaim = st.number_input("Batas Klaim (Untuk Massal)", min_value=1, value=10, disabled=(v_tipe == "Eksklusif (1x Pakai)"))
+                # FIX: Menghapus "disabled" agar admin bebas mengetik angka
+                with col_t2: v_kuota_klaim = st.number_input("Batas Klaim (Khusus Massal)", min_value=1, value=10) 
                 
                 if st.form_submit_button("🔨 Generate Voucher"):
                     import random, string
@@ -1209,7 +1210,6 @@ if st.session_state.user_role == "admin":
                     
                     max_k = 1 if v_tipe == "Eksklusif (1x Pakai)" else v_kuota_klaim
                     
-                    # Cek apakah kode sudah ada
                     if db.collection('vouchers').document(v_kode).get().exists:
                         st.error(f"❌ Kode '{v_kode}' sudah pernah dibuat! Silakan gunakan kode lain.")
                     else:
@@ -1228,14 +1228,20 @@ if st.session_state.user_role == "admin":
                         st.rerun()
 
         st.write("")
-        # Menampilkan Tabel/Daftar Voucher Aktif secara sederhana
+        # Menampilkan Tabel/Daftar Voucher Aktif + Riwayat Penebus
         if st.checkbox("Lihat Daftar Voucher Aktif"):
             vouchers_ref = db.collection('vouchers').order_by('created_at', direction=firestore.Query.DESCENDING).limit(10).stream()
             for v in vouchers_ref:
                 vd = v.to_dict()
-                sisa = vd['max_klaim'] - vd['jumlah_terklaim']
+                sisa = vd['max_klaim'] - vd.get('jumlah_terklaim', 0)
                 status_v = "🟢 AKTIF" if sisa > 0 else "🔴 HABIS"
-                st.markdown(f"**{vd['kode_voucher']}** &nbsp;|&nbsp; Paket: {vd['nama_paket']} &nbsp;|&nbsp; Sisa Klaim: **{sisa}** &nbsp;|&nbsp; {status_v}")
+                st.markdown(f"**{vd.get('kode_voucher', '')}** &nbsp;|&nbsp; Paket: {vd.get('nama_paket', '')} &nbsp;|&nbsp; Sisa Klaim: **{sisa}** &nbsp;|&nbsp; {status_v}")
+                
+                # FITUR BARU: Menampilkan siapa saja yang sudah klaim
+                riwayat = vd.get('riwayat_pengguna', [])
+                if riwayat:
+                    teks_riwayat = ", ".join(riwayat)
+                    st.caption(f"👤 *Diklaim oleh: {teks_riwayat}*")
         st.markdown("---")
         
         # --- MANAJEMEN USER ---
