@@ -896,7 +896,7 @@ with tab_auth:
         st.markdown(f"""
         <div style="text-align: center; padding: 15px 0;">
             <p style="color: #666; font-size: 15px; margin-bottom: 5px;">Anda saat ini masuk sebagai:</p>
-            <div style="font-size: 22px;"><b><font color="#e74c3c">{st.session_state.current_user}</font></b></div>
+            <div style="font-size: 24px;"><b><font color="#e74c3c">{st.session_state.current_user}</font></b></div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1169,3 +1169,4 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
