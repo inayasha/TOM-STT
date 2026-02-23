@@ -1041,24 +1041,6 @@ if submit_btn and audio_to_process:
     finally:
         if os.path.exists(input_path): os.remove(input_path)
 
-		status_box.success("✅ Selesai! Transkrip tersimpan. Silakan klik Tab '✨ Ekstrak AI'.")
-        final_text = " ".join(full_transcript)
-        st.session_state.transcript, st.session_state.filename = final_text, os.path.splitext(source_name)[0]
-        st.session_state.ai_result = "" 
-        # CHECKPOINT 1: Simpan Transkrip ke Firebase (Auto-Save)
-        if st.session_state.logged_in:
-            db.collection('users').document(st.session_state.current_user).update({
-                "draft_transcript": st.session_state.transcript,
-                "draft_filename": st.session_state.filename,
-                "draft_ai_result": "",
-                "draft_ai_prefix": ""
-            })
-        st.download_button("💾 Download (.TXT)", final_text, f"{st.session_state.filename}.txt", "text/plain", use_container_width=True)
-
-    except Exception as e: st.error(f"Error: {e}")
-    finally:
-        if os.path.exists(input_path): os.remove(input_path)
-
 # ==========================================
 # 5. TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
 # ==========================================
@@ -1605,4 +1587,3 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
-
