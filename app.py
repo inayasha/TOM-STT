@@ -678,7 +678,7 @@ st.markdown('<div class="main-header">🎙️ TOM\'<span style="color: #e74c3c !
 
 # KOTAK SELAMAT DATANG (COPYWRITING BARU)
 st.info("""
-🚀 **Otomatisasi Notulen & Laporan dalam Hitungan Menit** Mengubah rekaman rapat berjam-jam menjadi teks manual bisa menyita 1-2 hari kerja Anda. Dengan mesin AI , semuanya selesai secara instan! TOMMY TOMMY
+🚀 **Otomatisasi Notulen & Laporan dalam Hitungan Menit** Mengubah rekaman rapat berjam-jam menjadi teks manual bisa menyita 1-2 hari kerja Anda. Dengan mesin AI , semuanya selesai secara instan! TOMMY TOMMY TOMMY TOMMY
 
 🧠 **Bukan Sekadar Transkrip Biasa:** AI kami telah diprogram khusus untuk langsung mengekstrak **Notulen Rapat** atau **Laporan Memorandum** siap cetak—lengkap dengan latar belakang, analisis, dan tindak lanjut berstandar profesional.
 """)
@@ -1124,5 +1124,6 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
 
 
