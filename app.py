@@ -43,133 +43,113 @@ def get_user(username):
     return doc.to_dict() if doc.exists else None
 
 def save_user(username, password, role):
-    """Menyimpan user baru beserta dompetnya, atau mengupdate user lama"""
     user_ref = db.collection('users').document(username)
     existing_user = user_ref.get()
     
     if existing_user.exists:
-        # JIKA USER SUDAH ADA: Update password & role saja, JANGAN sentuh saldo/kuota!
         user_ref.update({"password": password, "role": role})
     else:
-        # JIKA USER BARU: Buatkan akun dan berikan modal awal (Paket Freemium)
         user_ref.set({
             "password": password,
             "role": role,
-            "paket_aktif": "Freemium",
-            "kuota": 2,                # Jatah awal Freemium
-            "saldo": 0,                # Saldo awal Rp 0
-            "batas_durasi": 10,        # Maksimal audio 10 Menit
-            "masa_aktif": "Selamanya",
+            "inventori": [],           # FORMAT BARU: Rak Penyimpanan Array
+            "saldo": 0,                
+            "tanggal_expired": "Selamanya",
             "created_at": datetime.now()
         })
 
 def delete_user(username):
-    # 1. Hapus data dompet dari Firestore Database
     db.collection('users').document(username).delete()
-    
-    # 2. Hapus kredensial login dari Firebase Authentication
     try:
-        # Cari UID user berdasarkan emailnya, lalu musnahkan
         user_record = auth.get_user_by_email(username)
         auth.delete_user(user_record.uid)
-    except Exception as e:
-        # Abaikan secara diam-diam jika user ternyata sudah tidak ada di Auth
-        pass
+    except: pass
     
 def check_expired(username, user_data):
-    """SATPAM: Mengecek apakah paket user sudah kedaluwarsa. Jika ya, RESET semua."""
-    if not user_data or user_data.get("role") == "admin": 
-        return user_data # Lewati jika tidak ada data atau jika dia Admin
+    """SATPAM: Mengecek kedaluwarsa & MIGRASI OTOMATIS data lama."""
+    if not user_data or user_data.get("role") == "admin": return user_data 
     
+    # 1. AUTO-MIGRASI DATA LAMA KE FORMAT INVENTORI
+    if "paket_aktif" in user_data and "inventori" not in user_data:
+        paket_lama = user_data.get("paket_aktif", "Freemium")
+        kuota_lama = user_data.get("kuota", 0)
+        batas_lama = user_data.get("batas_durasi", 10)
+        
+        inventori_baru = []
+        if paket_lama != "Freemium" and kuota_lama > 0:
+            inventori_baru.append({"nama": paket_lama, "kuota": kuota_lama, "batas_durasi": batas_lama})
+        user_data["inventori"] = inventori_baru
+    
+    # 2. CEK KEDALUWARSA GLOBAL
     exp_val = user_data.get("tanggal_expired")
-    
-    # Jika ada tanggal expired dan bukan 'Selamanya'
     if exp_val and exp_val != "Selamanya":
         import datetime
         now = datetime.datetime.now(datetime.timezone.utc)
-        
-        # Konversi jika format string (untuk berjaga-jaga), jika sudah datetime biarkan
         try:
-            if isinstance(exp_val, str):
-                exp_date = datetime.datetime.fromisoformat(exp_val.replace("Z", "+00:00"))
-            else:
-                exp_date = exp_val # Format bawaan Firebase Admin
-                
-            # EKSEKUSI HUKUMAN JIKA LEWAT WAKTU
+            exp_date = datetime.datetime.fromisoformat(exp_val.replace("Z", "+00:00")) if isinstance(exp_val, str) else exp_val
             if now > exp_date:
-                st.toast("⚠️ Masa aktif paket habis. Kuota dan Saldo di-reset.", icon="🚨")
-                user_ref = db.collection('users').document(username)
-                user_ref.update({
-                    "paket_aktif": "Freemium",
-                    "kuota": 0,
-                    "saldo": 0,
-                    "batas_durasi": 10,
-                    "tanggal_expired": firestore.DELETE_FIELD
+                st.toast("⚠️ Masa aktif habis. Inventori & Saldo di-reset.", icon="🚨")
+                db.collection('users').document(username).update({
+                    "inventori": [], "saldo": 0, "tanggal_expired": firestore.DELETE_FIELD
                 })
-                # Update data sementara agar UI langsung berubah di layar user
-                user_data["paket_aktif"] = "Freemium"
-                user_data["kuota"] = 0
+                user_data["inventori"] = []
                 user_data["saldo"] = 0
-                user_data["batas_durasi"] = 10
                 user_data.pop("tanggal_expired", None)
-        except Exception as e:
-            pass # Abaikan jika gagal parsing agar tidak error di layar
+        except: pass
             
     return user_data
     
-# --- FUNGSI KASIR & SUBSIDI SILANG ---
 def hitung_estimasi_menit(teks):
-    """Estimasi durasi berdasarkan jumlah kata (Rata-rata bicara: 130 kata/menit)"""
     if not teks: return 0
     jumlah_kata = len(teks.split())
     durasi = math.ceil(jumlah_kata / 130)
-    return durasi if durasi > 0 else 1 # Minimal terhitung 1 menit
+    return durasi if durasi > 0 else 1
 
-def cek_pembayaran(username, durasi_menit):
-    """Mengecek apakah user sanggup membayar. Return: (BisaBayar, Pesan, PotongKuota, PotongSaldo)"""
-    user_ref = db.collection('users').document(username)
-    user_data = user_ref.get().to_dict()
-    
-    if user_data.get("role") == "admin":
-        return True, "Akses Admin (Gratis)", 0, 0
-
-    kuota = user_data.get("kuota", 0)
-    saldo = user_data.get("saldo", 0)
-    batas_durasi = user_data.get("batas_durasi", 10)
-    TARIF = 350 # Tarif Rp 350/Menit
-
-    # Skenario 1: Durasi Aman (Sesuai Batas)
-    if durasi_menit <= batas_durasi:
-        if kuota > 0:
-            return True, "1 Kuota Terpakai.", 1, 0
-        else:
-            biaya = durasi_menit * TARIF
-            if saldo >= biaya: return True, f"Saldo terpotong Rp {biaya:,}", 0, biaya
-            else: return False, f"Saldo kurang. Butuh Rp {biaya:,} untuk {durasi_menit} Menit.", 0, 0
-
-    # Skenario 2: Subsidi Silang (Kelebihan Durasi)
-    else:
-        kelebihan = durasi_menit - batas_durasi
-        biaya_tambahan = kelebihan * TARIF
+def cek_pembayaran(user_data, durasi_menit, index_paket):
+    """Mengecek kesanggupan bayar berdasarkan pilihan Dropdown User."""
+    if user_data.get("role") == "admin": return True, "Akses Admin (Gratis)", 0
         
-        if kuota > 0:
-            if saldo >= biaya_tambahan:
-                return True, f"1 Kuota + Saldo Rp {biaya_tambahan:,} terpakai (Kelebihan waktu).", 1, biaya_tambahan
-            else: return False, f"Kelebihan durasi! Saldo Anda kurang untuk menutupi biaya tambahan Rp {biaya_tambahan:,}", 0, 0
+    saldo = user_data.get("saldo", 0)
+    inventori = user_data.get("inventori", [])
+    TARIF = 350
+    
+    # Skenario 1: Bayar Pakai Saldo Murni
+    if index_paket == -1:
+        biaya = durasi_menit * TARIF
+        if saldo >= biaya: return True, f"Saldo terpotong Rp {biaya:,}", biaya
+        else: return False, f"Saldo kurang. Butuh Rp {biaya:,}", 0
+    
+    # Skenario 2: Bayar Pakai Inventori Paket + Subsidi Silang
+    if 0 <= index_paket < len(inventori):
+        paket = inventori[index_paket]
+        batas = paket.get("batas_durasi", 10)
+        
+        if durasi_menit <= batas:
+            return True, f"1 Kuota '{paket['nama']}' Terpakai.", 0
         else:
-            biaya_total = durasi_menit * TARIF
-            if saldo >= biaya_total: return True, f"Saldo terpotong Rp {biaya_total:,}", 0, biaya_total
-            else: return False, f"Saldo kurang. Butuh Rp {biaya_total:,} untuk total {durasi_menit} Menit.", 0, 0
+            biaya_subsidi = (durasi_menit - batas) * TARIF
+            if saldo >= biaya_subsidi: return True, f"1 Kuota '{paket['nama']}' + Saldo Rp {biaya_subsidi:,} terpakai.", biaya_subsidi
+            else: return False, f"Saldo kurang untuk bayar kelebihan waktu (Butuh Rp {biaya_subsidi:,}).", 0
+            
+    return False, "Sistem Gagal Membaca Paket.", 0
 
-def eksekusi_pembayaran(username, potong_kuota, potong_saldo):
-    """Memotong dompet di Firebase secara NYATA (Dipanggil hanya jika AI berhasil)"""
-    if potong_kuota == 0 and potong_saldo == 0: return # Admin tidak dipotong
+def eksekusi_pembayaran(username, user_data, index_paket, potong_saldo):
+    """Mengeksekusi pemotongan di Firebase secara presisi pada array inventori."""
+    if user_data.get("role") == "admin": return 
+    
     user_ref = db.collection('users').document(username)
-    user_ref.update({
-        "kuota": firestore.Increment(-potong_kuota),
-        "saldo": firestore.Increment(-potong_saldo)
-    })
-
+    updates = {"saldo": firestore.Increment(-potong_saldo)}
+    
+    if index_paket != -1:
+        inventori = user_data.get("inventori", [])
+        if 0 <= index_paket < len(inventori):
+            inventori[index_paket]["kuota"] -= 1
+            if inventori[index_paket]["kuota"] <= 0:
+                inventori.pop(index_paket) # Buang paket dari rak jika kuota habis
+            updates["inventori"] = inventori # Simpan rak baru ke Firebase
+            
+    user_ref.update(updates)
+    
 # --- FUNGSI DATABASE FIREBASE (API KEYS & LOAD BALANCER) ---
 def add_api_key(name, provider, key_string, limit):
     db.collection('api_keys').add({
@@ -619,45 +599,35 @@ with st.sidebar:
                 col_b.metric("Batas Paket", "∞")
                 st.metric("💳 Saldo Darurat", "∞")
             else:
-                paket = user_data.get("paket_aktif", "Freemium")
-                kuota = user_data.get("kuota", 0)
+                inventori = user_data.get("inventori", [])
                 saldo = user_data.get("saldo", 0)
-                batas = user_data.get("batas_durasi", 10)
                 exp_val = user_data.get("tanggal_expired")
                 
-                # Format Tanggal untuk Tampilan
-                status_waktu = "⏳ **Berlaku hingga:** Selamanya" # Default murni untuk Freemium
-                if paket != "Freemium" and exp_val and exp_val != "Selamanya":
+                # Menampilkan Rak Inventori
+                st.markdown("📦 **Inventori Paket Anda:**")
+                if not inventori:
+                    st.markdown("<span style='color:#e74c3c;'><i>Belum ada paket aktif.</i></span>", unsafe_allow_html=True)
+                else:
+                    for pkt in inventori:
+                        st.markdown(f"- **{pkt['nama']}** (Maks {pkt['batas_durasi']}m **per Kuota**) : **{pkt['kuota']}x**")
+                
+                # Format Tanggal Expired Global
+                status_waktu = "⏳ **Berlaku hingga:** Selamanya"
+                if exp_val and exp_val != "Selamanya":
                     import datetime
                     try:
-                        if isinstance(exp_val, str):
-                            exp_date = datetime.datetime.fromisoformat(exp_val.replace("Z", "+00:00"))
-                        else:
-                            exp_date = exp_val
+                        exp_date = datetime.datetime.fromisoformat(exp_val.replace("Z", "+00:00")) if isinstance(exp_val, str) else exp_val
                         status_waktu = f"⏳ **Berlaku hingga:** {exp_date.strftime('%d %b %Y')}"
-                    except:
-                        pass
-                elif paket != "Freemium":
-                    status_waktu = "⏳ **Berlaku hingga:** Selamanya"
+                    except: pass
+                
+                st.write("")
+                st.markdown(status_waktu)
+                st.markdown("---")
                 
                 estimasi_menit = math.floor(saldo / 350)
                 saldo_rp = f"Rp {saldo:,}".replace(",", ".")
-                
-                # UI Dashboard Mini Baru + TANGGAL
-                st.markdown(f"📦 **Paket Aktif:** {paket}")
-                st.markdown(f"📄 **Sisa Kuota:** {kuota}x")
-                st.markdown(f"⏱️ **Kapasitas:** Maks. {batas} Menit per Kuota")
-                st.markdown(status_waktu) # <--- Tanggal Expired Muncul di Sini
-                st.markdown("---")
-                
                 st.metric("💳 Saldo Utama", saldo_rp)
                 st.caption(f"*(Melindungi ± {estimasi_menit} Menit kelebihan durasi)*")
-                
-                st.write("")
-                if st.button("⚡ Refresh Dompet", use_container_width=True):
-                    st.rerun()
-                if st.button("🛒 Beli Paket / Top-Up", use_container_width=True):
-                    show_pricing_dialog()  
                 
             st.markdown("---")
             
@@ -935,40 +905,66 @@ with tab_ai:
             st.markdown("#### ⚙️ Pilih Mesin AI")
             engine_choice = st.radio("Silakan pilih AI yang ingin digunakan:", ["Gemini", "Groq"])
             
-            # --- UI INDIKATOR TAGIHAN (TRANSPARANSI) ---
+            # --- UI KENDALI TAGIHAN & SUBSIDI SILANG ---
             durasi_teks = hitung_estimasi_menit(st.session_state.transcript)
             jumlah_kata = len(st.session_state.transcript.split())
             
-            # AMBIL DATA USER UNTUK CEK KONDISI TAGIHAN
             user_info = get_user(st.session_state.current_user)
-            info_text = f"📊 **Analisis Teks:** Anda memiliki **{jumlah_kata:,} Kata**. (Setara dengan **± {durasi_teks} Menit** pemakaian sistem)."
+            user_info = check_expired(st.session_state.current_user, user_info) # Pastikan migrasi berjalan
             
-            if user_info:
-                batas = user_info.get("batas_durasi", 10)
-                kuota = user_info.get("kuota", 0)
-                role = user_info.get("role", "user")
+            st.info(f"📊 **Analisis Teks:** Dokumen Anda memiliki **{jumlah_kata:,} Kata** (Setara dengan **± {durasi_teks} Menit** pemrosesan AI).")
+            st.write("")
+            
+            # MEMBUAT DROPDOWN OPSI PEMBAYARAN
+            pilihan_paket_dict = {}
+            if user_info and user_info.get("role") != "admin":
+                st.markdown("#### 💳 Pilih Metode Pembayaran")
+                inventori = user_info.get("inventori", [])
+                saldo = user_info.get("saldo", 0)
+                opsi_list = []
                 
-                if role == "admin":
-                    info_text += "\n\n👑 **Status:** Anda adalah Admin. Bebas kuota dan tanpa batas durasi."
-                elif kuota > 0:
-                    if durasi_teks > batas:
-                        kelebihan = durasi_teks - batas
-                        biaya = kelebihan * 350
-                        biaya_rp = f"Rp {biaya:,}".replace(",", ".")
-                        info_text += f"\n\n⚠️ **Subsidi Silang:** Durasi teks Anda melebihi kapasitas paket ({batas} Menit). Kelebihan **{kelebihan} Menit** akan memotong Saldo Utama Anda sebesar **{biaya_rp}**."
+                # Looping Isi Inventori User
+                for i, pkt in enumerate(inventori):
+                    batas = pkt["batas_durasi"]
+                    if durasi_teks <= batas:
+                        teks_opsi = f"🎟️ Paket {pkt['nama']} (Maks {batas}m) - Saldo Aman!"
                     else:
-                        info_text += f"\n\n✅ **Status Aman:** Durasi teks masih di bawah batas maksimal ({batas} Menit / Kuota). Tidak ada pemotongan saldo."
-                else:
-                    biaya_total = durasi_teks * 350
-                    biaya_rp = f"Rp {biaya_total:,}".replace(",", ".")
-                    info_text += f"\n\n⚠️ **Saldo Darurat:** Kuota Anda habis (0x). Seluruh pemrosesan (**{durasi_teks} Menit**) akan langsung memotong Saldo Utama Anda sebesar **{biaya_rp}**."
+                        biaya_lebih = (durasi_teks - batas) * 350
+                        ket = "✅ Cukup" if saldo >= biaya_lebih else f"❌ Saldo Kurang Rp {biaya_lebih - saldo:,}"
+                        teks_opsi = f"🎟️ Paket {pkt['nama']} (Maks {batas}m) + Potong Saldo Rp {biaya_lebih:,} ({ket})"
                     
-            st.info(info_text)
+                    opsi_list.append(teks_opsi)
+                    pilihan_paket_dict[teks_opsi] = i
+                
+                # Opsi Terakhir: Bayar Murni Pakai Saldo
+                biaya_murni = durasi_teks * 350
+                ket_murni = "✅ Cukup" if saldo >= biaya_murni else f"❌ Saldo Kurang Rp {biaya_murni - saldo:,}"
+                opsi_saldo = f"💳 Gunakan Saldo Murni (Biaya Rp {biaya_murni:,} - {ket_murni})"
+                opsi_list.append(opsi_saldo)
+                pilihan_paket_dict[opsi_saldo] = -1
+                
+                # Tampilkan Dropdown/Radio ke Layar
+                selected_opsi_teks = st.radio("Pilih aset dompet yang ingin digunakan untuk dokumen ini:", opsi_list)
+                selected_index_paket = pilihan_paket_dict[selected_opsi_teks]
+            else:
+                selected_index_paket = -1
+                st.info("👑 Anda menggunakan akses Super Admin (Gratis tanpa batas).")
+                
             st.write("")
             
             col1, col2 = st.columns(2)
             with col1: btn_notulen = st.button("📝 Buat Notulen", use_container_width=True)
             with col2: btn_laporan = st.button("📋 Buat Laporan", use_container_width=True)
+
+            if btn_notulen or btn_laporan:
+                # 1. CEK BIAYA BERDASARKAN PILIHAN USER
+                bisa_bayar, pesan_bayar, p_saldo = cek_pembayaran(user_info, durasi_teks, selected_index_paket)
+                
+                if not bisa_bayar:
+                    st.error(f"❌ TRANSAKSI DITOLAK: {pesan_bayar}")
+                    st.warning("💡 Silakan pilih metode pembayaran lain, atau Top-Up Saldo Anda.")
+                else:
+                    # LANJUT PROSES AI...
 
             if btn_notulen or btn_laporan:
                 # 1. CEK BIAYA SEBELUM MEMANGGIL AI
@@ -1016,10 +1012,9 @@ with tab_ai:
                                     continue
                         
                         if success_generation and ai_result:
-                            # 3. POTONG SALDO KARENA HASIL BERHASIL DIBUAT!
-                            eksekusi_pembayaran(st.session_state.current_user, p_kuota, p_saldo)
+                            # 3. POTONG SALDO & INVENTORI KARENA BERHASIL!
+                            eksekusi_pembayaran(st.session_state.current_user, user_info, selected_index_paket, p_saldo)
                             
-                            # MENGGANTI TOAST MENJADI KOTAK SUCCESS BESAR
                             st.success(f"✅ **Proses Selesai!** {pesan_bayar}")
                             
                             st.session_state.ai_result = ai_result
@@ -1169,4 +1164,3 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
-
