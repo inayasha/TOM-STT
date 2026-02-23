@@ -964,16 +964,6 @@ with tab_ai:
                     st.error(f"❌ TRANSAKSI DITOLAK: {pesan_bayar}")
                     st.warning("💡 Silakan pilih metode pembayaran lain, atau Top-Up Saldo Anda.")
                 else:
-                    # LANJUT PROSES AI...
-
-            if btn_notulen or btn_laporan:
-                # 1. CEK BIAYA SEBELUM MEMANGGIL AI
-                bisa_bayar, pesan_bayar, p_kuota, p_saldo = cek_pembayaran(st.session_state.current_user, durasi_teks)
-                
-                if not bisa_bayar:
-                    st.error(f"❌ TRANSAKSI DITOLAK: {pesan_bayar}")
-                    st.warning("💡 Silakan Top-Up Saldo atau Upgrade Paket Anda.")
-                else:
                     # 2. LANJUT PROSES AI JIKA SALDO/KUOTA CUKUP
                     prompt_active = PROMPT_NOTULEN if btn_notulen else PROMPT_LAPORAN
                     ai_result = None
@@ -1164,3 +1154,4 @@ if st.session_state.user_role == "admin":
 
 st.markdown("<br><br><hr>", unsafe_allow_html=True) 
 st.markdown("""<div style="text-align: center; font-size: 13px; color: #888;">Powered by <a href="https://espeje.com" target="_blank" class="footer-link">espeje.com</a> & <a href="https://link-gr.id" target="_blank" class="footer-link">link-gr.id</a></div>""", unsafe_allow_html=True)
+
