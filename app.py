@@ -202,13 +202,13 @@ def redeem_voucher(username, kode_voucher):
         
         if "Pro" in v_latest['nama_paket']: 
             hari_tambah = 30
-            bonus_saldo = 5000
+            bonus_saldo = 2500
         elif "Eksekutif" in v_latest['nama_paket']: 
             hari_tambah = 45
-            bonus_saldo = 12000
+            bonus_saldo = 7500
         elif "VIP" in v_latest['nama_paket']: 
             hari_tambah = 60
-            bonus_saldo = 20000
+            bonus_saldo = 18500
         
         # Kalkulasi Expired (Maks 90 Hari)
         new_exp_date = base_date + datetime.timedelta(days=hari_tambah)
@@ -618,54 +618,67 @@ def show_pricing_dialog():
             if st.button("🛒 Beli Starter - Rp 51.000", use_container_width=True, key="buy_starter"):
                 with st.spinner("Mencetak tagihan..."):
                     link_bayar = buat_tagihan_midtrans("Starter", 51000, user_email)
-                    if link_bayar: st.link_button("💳 Lanjut Bayar (Termasuk 2% Biaya Layanan)", link_bayar, use_container_width=True)
+                    if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
             
             st.markdown("---")
             
             st.markdown("""
             **2. Paket Pro Notulis**
-            *Standar profesional untuk notulis & sekretaris.*
+            *Standar asisten profesional untuk notulis & sekretaris.*
             * 📄 **5x** Ekstrak AI (Laporan/Notulen)
             * ⏱️ **Kapasitas:** Maks. 1 Jam / File
             * 📅 **Masa Aktif:** 30 Hari
-            * 🎁 **Bonus Saldo:** Rp 5.000
+            * 🎁 **Bonus Saldo:** Rp 2.500
             * 🛡️ **Akses:** Server API Terjamin
             """)
-            if st.button("🛒 Beli Pro - Rp 102.000", use_container_width=True, key="buy_pro"):
+            if st.button("🛒 Beli Pro - Rp 127.500", use_container_width=True, key="buy_pro"):
                 with st.spinner("Mencetak tagihan..."):
-                    link_bayar = buat_tagihan_midtrans("Pro", 102000, user_email)
-                    if link_bayar: st.link_button("💳 Lanjut Bayar (Termasuk 2% Biaya Layanan)", link_bayar, use_container_width=True)
+                    link_bayar = buat_tagihan_midtrans("Pro", 127500, user_email)
+                    if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
 
         with col2:
             st.markdown("""
-            **3. Paket Eksekutif**
-            *Pilihan tepat untuk intensitas rapat tinggi.*
-            * 📄 **18x** Ekstrak AI (Laporan/Notulen)
+            **3. Paket Eksekutif** ⭐ **BEST VALUE**
+            *Pilihan favorit profesional untuk intensitas rapat tinggi.*
+            * 📄 **14x** Ekstrak AI (Laporan/Notulen)
             * ⏱️ **Kapasitas:** Maks. 1,5 Jam / File
             * 📅 **Masa Aktif:** 45 Hari
-            * 🎁 **Bonus Saldo:** Rp 12.000
+            * 🎁 **Bonus Saldo:** Rp 7.500
             * 🛡️ **Jaminan Akses:** Multi-Server API (Anti-Limit)
             """)
             if st.button("🛒 Beli Eksekutif - Rp 306.000", use_container_width=True, key="buy_exec"):
                 with st.spinner("Mencetak tagihan..."):
                     link_bayar = buat_tagihan_midtrans("Eksekutif", 306000, user_email)
-                    if link_bayar: st.link_button("💳 Lanjut Bayar (Termasuk 2% Biaya Layanan)", link_bayar, use_container_width=True)
+                    if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
             
             st.markdown("---")
             
             st.markdown("""
-            **4. Paket VIP**
-            *Akses maksimal untuk kementerian/instansi.*
-            * 📄 **35x** Ekstrak AI (Laporan/Notulen)
-            * ⏱️ **Kapasitas:** Maks. 3 Jam / File
+            **4. Paket VIP (Enterprise)** 👑
+            *Akses maksimal untuk instansi, kementerian & korporasi.*
+            * 📄 **38x** Ekstrak AI (Laporan/Notulen)
+            * ⏱️ **Kapasitas:** Maks. 2,5 Jam / File
             * 📅 **Masa Aktif:** 60 Hari
-            * 🎁 **Bonus Saldo:** Rp 20.000
+            * 🎁 **Bonus Saldo:** Rp 18.500
             * 🛡️ **Jaminan Akses:** Multi-Server API (Anti-Limit)
             """)
-            if st.button("🛒 Beli VIP - Rp 510.000", use_container_width=True, key="buy_vip"):
+            if st.button("🛒 Beli VIP - Rp 765.000", use_container_width=True, key="buy_vip"):
                 with st.spinner("Mencetak tagihan..."):
-                    link_bayar = buat_tagihan_midtrans("VIP", 510000, user_email)
-                    if link_bayar: st.link_button("💳 Lanjut Bayar (Termasuk 2% Biaya Layanan)", link_bayar, use_container_width=True)
+                    link_bayar = buat_tagihan_midtrans("VIP", 765000, user_email)
+                    if link_bayar: st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
+
+        # KOTAK MARKETING B2B & PRIVASI
+        st.write("")
+        st.markdown("""
+        <div style="background-color: #f8f9fa; border-left: 5px solid #0056b3; padding: 15px; border-radius: 5px; margin-bottom: 10px;">
+            <b>🏢 Kebutuhan Skala Besar / Instansi?</b><br>
+            <span style="font-size: 14px; color: #555;">Butuh kuota >100 dokumen, Faktur Pajak/SPJ, atau kontrak kerja sama tahunan? Hubungi Tim Admin kami untuk penawaran B2B eksklusif.</span>
+        </div>
+        <div style="background-color: #fdfaf6; border-left: 5px solid #f39c12; padding: 15px; border-radius: 5px;">
+            <b>🛡️ Garansi Privasi 100%</b><br>
+            <span style="font-size: 14px; color: #555;">Seluruh file audio & teks transkrip rapat Anda tidak kami simpan di server publik dan otomatis terhapus setelah diproses. Kerahasiaan data instansi terjamin aman.</span>
+        </div>
+        """, unsafe_allow_html=True)
 
     with tab_saldo:
         st.warning("ℹ️ **Catatan:** Saldo yang Anda beli masuk utuh 100% ke dompet Anda. Kami hanya menambahkan 2% pada tombol bayar sebagai Biaya Layanan (Payment Gateway).")
@@ -1528,8 +1541,8 @@ if st.session_state.user_role == "admin":
                     paket_map = {
                         "Starter": {"k": 2, "d": 45},
                         "Pro Notulis": {"k": 5, "d": 60},
-                        "Eksekutif": {"k": 18, "d": 90},
-                        "VIP": {"k": 35, "d": 180}
+                        "Eksekutif": {"k": 14, "d": 90},
+                        "VIP": {"k": 38, "d": 150}
                     }
                     
                     max_k = 1 if v_tipe == "Eksklusif (1x Pakai)" else v_kuota_klaim
