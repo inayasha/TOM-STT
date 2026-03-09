@@ -1510,7 +1510,7 @@ def show_pricing_dialog():
             </div>
             """, unsafe_allow_html=True)
             
-        st.info("💡 **Bebas Durasi & AI Sepuasnya!** Paket ini menggunakan sistem 'Bank Waktu'. Anda bebas mengunggah audio panjang maupun pendek tanpa takut terpotong batas menit per file.")
+        st.info("💡 **Bebas Durasi & AI Sepuasnya!** Paket ini menggunakan sistem 'Bank Waktu'. Anda bebas mengupload audio panjang maupun pendek tanpa takut terpotong batas menit per file.")
         
         # --- DAFTAR PAKET ALL-IN-ONE ---
 
@@ -1883,10 +1883,10 @@ def show_pricing_dialog():
     with st.expander("INFO & KETENTUAN PAKET", expanded=False):
         st.markdown("""
         **💡 Ketentuan Sistem & Kuota:**
-        * 📄 **Aturan Upload Teks (.txt):** Mengunggah dokumen teks manual kini akan memotong kuota utama Anda.
+        * 📄 **Aturan Upload Teks (.txt):** Mengupload dokumen teks manual kini akan memotong kuota utama Anda.
           👉 **User AIO:** Memotong **Saldo Universal (Menit)** berdasarkan estimasi panjang teks.
-          👉 **User Reguler:** Memotong **1 Kuota** (sama seperti mengunggah 1 file audio).
-        * 🔄 **Subsidi Silang (AIO ke Reguler):** Jika Anda mengunggah file namun sisa Bank Menit AIO tidak cukup, sistem akan otomatis memotong **1 Kuota Reguler** Anda (jika ada) sebagai cadangan.
+          👉 **User Reguler:** Memotong **1 Kuota** (sama seperti mengupload 1 file audio).
+        * 🔄 **Subsidi Silang (AIO ke Reguler):** Jika Anda mengupload file namun sisa Bank Menit AIO tidak cukup, sistem akan otomatis memotong **1 Kuota Reguler** Anda (jika ada) sebagai cadangan.
         * 🛡️ ***Tier* Tertinggi Selalu Aman:** Anda bebas menumpuk berbagai jenis paket. Sistem selalu memberikan batas *tier* tertinggi berdasarkan paket aktif yang Anda miliki. Membeli paket kecil tidak akan menurunkan status *tier* tinggi Anda.
         * 💬 **Tanya AI (Chatbot):** Jika jatah gratis habis, dikenakan tarif ringan **Rp 500 / pertanyaan** (memotong Saldo Utama).
 
