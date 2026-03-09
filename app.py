@@ -1522,6 +1522,7 @@ def show_pricing_dialog():
                     <li>⏱️ <b>Saldo Universal:</b> 600 Menit <i>(Memotong durasi audio ATAU estimasi panjang teks)</i></li>
                     <li>📅 <b>Masa Aktif:</b> 30 Hari (Maks Akumulasi 150 Hari)</li>
                     <li>👑 <b>FUP:</b> 35x Ekstrak AI <b>Per Hari</b> <i>(Bebas digunakan untuk semua dokumen)</i></li>
+					<li>💬 <b>Chatbot AI:</b> 75x Tanya / Dokumen (Gratis)</li>
                     <li>🚀 <b>Batas Ukuran Bebas:</b> Otomatis mengikuti <i>tier</i> tertinggi yang Anda miliki.</li>
                     <li>🎁 <b>Bonus Saldo:</b> Rp 10.000</li>
                     <li>⚡ <b>Server STT:</b> Prioritas Standar</li>
@@ -1549,6 +1550,7 @@ def show_pricing_dialog():
                     <li>⏱️ <b>Saldo Universal:</b> 1.800 Menit <i>(Memotong durasi audio ATAU estimasi panjang teks)</i></li>
                     <li>📅 <b>Masa Aktif:</b> 60 Hari (Maks Akumulasi 150 Hari)</li>
                     <li>👑 <b>FUP:</b> 50x Ekstrak AI <b>Per Hari</b> <i>(Bebas digunakan untuk semua dokumen)</i></li>
+					<li>💬 <b>Chatbot AI:</b> 75x Tanya / Dokumen (Gratis)</li>
                     <li>🚀 <b>Batas Ukuran Bebas:</b> Otomatis mengikuti <i>tier</i> tertinggi yang Anda miliki.</li>
                     <li>🎁 <b>Bonus Saldo:</b> Rp 25.000</li>
                     <li>⚡ <b>VVIP Lane:</b> Prioritas Server Tertinggi & STT Kilat</li>
@@ -1576,6 +1578,7 @@ def show_pricing_dialog():
                     <li>⏱️ <b>Saldo Universal:</b> 6.000 Menit <span style='color: #e74c3c; font-weight: bold;'>(Tarif Termurah: ± Rp 216/menit)</span></li>
                     <li>📅 <b>Masa Aktif:</b> 90 Hari (Maks Akumulasi 150 Hari)</li>
                     <li>👑 <b>FUP:</b> 75x Ekstrak AI <b>Per Hari</b> <i>(Bebas digunakan untuk semua dokumen)</i></li>
+					<li>💬 <b>Chatbot AI:</b> 75x Tanya / Dokumen (Gratis)</li>
                     <li>🚀 <b>Batas Ukuran Bebas:</b> Otomatis mengikuti <i>tier</i> tertinggi yang Anda miliki.</li>
                     <li>🎁 <b>Bonus Saldo:</b> Rp 75.000</li>
                     <li>⚡ <b>VVIP Lane:</b> Prioritas Server Tertinggi & STT Kilat</li>
