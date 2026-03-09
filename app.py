@@ -987,7 +987,7 @@ st.markdown("""
         align-self: flex-end !important;  /* Dorong mentok ke sisi kanan */
         order: -1 !important;             /* KUNCI UTAMA: Paksa pindah ke urutan paling atas HTML */
         margin-bottom: -35px !important;  /* Mencegah tombol mendesak judul teks ke bawah */
-        margin-right: 5px !important;
+        margin-right: 10px !important;
         z-index: 999999 !important;
         
         /* Desain Visual Mewah */
