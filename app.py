@@ -1912,7 +1912,8 @@ with st.sidebar:
                     <div style="background-color: #f0f7ff; padding: 8px 10px; border-radius: 8px; font-size: 11px; color: #0369a1; margin-bottom: 10px; border: 1px solid #bae6fd;">
                         <b>Kapasitas File Maksimal:</b><br>
                         🎙️ Audio: {limit_audio} Menit<br>
-                        📄 Teks: {limit_teks:,} Karakter
+                        📄 Teks: {limit_teks:,} Karakter<br>
+                        🎁 Jatah Ekstrak AI: {max_fup}x / File
                     </div>
                     <div style="background-color: #f9fafb; padding: 8px 10px; border-radius: 8px; font-size: 11.5px; color: #4b5563; display: flex; justify-content: space-between; border: 1px solid #f3f4f6;">
                         <span>Masa Aktif:</span><span style="font-weight: 700; color: #111;">{status_waktu}</span>
@@ -2122,11 +2123,15 @@ def jalankan_proses_transkrip(audio_to_process, source_name, lang_code):
             st.stop()
             return None
 
-    # --- FASE 2: INJEKSI NYAWA (FUP) SETELAH LOLOS VALIDASI ---
+    # --- FASE 2: INJEKSI NYAWA (HARD-CODED LIMIT UNTUK KEAMANAN) ---
     if u_info.get("bank_menit", 0) > 0:
+        # Sultan AIO: Ambil dari jatah harian (Default 35)
         st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
     else:
-        st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_per_file", 2)
+        # User Reguler (Lite, Starter, dll):
+        # Paksa minimal 2 jika di database tidak ada/error, agar tidak langsung habis
+        jatah_database = u_info.get("fup_dok_per_file", 2)
+        st.session_state.sisa_nyawa_dok = max(2, jatah_database)
 
     try:
         duration_sec = get_duration(input_path)
@@ -2781,8 +2786,13 @@ with tab_ai:
                     raw_text = uploaded_txt.read().decode("utf-8")
                     jumlah_char = len(raw_text)
                     
+                    # 🚀 PERBAIKAN: Tarik data user_info dari Firebase di sini
+                    u_info = {}
+                    if st.session_state.logged_in:
+                        u_info = db.collection('users').document(st.session_state.current_user).get().to_dict() or {}
+                    
                     # 2. Ambil batas kasta dari profil user
-                    batas_char = user_info.get("batas_teks_karakter", 45000)
+                    batas_char = u_info.get("batas_teks_karakter", 45000)
                     
                     # 3. FASE 2: INTERCEPTOR (Validasi Karakter)
                     if jumlah_char > batas_char:
@@ -2798,11 +2808,21 @@ with tab_ai:
                         st.session_state.chat_usage_count = 0 
                         st.session_state.ai_result = ""
                         
-                        # --- FASE 2: INJEKSI NYAWA (FUP DOKUMEN) ---
-                        if user_info.get("bank_menit", 0) > 0:
-                            st.session_state.sisa_nyawa_dok = user_info.get("fup_dok_harian_limit", 35)
+                        # --- FASE 2: DYNAMIC TIERED FUP INJECTION ---
+                        if u_info.get("bank_menit", 0) > 0:
+                            st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
                         else:
-                            st.session_state.sisa_nyawa_dok = user_info.get("fup_dok_per_file", 2)
+                            # Logika Cek Kasta Reguler
+                            max_fup = 2 # Default Lite
+                            inv = u_info.get("inventori", [])
+                            for pkt in inv:
+                                p_name = pkt.get("nama", "").upper()
+                                if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
+                                elif "VIP" in p_name: max_fup = max(max_fup, 8)
+                                elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
+                                elif "STARTER" in p_name: max_fup = max(max_fup, 4)
+                            
+                            st.session_state.sisa_nyawa_dok = max_fup
     
                         # Simpan ke Firebase agar tidak hilang saat di-refresh
                         if st.session_state.logged_in:
@@ -3312,9 +3332,9 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                         sisa_nyawa = st.session_state.get('sisa_nyawa_dok', 0)
                         
                         if sisa_nyawa > 0:
-                            # 🎁 OPSI A: Gunakan Jatah Gratis (FUP)
-                            st.session_state.sisa_nyawa_dok -= 1
-                            st.toast(f"✅ Jatah Gratis Digunakan. Sisa Nyawa: {st.session_state.sisa_nyawa_dok}x", icon="🎁")
+                            # Kurangi hanya jika proses benar-benar akan dijalankan
+                            st.session_state.sisa_nyawa_dok = sisa_nyawa - 1
+                            st.success(f"🎁 **Jatah Gratis Digunakan.** Sisa jatah untuk file ini: {st.session_state.sisa_nyawa_dok}x")
                             proses_lanjut = True
                             
                             # (Opsional: Jika AIO, kita bisa update fup_terpakai ke database di sini jika perlu rekap harian)
