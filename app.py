@@ -251,12 +251,19 @@ def berikan_paket_ke_user(username, user_data, nama_paket):
         inventori = user_data.get("inventori", [])
         ditemukan = False
         for pkt in inventori:
-            # FIX: Tumpuk kuota dengan aman (Abaikan huruf besar/kecil)
-            if pkt['nama'].upper() == cfg['nama'].upper() and pkt['batas_durasi'] == cfg['batas_durasi']:
-                pkt['kuota'] += cfg['kuota']; ditemukan = True; break
+            # 🚀 FIX: Gunakan .get() dan panggil 'limit_audio' agar kebal KeyError
+            if pkt.get('nama', '').upper() == cfg.get('nama', '').upper() and pkt.get('batas_durasi') == cfg.get('limit_audio'):
+                pkt['kuota'] += cfg.get('kuota', 0)
+                ditemukan = True
+                break
+                
         if not ditemukan:
-            # Tetap simpan dengan nama huruf besar (cfg['nama']) jika buat baru
-            inventori.append({"nama": cfg['nama'], "kuota": cfg['kuota'], "batas_durasi": cfg['batas_durasi']})
+            # Tetap simpan dengan nama huruf besar jika buat baru
+            inventori.append({
+                "nama": cfg.get('nama', ''), 
+                "kuota": cfg.get('kuota', 0), 
+                "batas_durasi": cfg.get('limit_audio', 45)
+            })
 
         new_saldo = user_data.get("saldo", 0) + cfg.get('bonus', 0)
         
