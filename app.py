@@ -762,10 +762,10 @@ if st.session_state.logged_in and not st.session_state.transcript and not st.ses
     user_info = get_user(st.session_state.current_user)
     if user_info and ("draft_transcript" in user_info or "draft_ai_result" in user_info):
         st.session_state.transcript = user_info.get("draft_transcript", "")
-            st.session_state.filename = user_info.get("draft_filename", "Hasil_STT")
-            st.session_state.ai_result = user_info.get("draft_ai_result", "")
-            st.session_state.ai_prefix = user_info.get("draft_ai_prefix", "")
-            st.session_state.is_text_upload = user_info.get("is_text_upload", False)
+        st.session_state.filename = user_info.get("draft_filename", "Hasil_STT")
+        st.session_state.ai_result = user_info.get("draft_ai_result", "")
+        st.session_state.ai_prefix = user_info.get("draft_ai_prefix", "")
+        st.session_state.is_text_upload = user_info.get("is_text_upload", False)
         
 # ==========================================
 # FASE 1: DYNAMIC GLOBAL SHIELD (NON-ADMIN ONLY)
