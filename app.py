@@ -261,16 +261,17 @@ def berikan_paket_ke_user(username, user_data, nama_paket):
         # Injeksi Bank Menit jika ini adalah paket AIO
         new_bank_menit = user_data.get("bank_menit", 0) + cfg.get('bank_menit', 0)
 
-        # --- FASE 1: INJEKSI METADATA KASTA (BLUEPRINT 2026) ---
+        # --- FASE 1: INJEKSI METADATA KASTA (BLUEPRINT 2026 - FIX ANTI DOWNGRADE) ---
+        # 🚀 KUNCI PERBAIKAN: Gunakan fungsi max() agar kasta selalu mengambil nilai tertinggi
         update_data = {
             "inventori": inventori, 
             "saldo": new_saldo, 
             "tanggal_expired": new_exp_date, 
             "bank_menit": new_bank_menit,
-            "batas_audio_menit": cfg.get("limit_audio", 45),
-            "batas_teks_karakter": cfg.get("limit_teks", 45000),
-            "fup_dok_per_file": cfg.get("fup_per_file", 2),
-            "fup_dok_harian_limit": cfg.get("fup_harian", 0)
+            "batas_audio_menit": max(user_data.get("batas_audio_menit", 0), cfg.get("limit_audio", 45)),
+            "batas_teks_karakter": max(user_data.get("batas_teks_karakter", 0), cfg.get("limit_teks", 45000)),
+            "fup_dok_per_file": max(user_data.get("fup_dok_per_file", 0), cfg.get("fup_per_file", 2)),
+            "fup_dok_harian_limit": max(user_data.get("fup_dok_harian_limit", 0), cfg.get("fup_harian", 0))
         }
 
         user_data.update(update_data)
@@ -314,11 +315,6 @@ def cek_status_pembayaran_duitku(username, user_data):
     if ada_perubahan:
         user_data["pending_trx"] = sisa_pending
         db.collection('users').document(username).update({"pending_trx": sisa_pending})
-        
-        # 🚀 AUTO-REFRESH DOMPET JIKA ADA TAGIHAN LUNAS
-        if 'temp_user_data' in st.session_state:
-            del st.session_state['temp_user_data']
-            
     return user_data
     
 def check_expired(username, user_data):
@@ -1819,13 +1815,6 @@ def show_pricing_dialog():
                     if sukses:
                         st.success(pesan)
                         st.toast("Voucher berhasil diklaim!", icon="🎁")
-                        
-                        # 🚀 AUTO-REFRESH DOMPET SETELAH KLAIM VOUCHER
-                        if 'temp_user_data' in st.session_state:
-                            del st.session_state['temp_user_data']
-                        import time
-                        time.sleep(1)
-                        st.rerun()
                     else:
                         st.error(pesan)
             else:
@@ -2709,10 +2698,6 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 st.session_state.sisa_nyawa_dok = max_fup
                 st.session_state.is_using_aio = False
         
-        # 🚀 AUTO-REFRESH DOMPET SETELAH TRANSKRIP BERHASIL
-        if 'temp_user_data' in st.session_state:
-            del st.session_state['temp_user_data']
-
         st.write("")
         
         # 🔥 FITUR BARU: TOMBOL PINDAH TAB OTOMATIS (JAVASCRIPT INJECTION)
@@ -3748,10 +3733,6 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                                 })
                                 
                                 st.success(f"✅ **Proses Selesai!**")
-                                
-                                # 🚀 AUTO-REFRESH DOMPET SETELAH AI SELESAI
-                                if 'temp_user_data' in st.session_state:
-                                    del st.session_state['temp_user_data']
                                 
                                 # 🚀 FITUR BARU: JEDA & REFRESH HALAMAN AGAR MENU OTOMATIS TERTUTUP
                                 import time
@@ -4841,4 +4822,3 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
