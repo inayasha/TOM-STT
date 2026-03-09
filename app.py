@@ -2977,8 +2977,16 @@ with tab_ai:
                             break
                             
             if not has_txt_access:
-                st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia. Silahkan upload/rekam audio.</div>', unsafe_allow_html=True)
-                st.info("🔒 **Fitur Eksklusif Terkunci**\n\nFasilitas upload teks manual (.txt) khusus untuk pengguna tingkat atas. Silakan **Upgrade** ke paket **VIP, ENTERPRISE, AIO 30 JAM, atau AIO 100 JAM** untuk menikmati fitur analisis dokumen instan (tanpa upload audio).")
+                # --- DESAIN PAYWALL SELARAS DENGAN TAB ARSIP (TANPA TOMBOL) ---
+                html_lock_txt = """<div style="text-align: center; padding: 25px; background-color: #fdfaf6; border-radius: 10px; border: 1px solid #f39c12; margin-bottom: 20px;">
+<div style="font-size: 40px; margin-bottom: 10px;">🔒</div>
+<h3 style="color: #d68910; margin-top: 0; font-size: 18px;">Fitur Eksklusif Paket Premium</h3>
+<p style="color: #d68910; font-weight: 500; font-size: 14.5px; line-height: 1.6; margin-bottom: 0;">
+Analisis AI pada dasarnya dilakukan setelah Anda memproses <b>Transkrip Audio</b> di menu sebelumnya.<br><br>
+Namun, jika Anda ingin menggunakan "jalur cepat" dengan <b>mengunggah file teks (.txt) manual</b> (tanpa perlu memproses audio), fasilitas instan ini secara khusus diperuntukkan bagi pengguna paket <b>VIP, ENTERPRISE, atau AIO tingkat atas</b>.
+</p>
+</div>"""
+                st.markdown(html_lock_txt, unsafe_allow_html=True)
                 uploaded_txt = None
             else:
                 st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia.<br><strong>ATAU</strong> Upload file .txt di bawah ini:</div>', unsafe_allow_html=True)
