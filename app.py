@@ -3067,9 +3067,7 @@ Namun, jika Anda ingin menggunakan FAST TRACK untuk upload file teks (.txt) seca
                         st.session_state.chat_usage_count = 0 
                         st.session_state.ai_result = ""
                         
-                        # --- 🚀 STRICT ORIGIN FUP UNTUK DOKUMEN TEKS (.TXT) ---
-                        # Teks tidak memotong tiket, jadi kita prioritaskan memakan FUP Reguler
-                        # Tujuannya agar jatah harian FUP AIO milik user tidak terbuang sia-sia untuk Teks.
+                        # --- 🚀 STRICT ORIGIN FUP (AIO SEBAGAI RAJA ABSOLUT) ---
                         max_fup_reg = 0
                         for pkt in u_info.get("inventori", []):
                             p_name = pkt.get("nama", "").upper()
@@ -3080,14 +3078,14 @@ Namun, jika Anda ingin menggunakan FAST TRACK untuk upload file teks (.txt) seca
                                 elif "STARTER" in p_name: max_fup_reg = max(max_fup_reg, 4)
                                 elif "LITE" in p_name: max_fup_reg = max(max_fup_reg, 2)
                                 
-                        if max_fup_reg > 0:
-                            # 1. Jika User punya paket Reguler cadangan, pakai FUP itu sebagai tameng!
-                            st.session_state.sisa_nyawa_dok = max_fup_reg
-                            st.session_state.is_using_aio = False
-                        elif u_info.get("bank_menit", 0) > 0:
-                            # 2. Jika User HANYA PUNYA AIO (Tanpa reguler), barulah kita izinkan pakai FUP AIO
+                        if u_info.get("bank_menit", 0) > 0:
+                            # 1. AIO ADALAH RAJA: Selalu berikan FUP Tertinggi jika punya AIO!
                             st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
                             st.session_state.is_using_aio = True
+                        elif max_fup_reg > 0:
+                            # 2. Jika tidak punya AIO, gunakan tiket Reguler
+                            st.session_state.sisa_nyawa_dok = max_fup_reg
+                            st.session_state.is_using_aio = False
                         else:
                             # 3. User Freemium
                             st.session_state.sisa_nyawa_dok = 2
@@ -3544,28 +3542,15 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                                 elif "STARTER" in p_name: max_fup_reg = max(max_fup_reg, 4)
                                 elif "LITE" in p_name: max_fup_reg = max(max_fup_reg, 2)
                         
-                        # 2. Cek apakah dokumen yang di-load adalah hasil upload .txt manual
-                        is_text_mode = st.session_state.get('is_text_upload', False)
-                        
-                        if is_text_mode:
-                            # 🛡️ JIKA TEKS: Prioritaskan Reguler sebagai tameng!
-                            if max_fup_reg > 0:
-                                st.session_state.sisa_nyawa_dok = max_fup_reg
-                                st.session_state.is_using_aio = False
-                            elif u_info_fup.get("bank_menit", 0) > 0:
-                                st.session_state.sisa_nyawa_dok = u_info_fup.get("fup_dok_harian_limit", 35)
-                                st.session_state.is_using_aio = True
-                            else:
-                                st.session_state.sisa_nyawa_dok = 2
-                                st.session_state.is_using_aio = False
+                        # 2. AIO SEBAGAI RAJA ABSOLUT (Baik Teks maupun Audio)
+                        if u_info_fup.get("bank_menit", 0) > 0:
+                            # JIKA PUNYA AIO: Selalu berikan FUP Sultan tanpa melihat sumber file!
+                            st.session_state.sisa_nyawa_dok = u_info_fup.get("fup_dok_harian_limit", 35)
+                            st.session_state.is_using_aio = True
                         else:
-                            # 🎙️ JIKA AUDIO: Prioritaskan AIO (Sultan)
-                            if u_info_fup.get("bank_menit", 0) > 0:
-                                st.session_state.sisa_nyawa_dok = u_info_fup.get("fup_dok_harian_limit", 35)
-                                st.session_state.is_using_aio = True
-                            else:
-                                st.session_state.sisa_nyawa_dok = max(2, max_fup_reg)
-                                st.session_state.is_using_aio = False
+                            # JIKA TIDAK PUNYA AIO: Gunakan kasta Reguler
+                            st.session_state.sisa_nyawa_dok = max(2, max_fup_reg)
+                            st.session_state.is_using_aio = False
 
                     # Tampilkan Status FUP DENGAN INFORMASI CERDAS
                     sisa_nyawa = st.session_state.get('sisa_nyawa_dok', 0)
@@ -4101,7 +4086,7 @@ if st.session_state.user_role == "admin":
                 st.info("💡 Kosongkan kotak yang tidak diperlukan. Sistem akan otomatis merakitnya menjadi desain HTML yang rapi.")
                 
                 # Sakelar Utama ON/OFF
-                toggle_ann = st.toggle("🟢 Tampilkan Pengumuman di Layar User", value=sys_config.get("is_announcement_active", False))
+                toggle_ann = st.toggle("Tampilkan Pengumuman di Layar User", value=sys_config.get("is_announcement_active", False))
                 
                 st.markdown("**1. Header & Teks Utama**")
                 new_a_title = st.text_input("Judul Pengumuman", value="" if is_clear else sys_config.get("ann_title", ""))
