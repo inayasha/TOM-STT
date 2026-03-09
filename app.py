@@ -2507,6 +2507,19 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                     db.collection('users').document(st.session_state.current_user).update({"bank_menit": new_menit})
                     st.toast(f"Sisa Waktu AIO Anda: {new_menit} Menit", icon="⏱️")
                     teks_struk_aio = f"\n\n📉 *Waktu AIO terpotong: **{durasi_menit_aktual} Menit** (Sisa: {new_menit} Menit)*"
+                
+                # 🚀 PERBAIKAN FUP: Reset sisa nyawa (FUP) ke nilai maksimal karena ini adalah file baru!
+                if usr_akhir.get("bank_menit", 0) > 0:
+                    st.session_state.sisa_nyawa_dok = usr_akhir.get("fup_dok_harian_limit", 35)
+                else:
+                    max_fup = 2
+                    for pkt in usr_akhir.get("inventori", []):
+                        p_name = pkt.get("nama", "").upper()
+                        if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
+                        elif "VIP" in p_name: max_fup = max(max_fup, 8)
+                        elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
+                        elif "STARTER" in p_name: max_fup = max(max_fup, 4)
+                    st.session_state.sisa_nyawa_dok = max_fup
 
         status_box.success(f"✅ **Selesai!** Transkrip tersimpan aman.\n\n⏱️ Durasi Asli Audio: **{durasi_menit_aktual} Menit**{teks_struk_aio}\n\n👉 Silahkan klik Tab **🧠 Analisis AI** di bagian atas.")
         
@@ -2887,20 +2900,19 @@ with tab_ai:
                 st.session_state.chat_history = [] # Reset Chat
                 st.session_state.chat_usage_count = 0 # Reset Jatah
                 
-                # 1. Reset juga variabel durasi kotor agar info teks di atas (durasi vs teks) ikut ter-reset
+                # Bersihkan memori pendukung (Durasi & FUP)
                 if 'durasi_audio_kotor' in st.session_state:
                     del st.session_state['durasi_audio_kotor']
+                if 'sisa_nyawa_dok' in st.session_state:
+                    del st.session_state['sisa_nyawa_dok']
                     
                 if user_info:
-                    # 2. Hapus draft di Firebase (Termasuk prefix-nya agar bersih total)
                     db.collection('users').document(st.session_state.current_user).update({
                         "draft_transcript": "", 
                         "draft_ai_result": "",
                         "draft_ai_prefix": ""
                     })
                     
-                    # 3. KUNCI PERBAIKAN: Hapus cache user lokal agar fungsi get_user() 
-                    # dipaksa menarik data kosong yang baru dari Firebase saat rerun!
                     if 'temp_user_data' in st.session_state:
                         del st.session_state['temp_user_data']
                         
@@ -3344,6 +3356,22 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                     
                 # --- FASE 4: INDIKATOR SISA NYAWA / FUP ---
                 if st.session_state.user_role != "admin":
+                    # 🚀 PERBAIKAN: Jika variabel FUP hilang karena refresh layar / tarik draft otomatis
+                    if 'sisa_nyawa_dok' not in st.session_state:
+                        u_info_fup = get_user(st.session_state.current_user) or {}
+                        if u_info_fup.get("bank_menit", 0) > 0:
+                            st.session_state.sisa_nyawa_dok = u_info_fup.get("fup_dok_harian_limit", 35)
+                        else:
+                            max_fup = 2
+                            for pkt in u_info_fup.get("inventori", []):
+                                p_name = pkt.get("nama", "").upper()
+                                if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
+                                elif "VIP" in p_name: max_fup = max(max_fup, 8)
+                                elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
+                                elif "STARTER" in p_name: max_fup = max(max_fup, 4)
+                            st.session_state.sisa_nyawa_dok = max_fup
+
+                    # Tampilkan Status FUP
                     sisa_nyawa = st.session_state.get('sisa_nyawa_dok', 0)
                     if sisa_nyawa > 0:
                         st.info(f"🎁 **Taman Bermain Terbuka:** Anda memiliki **{sisa_nyawa}x Ekstrak Dokumen Gratis** untuk file ini.")
