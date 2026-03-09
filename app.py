@@ -2576,17 +2576,20 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
             hasil_akhir_teks = partial_text
 
         # --- SAAT PROSES SELESAI (BERLAKU UNTUK KEDUA JALUR) ---
-        # 🚀 POTONG BANK MENIT JIKA USER MENGGUNAKAN AIO
+        # 🚀 MENYIAPKAN TEKS STRUK (TANPA DOUBLE DEDUCTION DATABASE)
         teks_struk_aio = ""
         if st.session_state.logged_in:
             usr_akhir = get_user(st.session_state.current_user)
             if usr_akhir and usr_akhir.get("role") != "admin":
                 bank_menit_akhir = usr_akhir.get("bank_menit", 0)
-                if bank_menit_akhir > 0:
+                is_fallback = getattr(st.session_state, 'force_use_reguler_audio', False)
+                
+                # Cek apakah dipotong murni AIO atau beralih (Fallback) ke Reguler
+                if bank_menit_akhir > 0 and not is_fallback:
                     new_menit = max(0, bank_menit_akhir - durasi_menit_aktual)
-                    db.collection('users').document(st.session_state.current_user).update({"bank_menit": new_menit})
-                    st.toast(f"Sisa Waktu AIO Anda: {new_menit} Menit", icon="⏱️")
                     teks_struk_aio = f"\n\n📉 *Waktu AIO terpotong: **{durasi_menit_aktual} Menit** (Sisa: {new_menit} Menit)*"
+                elif is_fallback:
+                    teks_struk_aio = f"\n\n📦 *Tiket Reguler terpotong (Sisa AIO {bank_menit_akhir} Menit diamankan)*"
                 
                 # 🚀 PERBAIKAN FUP: Reset sisa nyawa (FUP) ke nilai maksimal karena ini adalah file baru!
                 if usr_akhir.get("bank_menit", 0) > 0:
@@ -2601,7 +2604,7 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                         elif "STARTER" in p_name: max_fup = max(max_fup, 4)
                     st.session_state.sisa_nyawa_dok = max_fup
 
-        status_box.success(f"✅ **Selesai!** Transkrip tersimpan aman.\n\n⏱️ Durasi Asli Audio: **{durasi_menit_aktual} Menit**{teks_struk_aio}\n\n👉 Silahkan klik Tab **🧠 Analisis AI** di bagian atas.")
+        status_box.success(f"✅ **Selesai!** Transkrip tersimpan aman.\n\n⏱️ Durasi Asli Audio: **{durasi_menit_aktual} Menit**{teks_struk_aio}\n\n👉 Silahkan klik Tab **🧠 Analisis AI** di bagian atas.")        
         
         # Simpan durasi kotor ke memori agar bisa dibaca di Tab 4
         st.session_state.durasi_audio_kotor = durasi_menit_aktual
