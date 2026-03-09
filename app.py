@@ -2561,6 +2561,20 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 "draft_ai_result": "",
                 "draft_ai_prefix": ""
             })
+            
+            # --- MULAI KODE BARU: SUNTIKAN FUP KE MEMORI ---
+            if u_info.get("bank_menit", 0) > 0:
+                st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
+            else:
+                max_fup = 2
+                for pkt in u_info.get("inventori", []):
+                    p_name = pkt.get("nama", "").upper()
+                    if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
+                    elif "VIP" in p_name: max_fup = max(max_fup, 8)
+                    elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
+                    elif "STARTER" in p_name: max_fup = max(max_fup, 4)
+                st.session_state.sisa_nyawa_dok = max_fup
+            # --- AKHIR KODE BARU ---
         
         st.write("")
         
@@ -3356,7 +3370,7 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                     
                 # --- FASE 4: INDIKATOR SISA NYAWA / FUP ---
                 if st.session_state.user_role != "admin":
-                    # 🚀 PERBAIKAN: Jika variabel FUP hilang karena refresh layar / tarik draft otomatis
+                    # --- MULAI KODE BARU: FALLBACK JIKA FUP HILANG DARI MEMORI ---
                     if 'sisa_nyawa_dok' not in st.session_state:
                         u_info_fup = get_user(st.session_state.current_user) or {}
                         if u_info_fup.get("bank_menit", 0) > 0:
@@ -3404,41 +3418,38 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                 # CEK JIKA ADA TOMBOL YANG DIKLIK (Baik User maupun Admin)
                 if btn_notulen or btn_laporan or btn_ringkasan or btn_berita or btn_rtl or btn_qna or btn_swot or btn_verbatim or (st.session_state.user_role == "admin" and btn_eksekusi_admin):
                     
-                    proses_lanjut = False # Flag penanda apakah proses boleh diteruskan
+                    proses_lanjut = False 
+                    pakai_fup = False # 🚀 FLAG BARU: Mencegah potong saldo ganda
                     
                     # --- FASE 3: ROUTING MICRO-PAYWALL (RP 1.000) ---
                     if st.session_state.user_role != "admin":
-                        # Ambil sisa nyawa dari memori sesi yang disuntikkan saat file di-upload (Fase 2)
                         sisa_nyawa = st.session_state.get('sisa_nyawa_dok', 0)
                         
                         if sisa_nyawa > 0:
-                            # Kurangi hanya jika proses benar-benar akan dijalankan
                             st.session_state.sisa_nyawa_dok = sisa_nyawa - 1
                             st.success(f"🎁 **Jatah Gratis Digunakan.** Sisa jatah untuk file ini: {st.session_state.sisa_nyawa_dok}x")
                             proses_lanjut = True
-                            
-                            # (Opsional: Jika AIO, kita bisa update fup_terpakai ke database di sini jika perlu rekap harian)
+                            pakai_fup = True # 🚀 TANDAI DOKUMEN INI GRATIS
                         else:
-                            # 💰 OPSI B: Jatah Habis, Gunakan Saldo Utama (Rp 1.000)
                             saldo_user = user_info.get('saldo', 0)
                             if saldo_user >= 1000:
                                 new_saldo = saldo_user - 1000
-                                # Potong Saldo di Firestore secara Real-time
                                 db.collection('users').document(st.session_state.current_user).update({"saldo": new_saldo})
                                 st.toast("💳 Jatah Gratis Habis. Saldo Terpotong Rp 1.000", icon="💰")
                                 proses_lanjut = True
                             else:
-                                # 🚫 OPSI C: Saldo Kurang
                                 st.error("❌ **SALDO TIDAK CUKUP!** Jatah gratis AI (FUP) untuk file ini sudah habis.")
-                                st.warning("💡 Silakan **Isi Saldo (Top-Up) Minimal Rp 10.000** di menu samping untuk melanjutkan ekstraksi AI (Rp 1.000 / Dokumen).")
+                                st.warning("💡 Silakan Top-Up Saldo Anda Minimal Rp 10.000.")
                                 proses_lanjut = False
                     else:
-                        # Jika Admin, otomatis bebas hambatan!
                         proses_lanjut = True
 
                     if proses_lanjut:
-                        # 1. CEK BIAYA BERDASARKAN PILIHAN USER
-                        bisa_bayar, pesan_bayar, p_saldo = cek_pembayaran(user_info, durasi_teks, selected_index_paket)
+                        bisa_bayar, pesan_bayar, p_saldo = True, "✅ FUP Gratis Digunakan", 0
+                        
+                        # 🚀 KUNCI PERBAIKAN: Hanya cek dompet Dropdown JIKA TIDAK PAKAI FUP
+                        if not pakai_fup and st.session_state.user_role != "admin":
+                            bisa_bayar, pesan_bayar, p_saldo = cek_pembayaran(user_info, durasi_teks, selected_index_paket)
                         
                         if not bisa_bayar:
                             st.error(f"❌ TRANSAKSI DITOLAK: {pesan_bayar}")
@@ -3554,7 +3565,8 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                                             break
                                 
                                 # 3. POTONG SALDO & INVENTORI KARENA BERHASIL!
-                                eksekusi_pembayaran(st.session_state.current_user, user_info, selected_index_paket, p_saldo, durasi_teks)
+                                if not pakai_fup:
+                                    eksekusi_pembayaran(st.session_state.current_user, user_info, selected_index_paket, p_saldo, durasi_teks)
                                 
                                 # 🛡️ CATAT PENGGUNAAN FUP (Khusus Paket All-In-One)
                                 if user_info.get("bank_menit", 0) > 0:
