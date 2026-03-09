@@ -1880,7 +1880,7 @@ def show_pricing_dialog():
     st.markdown("---")
 
     # KOTAK INFO (DIGABUNG DALAM COLLAPSE BOX MENGGUNAKAN MARKDOWN ASLI)
-    with st.expander("📚 INFO & KETENTUAN PAKET (Wajib Baca)", expanded=False):
+    with st.expander("INFO & KETENTUAN PAKET", expanded=False):
         st.markdown("""
         **💡 Ketentuan Sistem & Kuota:**
         * 📄 **Aturan Upload Teks (.txt):** Mengunggah dokumen teks manual kini akan memotong kuota utama Anda.
