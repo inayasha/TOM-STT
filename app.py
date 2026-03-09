@@ -1913,8 +1913,8 @@ with st.sidebar:
                         elif "STARTER" in p_name: max_fup = max(max_fup, 4)
                     label_fup = f"{max_fup}x / File"
 
-# Cetak HTML Sidebar
-html_sidebar = f"""
+                # Cetak HTML Sidebar 
+                html_sidebar = f"""
 <div class="sidebar-card">
     <div class="wallet-title">💳 Saldo Utama</div>
     <div class="wallet-balance">{saldo_rp}</div>
@@ -1936,7 +1936,7 @@ html_sidebar = f"""
     </div>
 </div>
 """
-        st.markdown(html_sidebar, unsafe_allow_html=True)
+                st.markdown(html_sidebar, unsafe_allow_html=True)
                 
             # ==========================================
             # KARTU 3: TOMBOL AKSI (HIERARKI BARU)
