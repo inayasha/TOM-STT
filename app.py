@@ -1780,7 +1780,7 @@ def show_pricing_dialog():
         # BAGIAN 1: TOP-UP SALDO REGULER (CHATBOT & TEKS)
         # ==========================================
         with st.expander("💳 Top-Up Saldo Reguler", expanded=False):
-            st.caption("Isi ulang saldo murni untuk Chatbot AI (Rp 500/tanya) dan bayar subsidi kelebihan karakter teks.")
+            st.caption("Isi ulang saldo murni untuk Chatbot AI (Rp 1.000/tanya) dan bayar subsidi kelebihan karakter teks.")
             st.warning("**Catatan:** Harga tagihan sudah termasuk Biaya Layanan Payment Gateway (2%).")
             
             col_s1, col_s2 = st.columns(2)
@@ -1888,7 +1888,7 @@ def show_pricing_dialog():
           👉 **User Reguler:** Memotong **1 Kuota** (sama seperti mengupload 1 file audio).
         * 🔄 **Subsidi Silang (AIO ke Reguler):** Jika Anda mengupload file namun sisa Bank Menit AIO tidak cukup, sistem akan otomatis memotong **1 Kuota Reguler** Anda (jika ada) sebagai cadangan.
         * 🛡️ ***Tier* Tertinggi Selalu Aman:** Anda bebas menumpuk berbagai jenis paket. Sistem selalu memberikan batas *tier* tertinggi berdasarkan paket aktif yang Anda miliki. Membeli paket kecil tidak akan menurunkan status *tier* tinggi Anda.
-        * 💬 **Tanya AI (Chatbot):** Jika jatah gratis habis, dikenakan tarif ringan **Rp 500 / pertanyaan** (memotong Saldo Utama).
+        * 💬 **Tanya AI (Chatbot):** Jika jatah gratis habis, dikenakan tarif ringan **Rp 1.000 / pertanyaan** (memotong Saldo Utama).
 
         ---
         
