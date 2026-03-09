@@ -2389,7 +2389,7 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                             if punya_reguler and durasi_menit_aktual <= max_durasi_reguler:
                                 st.session_state.force_use_reguler_audio = True
                                 status_box.empty()
-                                st.info(f"🔄 Waktu AIO tidak cukup ({bank_menit_user} mnt). Sistem otomatis mengalihkan pemotongan ke Tiket Reguler Anda.")
+                                st.info(f"Waktu AIO tidak cukup ({bank_menit_user} mnt). Sistem otomatis mengalihkan pemotongan ke Tiket Reguler Anda.")
                             else:
                                 status_box.empty()
                                 if punya_reguler:
@@ -2663,21 +2663,25 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 "draft_ai_prefix": ""
             })
             
-            # --- MULAI KODE BARU: SMART OVERRIDE FUP ---
-            if u_info.get("bank_menit", 0) > 0:
+            # --- PERBAIKAN LOGIKA FUP: STRICT ORIGIN (SESUAI TIKET YG DIPOTONG) ---
+            is_fallback = getattr(st.session_state, 'force_use_reguler_audio', False)
+            
+            if u_info.get("bank_menit", 0) > 0 and not is_fallback:
+                # 1. Jalur Sultan (Murni AIO)
                 st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
-                st.session_state.is_using_aio = True # 🚀 TANDAI BAHWA AIO AKTIF
+                st.session_state.is_using_aio = True
             else:
+                # 2. Jalur Reguler (Tiket Reguler Terpotong)
                 max_fup = 2
                 for pkt in u_info.get("inventori", []):
                     p_name = pkt.get("nama", "").upper()
-                    if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
-                    elif "VIP" in p_name: max_fup = max(max_fup, 8)
-                    elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
-                    elif "STARTER" in p_name: max_fup = max(max_fup, 4)
+                    if "AIO" not in p_name and pkt.get("kuota", 0) > 0:
+                        if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
+                        elif "VIP" in p_name: max_fup = max(max_fup, 8)
+                        elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
+                        elif "STARTER" in p_name: max_fup = max(max_fup, 4)
                 st.session_state.sisa_nyawa_dok = max_fup
                 st.session_state.is_using_aio = False
-            # --- AKHIR KODE BARU ---
         
         st.write("")
         
@@ -4759,3 +4763,4 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
+
