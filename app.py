@@ -2591,17 +2591,21 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 elif is_fallback:
                     teks_struk_aio = f"\n\n📦 *Tiket Reguler terpotong (Sisa AIO {bank_menit_akhir} Menit diamankan)*"
                 
-                # 🚀 PERBAIKAN FUP: Reset sisa nyawa (FUP) ke nilai maksimal karena ini adalah file baru!
-                if usr_akhir.get("bank_menit", 0) > 0:
+                # 🚀 STRICT ORIGIN FUP: FUP DIBERIKAN SESUAI TIKET YANG DIPOTONG
+                # Jika dipotong murni pakai Bank Menit AIO (Bukan Fallback)
+                if usr_akhir.get("bank_menit", 0) > 0 and not is_fallback:
                     st.session_state.sisa_nyawa_dok = usr_akhir.get("fup_dok_harian_limit", 35)
                 else:
+                    # Jika beralih ke Reguler (Fallback) atau murni Reguler
                     max_fup = 2
                     for pkt in usr_akhir.get("inventori", []):
                         p_name = pkt.get("nama", "").upper()
-                        if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
-                        elif "VIP" in p_name: max_fup = max(max_fup, 8)
-                        elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
-                        elif "STARTER" in p_name: max_fup = max(max_fup, 4)
+                        # Pastikan kita hanya membaca kasta tiket Reguler yang masih ada kuotanya
+                        if "AIO" not in p_name and pkt.get("kuota", 0) > 0:
+                            if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
+                            elif "VIP" in p_name: max_fup = max(max_fup, 8)
+                            elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
+                            elif "STARTER" in p_name: max_fup = max(max_fup, 4)
                     st.session_state.sisa_nyawa_dok = max_fup
 
         status_box.success(f"✅ **Selesai!** Transkrip tersimpan aman.\n\n⏱️ Durasi Asli Audio: **{durasi_menit_aktual} Menit**{teks_struk_aio}\n\n👉 Silahkan klik Tab **🧠 Analisis AI** di bagian atas.")        
@@ -2970,23 +2974,31 @@ with tab_ai:
                         st.session_state.chat_usage_count = 0 
                         st.session_state.ai_result = ""
                         
-                        # --- MULAI KODE BARU: SMART OVERRIDE FUP ---
-                        if u_info.get("bank_menit", 0) > 0:
+                        # --- 🚀 STRICT ORIGIN FUP UNTUK DOKUMEN TEKS (.TXT) ---
+                        # Teks tidak memotong tiket, jadi kita prioritaskan memakan FUP Reguler
+                        # Tujuannya agar jatah harian FUP AIO milik user tidak terbuang sia-sia untuk Teks.
+                        max_fup_reg = 0
+                        for pkt in u_info.get("inventori", []):
+                            p_name = pkt.get("nama", "").upper()
+                            if "AIO" not in p_name and pkt.get("kuota", 0) > 0:
+                                if "ENTERPRISE" in p_name: max_fup_reg = max(max_fup_reg, 15)
+                                elif "VIP" in p_name: max_fup_reg = max(max_fup_reg, 8)
+                                elif "EKSEKUTIF" in p_name: max_fup_reg = max(max_fup_reg, 6)
+                                elif "STARTER" in p_name: max_fup_reg = max(max_fup_reg, 4)
+                                elif "LITE" in p_name: max_fup_reg = max(max_fup_reg, 2)
+                                
+                        if max_fup_reg > 0:
+                            # 1. Jika User punya paket Reguler cadangan, pakai FUP itu sebagai tameng!
+                            st.session_state.sisa_nyawa_dok = max_fup_reg
+                            st.session_state.is_using_aio = False
+                        elif u_info.get("bank_menit", 0) > 0:
+                            # 2. Jika User HANYA PUNYA AIO (Tanpa reguler), barulah kita izinkan pakai FUP AIO
                             st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
-                            st.session_state.is_using_aio = True # 🚀 TANDAI BAHWA AIO AKTIF
+                            st.session_state.is_using_aio = True
                         else:
-                            # Logika Cek Kasta Reguler
-                            max_fup = 2 # Default Lite
-                            inv = u_info.get("inventori", [])
-                            for pkt in inv:
-                                p_name = pkt.get("nama", "").upper()
-                                if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
-                                elif "VIP" in p_name: max_fup = max(max_fup, 8)
-                                elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
-                                elif "STARTER" in p_name: max_fup = max(max_fup, 4)
-                            
-                            st.session_state.sisa_nyawa_dok = max_fup
-                            st.session_state.is_using_aio = False # 🚀 TANDAI BUKAN AIO
+                            # 3. User Freemium
+                            st.session_state.sisa_nyawa_dok = 2
+                            st.session_state.is_using_aio = False
                         # --- AKHIR KODE BARU ---
     
                         # Simpan ke Firebase agar tidak hilang saat di-refresh
@@ -4747,4 +4759,3 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
