@@ -84,11 +84,21 @@ def save_user(username, password, role):
         })
 
 def delete_user(username):
-    db.collection('users').document(username).delete()
+    # 1. Hapus dari Firebase Auth terlebih dahulu (Krusial agar tidak bisa login lagi)
     try:
         user_record = auth.get_user_by_email(username)
         auth.delete_user(user_record.uid)
-    except: pass
+    except Exception as e:
+        error_msg = str(e).lower()
+        # Jika gagal bukan karena user sudah tidak ada, HENTIKAN PROSES!
+        if "not_found" not in error_msg and "no user record" not in error_msg:
+            import streamlit as st
+            st.error(f"Gagal mencabut akses Login (Auth) karena: {e}. Penghapusan dibatalkan.")
+            return False 
+
+    # 2. Jika Auth sukses dihapus (atau memang kosong), baru hapus data Dompet di Firestore
+    db.collection('users').document(username).delete()
+    return True
 	
 def berikan_paket_ke_user(username, user_data, nama_paket):
     """Menyuntikkan Paket/Saldo saat Duitku bilang 'Lunas'"""
@@ -2466,8 +2476,32 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
         st.session_state.filename = os.path.splitext(source_name)[0]
         st.session_state.ai_result = "" 
         
+        # --- PERBAIKAN: EKSEKUSI PEMOTONGAN KUOTA AUDIO ---
         if st.session_state.logged_in:
-            db.collection('users').document(st.session_state.current_user).update({
+            u_doc = db.collection('users').document(st.session_state.current_user)
+            u_info = u_doc.get().to_dict()
+            
+            # Ambil kembali durasi menit kotor yang sudah disiapkan di baris 2463
+            durasi_menit = st.session_state.get('durasi_audio_kotor', 1)
+            
+            # Logika Pemotongan berdasarkan tipe user
+            if u_info.get("bank_menit", 0) > 0:
+                # 1. User AIO (Sultan): Potong saldo bank menit
+                new_bank = max(0, u_info["bank_menit"] - durasi_menit)
+                u_doc.update({"bank_menit": new_bank})
+                st.toast(f"💸 Saldo Paket AIO terpotong {durasi_menit} Menit", icon="⏳")
+            else:
+                # 2. User Reguler/Lite: Potong 1 Kuota dari Inventori paket mereka
+                inv = u_info.get("inventori", [])
+                if inv:
+                    inv[0]['kuota'] -= 1
+                    if inv[0]['kuota'] <= 0:
+                        inv.pop(0) # Buang bungkus paket jika kuotanya sudah 0
+                    u_doc.update({"inventori": inv})
+                    st.toast("🎟️ 1 Kuota Transkrip Audio terpotong!", icon="✅")
+
+            # 3. Simpan Draft Transkrip terakhir ke Firestore
+            u_doc.update({
                 "draft_transcript": hasil_akhir_teks,
                 "draft_filename": st.session_state.filename,
                 "draft_ai_result": "",
