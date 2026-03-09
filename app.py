@@ -2302,6 +2302,7 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
         limit_menit = 20
         is_premium = False
         durasi_menit_aktual = math.ceil(duration_sec / 60)
+        st.session_state.force_use_reguler_audio = False # 🚀 RESET FLAG FALLBACK
         
         if st.session_state.logged_in:
             usr_cek = get_user(st.session_state.current_user)
@@ -2309,15 +2310,33 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 if usr_cek.get("role") == "admin" or len(usr_cek.get("inventori", [])) > 0:
                     is_premium = True
                 
-                # 🚀 GATEWAY ALL-IN-ONE (AIO): CEK KECUKUPAN BANK MENIT SEBELUM PROSES
+                # 🚀 GATEWAY CERDAS ALL-IN-ONE & REGULER FALLBACK
                 if usr_cek.get("role") != "admin":
                     bank_menit_user = usr_cek.get("bank_menit", 0)
+                    
+                    # 1. Cek apakah user punya tiket Reguler sebagai cadangan
+                    max_durasi_reguler = 0
+                    punya_reguler = False
+                    for pkt in usr_cek.get("inventori", []):
+                        if pkt.get("batas_durasi", 0) != 9999 and pkt.get("kuota", 0) > 0:
+                            punya_reguler = True
+                            max_durasi_reguler = max(max_durasi_reguler, pkt.get("batas_durasi", 0))
+
                     if bank_menit_user > 0:
                         if durasi_menit_aktual > bank_menit_user:
-                            status_box.empty()
-                            st.error(f"❌ WAKTU AIO TIDAK CUKUP: Audio Anda berdurasi **{durasi_menit_aktual} Menit**, sedangkan sisa Bank Waktu Anda hanya **{bank_menit_user} Menit**.")
-                            st.warning("Silahkan Top-Up Paket All-In-One Anda terlebih dahulu.")
-                            st.stop()
+                            # AIO KURANG! Coba Fallback ke Reguler
+                            if punya_reguler and durasi_menit_aktual <= max_durasi_reguler:
+                                st.session_state.force_use_reguler_audio = True
+                                status_box.empty()
+                                st.info(f"🔄 Waktu AIO tidak cukup ({bank_menit_user} mnt). Sistem otomatis mengalihkan pemotongan ke Tiket Reguler Anda.")
+                            else:
+                                status_box.empty()
+                                if punya_reguler:
+                                    st.error(f"❌ DURASI DITOLAK: Waktu AIO kurang ({bank_menit_user} Mnt), dan durasi audio ({durasi_menit_aktual} Mnt) ini melampaui batas cadangan Paket Reguler Anda (Maks {max_durasi_reguler} Mnt).")
+                                else:
+                                    st.error(f"❌ WAKTU AIO TIDAK CUKUP: Audio Anda berdurasi **{durasi_menit_aktual} Menit**, sedangkan sisa Bank Waktu Anda hanya **{bank_menit_user} Menit**.")
+                                st.warning("Silahkan Top-Up Paket Anda terlebih dahulu.")
+                                st.stop()
         
         if not is_premium and durasi_menit_aktual > limit_menit:
             status_box.empty()
@@ -2529,32 +2548,46 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
         st.session_state.transcript = hasil_akhir_teks
         st.session_state.filename = os.path.splitext(source_name)[0]
         st.session_state.ai_result = "" 
-        
+            
         # --- PERBAIKAN: EKSEKUSI PEMOTONGAN KUOTA AUDIO ---
         if st.session_state.logged_in:
             u_doc = db.collection('users').document(st.session_state.current_user)
             u_info = u_doc.get().to_dict()
             
-            # Ambil kembali durasi menit kotor yang sudah disiapkan di baris 2463
+            # Ambil kembali durasi menit kotor yang sudah disiapkan
             durasi_menit = st.session_state.get('durasi_audio_kotor', 1)
             
-            # Logika Pemotongan berdasarkan tipe user
-            if u_info.get("bank_menit", 0) > 0:
-                # 1. User AIO (Sultan): Potong saldo bank menit
+            # 🚀 LOGIKA PEMOTONGAN CERDAS (SUPPORT FALLBACK)
+            is_fallback_reguler = getattr(st.session_state, 'force_use_reguler_audio', False)
+            
+            if u_info.get("bank_menit", 0) > 0 and not is_fallback_reguler:
+                # 1. User AIO Normal: Potong saldo bank menit
                 new_bank = max(0, u_info["bank_menit"] - durasi_menit)
                 u_doc.update({"bank_menit": new_bank})
-                st.toast(f"💸 Saldo Paket AIO terpotong {durasi_menit} Menit", icon="⏳")
+                st.toast(f"🌟 Saldo Paket AIO terpotong {durasi_menit} Menit", icon="⏳")
             else:
-                # 2. User Reguler/Lite: Potong 1 Kuota dari Inventori paket mereka
+                # 2. User Reguler ATAU Fallback AIO: Potong 1 Tiket Reguler
                 inv = u_info.get("inventori", [])
-                if inv:
-                    inv[0]['kuota'] -= 1
-                    if inv[0]['kuota'] <= 0:
-                        inv.pop(0) # Buang bungkus paket jika kuotanya sudah 0
+                idx_to_cut = -1
+                # Cari index paket reguler pertama (Abaikan paket AIO yang batasnya 9999)
+                for i, pkt in enumerate(inv):
+                    if pkt.get('batas_durasi', 0) != 9999 and pkt.get('kuota', 0) > 0:
+                        idx_to_cut = i
+                        break
+                
+                if idx_to_cut != -1:
+                    inv[idx_to_cut]['kuota'] -= 1
+                    if inv[idx_to_cut]['kuota'] <= 0:
+                        inv.pop(idx_to_cut)
                     u_doc.update({"inventori": inv})
-                    st.toast("🎟️ 1 Kuota Transkrip Audio terpotong!", icon="✅")
+                    
+                    if is_fallback_reguler:
+                        st.toast("🎟️ 1 Tiket Reguler terpotong (Efek Fallback AIO)!", icon="✅")
+                    else:
+                        st.toast("🎟️ 1 Tiket Transkrip Audio terpotong!", icon="✅")
 
             # 3. Simpan Draft Transkrip terakhir ke Firestore
+                
             u_doc.update({
                 "draft_transcript": hasil_akhir_teks,
                 "draft_filename": st.session_state.filename,
