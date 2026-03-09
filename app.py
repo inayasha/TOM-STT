@@ -1896,10 +1896,24 @@ with st.sidebar:
                         status_waktu = exp_date_wib.strftime('%d %b %Y, %H:%M')
                     except: pass
 
-                # --- FASE 4: INJEKSI LIMIT AUDIO & TEKS KE SIDEBAR ---
-                limit_audio = user_data.get("batas_audio_menit", 45)
-                limit_teks = user_data.get("batas_teks_karakter", 45000)
+                # --- FASE 4: INJEKSI LIMIT AUDIO, TEKS & FUP KE SIDEBAR ---
+                limit_audio = int(user_data.get("batas_audio_menit", 45))
+                limit_teks = int(user_data.get("batas_teks_karakter", 45000))
                 
+                # 🚀 LOGIKA MENENTUKAN JATAH EKSTRAK AI (FUP) UNTUK SIDEBAR
+                if user_data.get("bank_menit", 0) > 0:
+                    label_fup = f"{user_data.get('fup_dok_harian_limit', 35)}x / Hari"
+                else:
+                    max_fup = 2  # Default Lite
+                    for pkt in user_data.get("inventori", []):
+                        p_name = pkt.get("nama", "").upper()
+                        if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
+                        elif "VIP" in p_name: max_fup = max(max_fup, 8)
+                        elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
+                        elif "STARTER" in p_name: max_fup = max(max_fup, 4)
+                    label_fup = f"{max_fup}x / File"
+
+                # Cetak HTML Sidebar
                 st.markdown(f"""
                 <div class="sidebar-card">
                     <div class="wallet-title">💳 Saldo Utama</div>
@@ -1909,12 +1923,14 @@ with st.sidebar:
                         <div class="wallet-title">📦 Inventori Paket</div>
                         <div style="line-height: 1.8;">{pills_html}</div>
                     </div>
+                    
                     <div style="background-color: #f0f7ff; padding: 8px 10px; border-radius: 8px; font-size: 11px; color: #0369a1; margin-bottom: 10px; border: 1px solid #bae6fd;">
-                        <b>Kapasitas File Maksimal:</b><br>
+                        <b>Kapasitas Maksimal & Hak Akses:</b><br>
                         🎙️ Audio: {limit_audio} Menit<br>
                         📄 Teks: {limit_teks:,} Karakter<br>
-                        🎁 Jatah Ekstrak AI: {max_fup}x / File
+                        🎁 Jatah Ekstrak AI: {label_fup}
                     </div>
+                    
                     <div style="background-color: #f9fafb; padding: 8px 10px; border-radius: 8px; font-size: 11.5px; color: #4b5563; display: flex; justify-content: space-between; border: 1px solid #f3f4f6;">
                         <span>Masa Aktif:</span><span style="font-weight: 700; color: #111;">{status_waktu}</span>
                     </div>
