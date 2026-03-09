@@ -3417,30 +3417,30 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                                 # --- 1. MUNCULKAN LAYAR LOADING MEGAH (OVERLAY) ---
                                 loading_overlay = st.empty()
                                 loading_overlay.markdown(f"""
-                                <style>
-                                .loading-screen {{
-                                    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-                                    background-color: rgba(255, 255, 255, 0.92);
-                                    display: flex; flex-direction: column; justify-content: center; align-items: center;
-                                    z-index: 999999; backdrop-filter: blur(8px);
-                                }}
-                                .spinner-large {{
-                                    width: 50px; height: 50px; border: 5px solid #F0F2F6; border-top: 5px solid #e74c3c;
-                                    border-radius: 50%; animation: spin-large 1s linear infinite; margin-bottom: 15px;
-                                    box-shadow: 0 4px 10px rgba(231, 76, 60, 0.15);
-                                }}
-                                @keyframes spin-large {{
-                                    0% {{ transform: rotate(0deg); }}
-                                    100% {{ transform: rotate(360deg); }}
-                                }}
-                                .loading-title {{ font-size: 17px; font-weight: 600; color: #333; margin-bottom: 8px; text-align: center; }}
-                                .loading-subtitle {{ font-size: 14px; color: #666; font-weight: 500; text-align: center; padding: 0 20px; line-height: 1.5; }}
-                                </style>
-                                <div class="loading-screen">
-                                    <div class="spinner-large"></div>
-                                    <div class="loading-title">🚀 TOM'STT AI is Working...</div>
-                                    <div class="loading-subtitle">Memproses dengan {engine_choice} (Beban: {durasi_teks} Menit).<br>Mohon jangan tutup atau keluar dari halaman ini.</div>
-                                </div>
+<style>
+.loading-screen {{
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(255, 255, 255, 0.92);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 999999; backdrop-filter: blur(8px);
+}}
+.spinner-large {{
+    width: 50px; height: 50px; border: 5px solid #F0F2F6; border-top: 5px solid #e74c3c;
+    border-radius: 50%; animation: spin-large 1s linear infinite; margin-bottom: 15px;
+    box-shadow: 0 4px 10px rgba(231, 76, 60, 0.15);
+}}
+@keyframes spin-large {{
+    0% {{ transform: rotate(0deg); }}
+    100% {{ transform: rotate(360deg); }}
+}}
+.loading-title {{ font-size: 17px; font-weight: 600; color: #333; margin-bottom: 8px; text-align: center; }}
+.loading-subtitle {{ font-size: 14px; color: #666; font-weight: 500; text-align: center; padding: 0 20px; line-height: 1.5; }}
+</style>
+<div class="loading-screen">
+    <div class="spinner-large"></div>
+    <div class="loading-title">🚀 TOM'STT AI is Working...</div>
+    <div class="loading-subtitle">Memproses dengan {engine_choice} (Beban: {durasi_teks} Menit).<br>Mohon jangan tutup atau keluar dari halaman ini.</div>
+</div>
                                 """, unsafe_allow_html=True)
                             
                             # --- 2. JALANKAN PROSES AI (DI BALIK LAYAR) ---
