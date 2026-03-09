@@ -3008,56 +3008,6 @@ with tab_ai:
                 st.info(f"Dokumen Anda mencapai **{jumlah_karakter:,} Karakter**. Batas maksimal paket **{nama_paket_tertinggi}** adalah **{soft_limit:,} Karakter**. Silahkan Upgrade Paket Anda.")
                 st.stop() # Menghentikan rendering ke bawah agar tagihan 1200 menit tidak muncul
             
-            # MEMBUAT DROPDOWN OPSI PEMBAYARAN
-            pilihan_paket_dict = {}
-            if user_info and user_info.get("role") != "admin":
-                st.markdown("#### 💳 Pilih Metode Pembayaran")
-                inventori = user_info.get("inventori", [])
-                saldo = user_info.get("saldo", 0)
-                opsi_list = []
-                
-                # Looping Isi Inventori User
-                ada_opsi_aio = False
-                for i, pkt in enumerate(inventori):
-                    batas = pkt["batas_durasi"]
-                    # 🚀 TAMPILAN DROPDOWN ALL-IN-ONE (Disatukan agar tidak dobel)
-                    if batas == 9999:
-                        if not ada_opsi_aio:
-                            bank_menit = user_info.get("bank_menit", 0)
-                            if bank_menit > 0:
-                                teks_opsi = f"🌟 Paket All-In-One (Ekstrak AI Gratis Sepuasnya!)"
-                            else:
-                                teks_opsi = f"⚠️ Paket All-In-One (Bank Waktu Habis)"
-                            opsi_list.append(teks_opsi)
-                            pilihan_paket_dict[teks_opsi] = i
-                            ada_opsi_aio = True
-                    # 📦 TAMPILAN DROPDOWN REGULER
-                    else:
-                        if durasi_teks <= batas:
-                            teks_opsi = f"📦 Paket {pkt['nama']} (Maks {batas}m) - Saldo Aman!"
-                        else:
-                            biaya_lebih = (durasi_teks - batas) * 350
-                            ket = "✅ Cukup" if saldo >= biaya_lebih else f"❌ Saldo Kurang Rp {biaya_lebih - saldo:,}"
-                            teks_opsi = f"📦 Paket {pkt['nama']} (Maks {batas}m) + Potong Saldo Rp {biaya_lebih:,} ({ket})"
-                        
-                        # Pindahkan 2 baris ini ke DALAM blok 'else' agar tidak tereksekusi dobel
-                        opsi_list.append(teks_opsi)
-                        pilihan_paket_dict[teks_opsi] = i
-                
-                # Opsi Terakhir: Bayar Murni Pakai Saldo
-                biaya_murni = durasi_teks * 350
-                ket_murni = "✅ Cukup" if saldo >= biaya_murni else f"❌ Saldo Kurang Rp {biaya_murni - saldo:,}"
-                opsi_saldo = f"💳 Gunakan Saldo Murni (Biaya Rp {biaya_murni:,} - {ket_murni})"
-                opsi_list.append(opsi_saldo)
-                pilihan_paket_dict[opsi_saldo] = -1
-                
-                # Tampilkan Dropdown/Radio ke Layar
-                selected_opsi_teks = st.radio("Pilih aset dompet yang ingin digunakan untuk dokumen ini:", opsi_list)
-                selected_index_paket = pilihan_paket_dict[selected_opsi_teks]
-            else:
-                selected_index_paket = -1
-                st.info("🔥 Anda menggunakan akses Super Admin (Gratis tanpa batas).")
-                
             st.write("")
             
             # --- CEK HAK AKSES FITUR PREMIUM (SISTEM TANGGA 5 KASTA) ---
@@ -3418,63 +3368,51 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                 # CEK JIKA ADA TOMBOL YANG DIKLIK (Baik User maupun Admin)
                 if btn_notulen or btn_laporan or btn_ringkasan or btn_berita or btn_rtl or btn_qna or btn_swot or btn_verbatim or (st.session_state.user_role == "admin" and btn_eksekusi_admin):
                     
-                    proses_lanjut = False 
-                    pakai_fup = False # 🚀 FLAG BARU: Mencegah potong saldo ganda
+                    proses_lanjut = False
+                    pakai_fup = False 
                     
-                    # --- FASE 3: ROUTING MICRO-PAYWALL (RP 1.000) ---
+                    # --- FASE 3: VALIDASI MICRO-PAYWALL (RP 1.000) ---
                     if st.session_state.user_role != "admin":
                         sisa_nyawa = st.session_state.get('sisa_nyawa_dok', 0)
                         
                         if sisa_nyawa > 0:
-                            st.session_state.sisa_nyawa_dok = sisa_nyawa - 1
-                            st.success(f"🎁 **Jatah Gratis Digunakan.** Sisa jatah untuk file ini: {st.session_state.sisa_nyawa_dok}x")
+                            # Jika FUP ada, izinkan lewat (Jangan potong dulu sebelum AI berhasil)
                             proses_lanjut = True
-                            pakai_fup = True # 🚀 TANDAI DOKUMEN INI GRATIS
+                            pakai_fup = True 
                         else:
+                            # Jika FUP habis, cek apakah saldo cukup Rp 1.000
                             saldo_user = user_info.get('saldo', 0)
                             if saldo_user >= 1000:
-                                new_saldo = saldo_user - 1000
-                                db.collection('users').document(st.session_state.current_user).update({"saldo": new_saldo})
-                                st.toast("💳 Jatah Gratis Habis. Saldo Terpotong Rp 1.000", icon="💰")
                                 proses_lanjut = True
+                                pakai_fup = False 
                             else:
                                 st.error("❌ **SALDO TIDAK CUKUP!** Jatah gratis AI (FUP) untuk file ini sudah habis.")
-                                st.warning("💡 Silakan Top-Up Saldo Anda Minimal Rp 10.000.")
+                                st.warning("💡 Silakan Top-Up Saldo Anda Minimal Rp 10.000 untuk melanjutkan (Tarif: Rp 1.000/dokumen).")
                                 proses_lanjut = False
                     else:
-                        proses_lanjut = True
+                        proses_lanjut = True # Admin bebas lewat
 
                     if proses_lanjut:
-                        bisa_bayar, pesan_bayar, p_saldo = True, "✅ FUP Gratis Digunakan", 0
-                        
-                        # 🚀 KUNCI PERBAIKAN: Hanya cek dompet Dropdown JIKA TIDAK PAKAI FUP
-                        if not pakai_fup and st.session_state.user_role != "admin":
-                            bisa_bayar, pesan_bayar, p_saldo = cek_pembayaran(user_info, durasi_teks, selected_index_paket)
-                        
-                        if not bisa_bayar:
-                            st.error(f"❌ TRANSAKSI DITOLAK: {pesan_bayar}")
-                            st.warning("💡 Silahkan pilih metode pembayaran lain, atau Top-Up Saldo Anda.")
+                        # ROUTING PROMPT
+                        if st.session_state.user_role == "admin" and btn_eksekusi_admin:
+                            prompt_active = dict_prompt_admin[dokumen_pilihan]
                         else:
-                            # 2. LANJUT PROSES AI JIKA SALDO/KUOTA CUKUP & ROUTING PROMPT
-                            if st.session_state.user_role == "admin" and btn_eksekusi_admin:
-                                prompt_active = dict_prompt_admin[dokumen_pilihan]
-                            else:
-                                if btn_notulen: prompt_active = PROMPT_NOTULEN
-                                elif btn_laporan: prompt_active = PROMPT_LAPORAN
-                                elif btn_ringkasan: prompt_active = PROMPT_RINGKASAN
-                                elif btn_berita: prompt_active = PROMPT_BERITA
-                                elif btn_rtl: prompt_active = PROMPT_RTL
-                                elif btn_qna: prompt_active = PROMPT_QNA
-                                elif btn_swot: prompt_active = PROMPT_SWOT
-                                else: prompt_active = PROMPT_VERBATIM
+                            if btn_notulen: prompt_active = PROMPT_NOTULEN
+                            elif btn_laporan: prompt_active = PROMPT_LAPORAN
+                            elif btn_ringkasan: prompt_active = PROMPT_RINGKASAN
+                            elif btn_berita: prompt_active = PROMPT_BERITA
+                            elif btn_rtl: prompt_active = PROMPT_RTL
+                            elif btn_qna: prompt_active = PROMPT_QNA
+                            elif btn_swot: prompt_active = PROMPT_SWOT
+                            else: prompt_active = PROMPT_VERBATIM
                             
-                            ai_result = None
-                            active_keys = get_active_keys(engine_choice)
-                        
-                            if not active_keys:
-                                st.error(f"❌ Sistem Sibuk: Tidak ada API Key {engine_choice} yang aktif. Saldo/Kuota Anda AMAN (Tidak dipotong).")
-                            else:
-                                success_generation = False
+                        ai_result = None
+                        active_keys = get_active_keys(engine_choice)
+                    
+                        if not active_keys:
+                            st.error(f"❌ Sistem Sibuk: Tidak ada API Key {engine_choice} yang aktif. Saldo/FUP Anda AMAN.")
+                        else:
+                            success_generation = False
                                 
                                 # --- 1. MUNCULKAN LAYAR LOADING MEGAH (OVERLAY) ---
                                 loading_overlay = st.empty()
@@ -3564,10 +3502,18 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                                             hak_arsip = True
                                             break
                                 
-                                # 3. POTONG SALDO & INVENTORI KARENA BERHASIL!
-                                if not pakai_fup:
-                                    eksekusi_pembayaran(st.session_state.current_user, user_info, selected_index_paket, p_saldo, durasi_teks)
-                                
+                                # 3. POTONG FUP ATAU SALDO KARENA AI BERHASIL!
+                                if st.session_state.user_role != "admin":
+                                    if pakai_fup:
+                                        # Kurangi FUP di memori
+                                        st.session_state.sisa_nyawa_dok -= 1
+                                        st.toast(f"🎁 FUP Gratis Digunakan. Sisa jatah: {st.session_state.sisa_nyawa_dok}x", icon="✅")
+                                    else:
+                                        # FUP Habis, Potong saldo Rp 1.000 di Firestore
+                                        new_saldo = user_info.get('saldo', 0) - 1000
+                                        db.collection('users').document(st.session_state.current_user).update({"saldo": new_saldo})
+                                        st.toast("💳 Jatah FUP Habis. Saldo Terpotong Rp 1.000", icon="💰")
+                                        
                                 # 🛡️ CATAT PENGGUNAAN FUP (Khusus Paket All-In-One)
                                 if user_info.get("bank_menit", 0) > 0:
                                     import datetime
