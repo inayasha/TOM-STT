@@ -2980,10 +2980,10 @@ with tab_ai:
                 # --- DESAIN PAYWALL SELARAS DENGAN TAB ARSIP (TANPA TOMBOL) ---
                 html_lock_txt = """<div style="text-align: center; padding: 25px; background-color: #fdfaf6; border-radius: 10px; border: 1px solid #f39c12; margin-bottom: 20px;">
 <div style="font-size: 40px; margin-bottom: 10px;">🔒</div>
-<h3 style="color: #d68910; margin-top: 0; font-size: 18px;">Fitur Eksklusif Paket Premium</h3>
-<p style="color: #d68910; font-weight: 500; font-size: 14.5px; line-height: 1.6; margin-bottom: 0;">
-Analisis AI pada dasarnya dilakukan setelah Anda memproses <b>Transkrip Audio</b> di menu sebelumnya.<br><br>
-Namun, jika Anda ingin menggunakan "jalur cepat" dengan <b>mengunggah file teks (.txt) manual</b> (tanpa perlu memproses audio), fasilitas instan ini secara khusus diperuntukkan bagi pengguna paket <b>VIP, ENTERPRISE, atau AIO tingkat atas</b>.
+<h3 style="color: #d68910; margin-top: 0;">Fitur Eksklusif Paket Premium</h3>
+<p style="color: #d68910; font-weight: 500; font-size: 15px; line-height: 1.6; margin-bottom: 0;">
+Analisis AI terbuka setelah Anda memproses <b>Transkrip Audio</b> di menu sebelumnya.<br><br>
+Namun, jika Anda ingin menggunakan <i>"FAST TRACK"</i> untuk <b>upload file teks (.txt) secara manual</b> tanpa perlu memproses audio, silahkan upgrade ke paket <b>VIP, ENTERPRISE, atau AIO tingkat atas</b>.
 </p>
 </div>"""
                 st.markdown(html_lock_txt, unsafe_allow_html=True)
