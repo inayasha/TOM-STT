@@ -96,7 +96,26 @@ def delete_user(username):
             st.error(f"Gagal mencabut akses Login (Auth) karena: {e}. Penghapusan dibatalkan.")
             return False 
 
-    # 2. Jika Auth sukses dihapus (atau memang kosong), baru hapus data Dompet di Firestore
+    # 2. Hapus semua data terkait di collection lain (PENTING untuk membersihkan Firestore)
+    try:
+        # Daftar collection yang mungkin menyimpan jejak user. Sesuaikan jika ada nama lain.
+        collections_to_clean = ["transcriptions", "folders", "transactions", "topup_requests", "chats", "riwayat_ai"]
+        
+        for col_name in collections_to_clean:
+            # Cari dan hapus jika direlasikan dengan field 'username'
+            docs_by_username = db.collection(col_name).where("username", "==", username).stream()
+            for doc in docs_by_username:
+                doc.reference.delete()
+                
+            # Cari dan hapus jika direlasikan dengan field 'user_id' (untuk berjaga-jaga jika beda penamaan)
+            docs_by_user_id = db.collection(col_name).where("user_id", "==", username).stream()
+            for doc in docs_by_user_id:
+                doc.reference.delete()
+    except Exception as e:
+        import streamlit as st
+        st.warning(f"Peringatan saat membersihkan riwayat: {e}")
+
+    # 3. Baru hapus data utama di collection 'users'
     db.collection('users').document(username).delete()
     return True
 	
@@ -2867,8 +2886,24 @@ with tab_ai:
                 st.session_state.transcript, st.session_state.ai_result = "", "" 
                 st.session_state.chat_history = [] # Reset Chat
                 st.session_state.chat_usage_count = 0 # Reset Jatah
+                
+                # 1. Reset juga variabel durasi kotor agar info teks di atas (durasi vs teks) ikut ter-reset
+                if 'durasi_audio_kotor' in st.session_state:
+                    del st.session_state['durasi_audio_kotor']
+                    
                 if user_info:
-                    db.collection('users').document(st.session_state.current_user).update({"draft_transcript": "", "draft_ai_result": ""})
+                    # 2. Hapus draft di Firebase (Termasuk prefix-nya agar bersih total)
+                    db.collection('users').document(st.session_state.current_user).update({
+                        "draft_transcript": "", 
+                        "draft_ai_result": "",
+                        "draft_ai_prefix": ""
+                    })
+                    
+                    # 3. KUNCI PERBAIKAN: Hapus cache user lokal agar fungsi get_user() 
+                    # dipaksa menarik data kosong yang baru dari Firebase saat rerun!
+                    if 'temp_user_data' in st.session_state:
+                        del st.session_state['temp_user_data']
+                        
                 st.rerun()
                 
             st.write("")
