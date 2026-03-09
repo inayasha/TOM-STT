@@ -749,6 +749,7 @@ if not st.session_state.get('logged_in', False):
             st.session_state.filename = user_data.get("draft_filename", "Hasil_STT")
             st.session_state.ai_result = user_data.get("draft_ai_result", "")
             st.session_state.ai_prefix = user_data.get("draft_ai_prefix", "")
+            st.session_state.is_text_upload = user_data.get("is_text_upload", False)
             
             # Hapus Cache User agar data terbaru ditarik setelah login
             if 'temp_user_data' in st.session_state:
@@ -761,9 +762,10 @@ if st.session_state.logged_in and not st.session_state.transcript and not st.ses
     user_info = get_user(st.session_state.current_user)
     if user_info and ("draft_transcript" in user_info or "draft_ai_result" in user_info):
         st.session_state.transcript = user_info.get("draft_transcript", "")
-        st.session_state.filename = user_info.get("draft_filename", "Hasil_STT")
-        st.session_state.ai_result = user_info.get("draft_ai_result", "")
-        st.session_state.ai_prefix = user_info.get("draft_ai_prefix", "")
+            st.session_state.filename = user_info.get("draft_filename", "Hasil_STT")
+            st.session_state.ai_result = user_info.get("draft_ai_result", "")
+            st.session_state.ai_prefix = user_info.get("draft_ai_prefix", "")
+            st.session_state.is_text_upload = user_info.get("is_text_upload", False)
         
 # ==========================================
 # FASE 1: DYNAMIC GLOBAL SHIELD (NON-ADMIN ONLY)
@@ -2715,7 +2717,8 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 "draft_transcript": hasil_akhir_teks,
                 "draft_filename": st.session_state.filename,
                 "draft_ai_result": "",
-                "draft_ai_prefix": ""
+                "draft_ai_prefix": "",
+                "is_text_upload": False
             })
             
             # --- PERBAIKAN LOGIKA FUP: STRICT ORIGIN (SESUAI TIKET YG DIPOTONG) ---
@@ -3097,7 +3100,8 @@ Namun, jika Anda ingin menggunakan FAST TRACK untuk upload file teks (.txt) seca
                                 "draft_transcript": st.session_state.transcript,
                                 "draft_filename": st.session_state.filename,
                                 "draft_ai_result": "",
-                                "draft_ai_prefix": ""
+                                "draft_ai_prefix": "",
+                                "is_text_upload": True
                             })
                         
                         st.success(f"✅ Teks Berhasil Dimuat ({jumlah_char:,} Karakter).")
@@ -3128,7 +3132,8 @@ Namun, jika Anda ingin menggunakan FAST TRACK untuk upload file teks (.txt) seca
                     db.collection('users').document(st.session_state.current_user).update({
                         "draft_transcript": "", 
                         "draft_ai_result": "",
-                        "draft_ai_prefix": ""
+                        "draft_ai_prefix": "",
+                        "is_text_upload": False
                     })
                     
                     if 'temp_user_data' in st.session_state:
@@ -3524,22 +3529,43 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                     
                 # --- FASE 4: INDIKATOR SISA NYAWA / FUP ---
                 if st.session_state.user_role != "admin":
-                    # --- MULAI KODE BARU: FALLBACK SMART OVERRIDE ---
+                    # --- MULAI KODE BARU: FALLBACK SMART OVERRIDE (FIX TUMPANG TINDIH FUP) ---
                     if 'sisa_nyawa_dok' not in st.session_state:
                         u_info_fup = get_user(st.session_state.current_user) or {}
-                        if u_info_fup.get("bank_menit", 0) > 0:
-                            st.session_state.sisa_nyawa_dok = u_info_fup.get("fup_dok_harian_limit", 35)
-                            st.session_state.is_using_aio = True
+                        
+                        # 1. Cari kasta reguler tertinggi yang dimiliki
+                        max_fup_reg = 0
+                        for pkt in u_info_fup.get("inventori", []):
+                            p_name = pkt.get("nama", "").upper()
+                            if "AIO" not in p_name and pkt.get("kuota", 0) > 0:
+                                if "ENTERPRISE" in p_name: max_fup_reg = max(max_fup_reg, 15)
+                                elif "VIP" in p_name: max_fup_reg = max(max_fup_reg, 8)
+                                elif "EKSEKUTIF" in p_name: max_fup_reg = max(max_fup_reg, 6)
+                                elif "STARTER" in p_name: max_fup_reg = max(max_fup_reg, 4)
+                                elif "LITE" in p_name: max_fup_reg = max(max_fup_reg, 2)
+                        
+                        # 2. Cek apakah dokumen yang di-load adalah hasil upload .txt manual
+                        is_text_mode = st.session_state.get('is_text_upload', False)
+                        
+                        if is_text_mode:
+                            # 🛡️ JIKA TEKS: Prioritaskan Reguler sebagai tameng!
+                            if max_fup_reg > 0:
+                                st.session_state.sisa_nyawa_dok = max_fup_reg
+                                st.session_state.is_using_aio = False
+                            elif u_info_fup.get("bank_menit", 0) > 0:
+                                st.session_state.sisa_nyawa_dok = u_info_fup.get("fup_dok_harian_limit", 35)
+                                st.session_state.is_using_aio = True
+                            else:
+                                st.session_state.sisa_nyawa_dok = 2
+                                st.session_state.is_using_aio = False
                         else:
-                            max_fup = 2
-                            for pkt in u_info_fup.get("inventori", []):
-                                p_name = pkt.get("nama", "").upper()
-                                if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
-                                elif "VIP" in p_name: max_fup = max(max_fup, 8)
-                                elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
-                                elif "STARTER" in p_name: max_fup = max(max_fup, 4)
-                            st.session_state.sisa_nyawa_dok = max_fup
-                            st.session_state.is_using_aio = False
+                            # 🎙️ JIKA AUDIO: Prioritaskan AIO (Sultan)
+                            if u_info_fup.get("bank_menit", 0) > 0:
+                                st.session_state.sisa_nyawa_dok = u_info_fup.get("fup_dok_harian_limit", 35)
+                                st.session_state.is_using_aio = True
+                            else:
+                                st.session_state.sisa_nyawa_dok = max(2, max_fup_reg)
+                                st.session_state.is_using_aio = False
 
                     # Tampilkan Status FUP DENGAN INFORMASI CERDAS
                     sisa_nyawa = st.session_state.get('sisa_nyawa_dok', 0)
