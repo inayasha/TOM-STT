@@ -4188,7 +4188,7 @@ if st.session_state.user_role == "admin":
             
             if selected_archive_pkgs != current_archive_pkgs or selected_txt_pkgs != current_txt_pkgs:
                 st.write("")
-                if st.button("💾 Simpan Perubahan Hak Akses", type="primary", use_container_width=True):
+                if st.button("💾 Simpan Perubahan Hak Akses", type="primary"):
                     db.collection('settings').document('system_config').set({
                         "archive_allowed_packages": selected_archive_pkgs,
                         "txt_allowed_packages": selected_txt_pkgs
