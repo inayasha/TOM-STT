@@ -2562,9 +2562,10 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 "draft_ai_prefix": ""
             })
             
-            # --- MULAI KODE BARU: SUNTIKAN FUP KE MEMORI ---
+            # --- MULAI KODE BARU: SMART OVERRIDE FUP ---
             if u_info.get("bank_menit", 0) > 0:
                 st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
+                st.session_state.is_using_aio = True # 🚀 TANDAI BAHWA AIO AKTIF
             else:
                 max_fup = 2
                 for pkt in u_info.get("inventori", []):
@@ -2574,6 +2575,7 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                     elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
                     elif "STARTER" in p_name: max_fup = max(max_fup, 4)
                 st.session_state.sisa_nyawa_dok = max_fup
+                st.session_state.is_using_aio = False
             # --- AKHIR KODE BARU ---
         
         st.write("")
@@ -2871,9 +2873,10 @@ with tab_ai:
                         st.session_state.chat_usage_count = 0 
                         st.session_state.ai_result = ""
                         
-                        # --- FASE 2: DYNAMIC TIERED FUP INJECTION ---
+                        # --- MULAI KODE BARU: SMART OVERRIDE FUP ---
                         if u_info.get("bank_menit", 0) > 0:
                             st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
+                            st.session_state.is_using_aio = True # 🚀 TANDAI BAHWA AIO AKTIF
                         else:
                             # Logika Cek Kasta Reguler
                             max_fup = 2 # Default Lite
@@ -2886,6 +2889,8 @@ with tab_ai:
                                 elif "STARTER" in p_name: max_fup = max(max_fup, 4)
                             
                             st.session_state.sisa_nyawa_dok = max_fup
+                            st.session_state.is_using_aio = False # 🚀 TANDAI BUKAN AIO
+                        # --- AKHIR KODE BARU ---
     
                         # Simpan ke Firebase agar tidak hilang saat di-refresh
                         if st.session_state.logged_in:
@@ -3320,11 +3325,12 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                     
                 # --- FASE 4: INDIKATOR SISA NYAWA / FUP ---
                 if st.session_state.user_role != "admin":
-                    # --- MULAI KODE BARU: FALLBACK JIKA FUP HILANG DARI MEMORI ---
+                    # --- MULAI KODE BARU: FALLBACK SMART OVERRIDE ---
                     if 'sisa_nyawa_dok' not in st.session_state:
                         u_info_fup = get_user(st.session_state.current_user) or {}
                         if u_info_fup.get("bank_menit", 0) > 0:
                             st.session_state.sisa_nyawa_dok = u_info_fup.get("fup_dok_harian_limit", 35)
+                            st.session_state.is_using_aio = True
                         else:
                             max_fup = 2
                             for pkt in u_info_fup.get("inventori", []):
@@ -3334,11 +3340,17 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                                 elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
                                 elif "STARTER" in p_name: max_fup = max(max_fup, 4)
                             st.session_state.sisa_nyawa_dok = max_fup
+                            st.session_state.is_using_aio = False
 
-                    # Tampilkan Status FUP
+                    # Tampilkan Status FUP DENGAN INFORMASI CERDAS
                     sisa_nyawa = st.session_state.get('sisa_nyawa_dok', 0)
+                    is_aio = st.session_state.get('is_using_aio', False)
+                    
                     if sisa_nyawa > 0:
-                        st.info(f"🎁 **Taman Bermain Terbuka:** Anda memiliki **{sisa_nyawa}x Ekstrak Dokumen Gratis** untuk file ini.")
+                        if is_aio:
+                            st.info(f"🌟 **Akses Prioritas AIO Aktif:** Anda memiliki **{sisa_nyawa}x Ekstrak Dokumen Gratis** hari ini. *(Tiket Reguler Anda tersimpan aman dan tidak dipotong)*.")
+                        else:
+                            st.success(f"🎁 **Jatah Paket Reguler:** Anda memiliki **{sisa_nyawa}x Ekstrak Dokumen Gratis** untuk file ini.")
                     else:
                         st.warning("💳 **FUP Terlampaui:** Ekstraksi dokumen selanjutnya akan memotong saldo utama **Rp 1.000 / klik**.")
 
@@ -3505,25 +3517,27 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                                 # 3. POTONG FUP ATAU SALDO KARENA AI BERHASIL!
                                 if st.session_state.user_role != "admin":
                                     if pakai_fup:
-                                        # Kurangi FUP di memori
                                         st.session_state.sisa_nyawa_dok -= 1
-                                        st.toast(f"🎁 FUP Gratis Digunakan. Sisa jatah: {st.session_state.sisa_nyawa_dok}x", icon="✅")
+                                        
+                                        # Cek apakah sedang menggunakan AIO?
+                                        if st.session_state.get('is_using_aio', False):
+                                            import datetime
+                                            wib_tz = datetime.timezone(datetime.timedelta(hours=7))
+                                            today_str = datetime.datetime.now(wib_tz).strftime("%Y-%m-%d")
+                                            fup_lama = user_info.get("fup_terpakai", 0) if user_info.get("fup_hari_ini") == today_str else 0
+                                            db.collection('users').document(st.session_state.current_user).update({
+                                                "fup_hari_ini": today_str,
+                                                "fup_terpakai": fup_lama + 1
+                                            })
+                                            st.toast(f"🌟 FUP Harian AIO Terpakai. Sisa: {st.session_state.sisa_nyawa_dok}x", icon="✅")
+                                        else:
+                                            # Jika reguler, cukup kurangi di memori layar
+                                            st.toast(f"🎁 FUP Reguler Terpakai. Sisa: {st.session_state.sisa_nyawa_dok}x", icon="✅")
                                     else:
-                                        # FUP Habis, Potong saldo Rp 1.000 di Firestore
+                                        # FUP Habis, Potong saldo Rp 1.000
                                         new_saldo = user_info.get('saldo', 0) - 1000
                                         db.collection('users').document(st.session_state.current_user).update({"saldo": new_saldo})
                                         st.toast("💳 Jatah FUP Habis. Saldo Terpotong Rp 1.000", icon="💰")
-                                        
-                                # 🛡️ CATAT PENGGUNAAN FUP (Khusus Paket All-In-One)
-                                if user_info.get("bank_menit", 0) > 0:
-                                    import datetime
-                                    wib_tz = datetime.timezone(datetime.timedelta(hours=7))
-                                    today_str = datetime.datetime.now(wib_tz).strftime("%Y-%m-%d")
-                                    fup_lama = user_info.get("fup_terpakai", 0) if user_info.get("fup_hari_ini") == today_str else 0
-                                    db.collection('users').document(st.session_state.current_user).update({
-                                        "fup_hari_ini": today_str,
-                                        "fup_terpakai": fup_lama + 1
-                                    })
                                 
                                 st.session_state.ai_result = ai_result
                                 
