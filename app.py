@@ -1916,24 +1916,24 @@ with st.sidebar:
                 # Cetak HTML Sidebar 
                 html_sidebar = f"""
 <div class="sidebar-card">
-    <div class="wallet-title">💳 Saldo Utama</div>
-    <div class="wallet-balance">{saldo_rp}</div>
-    <div style="font-size: 11px; color: #888; margin-bottom: 2px;">*Subsidi Teks/Chatbot: ± {estimasi_menit} Menit</div>
-    <div style="margin-top: 15px; margin-bottom: 12px; border-top: 1px dashed #e5e7eb; padding-top: 12px;">
-        <div class="wallet-title">📦 Inventori Paket</div>
-        <div style="line-height: 1.8;">{pills_html}</div>
-    </div>
-    
-    <div style="background-color: #f0f7ff; padding: 8px 10px; border-radius: 8px; font-size: 11px; color: #0369a1; margin-bottom: 10px; border: 1px solid #bae6fd;">
-        <b>Kapasitas Maksimal & Hak Akses:</b><br>
-        🎙️ Audio: {limit_audio} Menit<br>
-        📄 Teks: {limit_teks:,} Karakter<br>
-        🎁 Jatah Ekstrak AI: {label_fup}
-    </div>
-    
-    <div style="background-color: #f9fafb; padding: 8px 10px; border-radius: 8px; font-size: 11.5px; color: #4b5563; display: flex; justify-content: space-between; border: 1px solid #f3f4f6;">
-        <span>Masa Aktif:</span><span style="font-weight: 700; color: #111;">{status_waktu}</span>
-    </div>
+<div class="wallet-title">💳 Saldo Utama</div>
+<div class="wallet-balance">{saldo_rp}</div>
+<div style="font-size: 11px; color: #888; margin-bottom: 2px;">*Subsidi Teks/Chatbot: ± {estimasi_menit} Menit</div>
+<div style="margin-top: 15px; margin-bottom: 12px; border-top: 1px dashed #e5e7eb; padding-top: 12px;">
+<div class="wallet-title">📦 Inventori Paket</div>
+<div style="line-height: 1.8;">{pills_html}</div>
+</div>
+
+<div style="background-color: #f0f7ff; padding: 8px 10px; border-radius: 8px; font-size: 11px; color: #0369a1; margin-bottom: 10px; border: 1px solid #bae6fd;">
+<b>Kapasitas Maksimal & Hak Akses:</b><br>
+🎙️ Audio: {limit_audio} Menit<br>
+📄 Teks: {limit_teks:,} Karakter<br>
+🎁 Jatah Ekstrak AI: {label_fup}
+</div>
+
+<div style="background-color: #f9fafb; padding: 8px 10px; border-radius: 8px; font-size: 11.5px; color: #4b5563; display: flex; justify-content: space-between; border: 1px solid #f3f4f6;">
+<span>Masa Aktif:</span><span style="font-weight: 700; color: #111;">{status_waktu}</span>
+</div>
 </div>
 """
                 st.markdown(html_sidebar, unsafe_allow_html=True)
