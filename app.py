@@ -1519,10 +1519,11 @@ def show_pricing_dialog():
             st.markdown("""
             <div style='font-size: 14px; color: #333;'>
                 <ul style='margin-bottom: 10px;'>
-                    <li><b>Kapasitas:</b> 600 Menit (± Rp 315/menit)</li>
-                    <li><b>Masa Aktif:</b> 30 Hari (Maks Akumulasi 150 Hari)</li>
-                    <li>✅ <b>Analisis AI:</b> Sepuasnya (FUP Harian Berlaku)</li>
-                    <li>✅ <b>Bonus Saldo:</b> Rp 10.000</li>
+                    <li>⏱️ <b>Saldo Universal:</b> 600 Menit <i>(Memotong durasi audio ATAU estimasi panjang teks)</i></li>
+                    <li>📅 <b>Masa Aktif:</b> 30 Hari (Maks Akumulasi 150 Hari)</li>
+                    <li>👑 <b>FUP:</b> 35x Ekstrak AI <b>Per Hari</b> <i>(Bebas digunakan untuk semua dokumen)</i></li>
+                    <li>🚀 <b>Batas Ukuran Bebas:</b> Otomatis mengikuti <i>tier</i> tertinggi yang Anda miliki.</li>
+                    <li>🎁 <b>Bonus Saldo:</b> Rp 10.000</li>
                     <li>⚡ <b>Server STT:</b> Prioritas Standar</li>
                 </ul>
             </div>
@@ -1545,10 +1546,11 @@ def show_pricing_dialog():
             st.markdown("""
             <div style='font-size: 14px; color: #333;'>
                 <ul style='margin-bottom: 10px;'>
-                    <li><b>Kapasitas:</b> 1.800 Menit (± Rp 271/menit)</li>
-                    <li><b>Masa Aktif:</b> 60 Hari (Maks Akumulasi 150 Hari)</li>
-                    <li>✅ <b>Analisis AI:</b> Sepuasnya (FUP Harian Berlaku)</li>
-                    <li>✅ <b>Bonus Saldo:</b> Rp 25.000</li>
+                    <li>⏱️ <b>Saldo Universal:</b> 1.800 Menit <i>(Memotong durasi audio ATAU estimasi panjang teks)</i></li>
+                    <li>📅 <b>Masa Aktif:</b> 60 Hari (Maks Akumulasi 150 Hari)</li>
+                    <li>👑 <b>FUP:</b> 50x Ekstrak AI <b>Per Hari</b> <i>(Bebas digunakan untuk semua dokumen)</i></li>
+                    <li>🚀 <b>Batas Ukuran Bebas:</b> Otomatis mengikuti <i>tier</i> tertinggi yang Anda miliki.</li>
+                    <li>🎁 <b>Bonus Saldo:</b> Rp 25.000</li>
                     <li>⚡ <b>VVIP Lane:</b> Prioritas Server Tertinggi & STT Kilat</li>
                 </ul>
             </div>
@@ -1571,10 +1573,11 @@ def show_pricing_dialog():
             st.markdown("""
             <div style='font-size: 14px; color: #333;'>
                 <ul style='margin-bottom: 10px;'>
-                    <li><b>Kapasitas:</b> 6.000 Menit <span style='color: #e74c3c; font-weight: bold;'>(Tarif Termurah: ± Rp 216/menit)</span></li>
-                    <li><b>Masa Aktif:</b> 90 Hari (Maks Akumulasi 150 Hari)</li>
-                    <li>✅ <b>Analisis AI:</b> Sepuasnya (FUP Harian Paling Longgar)</li>
-                    <li>✅ <b>Bonus Saldo:</b> Rp 75.000</li>
+                    <li>⏱️ <b>Saldo Universal:</b> 6.000 Menit <span style='color: #e74c3c; font-weight: bold;'>(Tarif Termurah: ± Rp 216/menit)</span></li>
+                    <li>📅 <b>Masa Aktif:</b> 90 Hari (Maks Akumulasi 150 Hari)</li>
+                    <li>👑 <b>FUP:</b> 75x Ekstrak AI <b>Per Hari</b> <i>(Bebas digunakan untuk semua dokumen)</i></li>
+                    <li>🚀 <b>Batas Ukuran Bebas:</b> Otomatis mengikuti <i>tier</i> tertinggi yang Anda miliki.</li>
+                    <li>🎁 <b>Bonus Saldo:</b> Rp 75.000</li>
                     <li>⚡ <b>VVIP Lane:</b> Prioritas Server Tertinggi & STT Kilat</li>
                 </ul>
             </div>
@@ -1611,12 +1614,14 @@ def show_pricing_dialog():
             <div style='font-size: 14px; color: #333;'>
                 <ul style='margin-bottom: 10px;'>
                     <li><i>Paket Tester (Setara ± Rp 215 / menit audio).</i></li>
-                    <li>📄 <b>3x</b> Ekstrak AI (Akses <b>Notulen & Laporan</b>)</li>
-                    <li>💬 <b>2x</b> Tanya AI / Dokumen (Gratis)</li>
-                    <li>⏱️ <b>Kapasitas:</b> Maks. 45 Menit / File</li>
+                    <li>📄 <b>Kuota:</b> 3 Dokumen <i>(1 Kuota = 1 File Audio ATAU 1 File Teks)</i></li>
+                    <li>🤖 <b>FUP AI:</b> 2x Ekstrak <b>Per Dokumen</b> <i>(Akses Notulen & Laporan)</i></li>
+                    <li>💬 <b>Chatbot:</b> 2x Tanya AI / Dokumen (Gratis)</li>
+                    <li>⏱️ <b>Batas Audio:</b> Maks. 45 Menit / Kuota</li>
+                    <li>📝 <b>Batas Teks:</b> Maks. 45.000 Karakter / Kuota</li>
                     <li>📅 <b>Masa Aktif:</b> 14 Hari</li>
                     <li>🗑️ <b>Arsip:</b> Sekali pakai (Tanpa riwayat)</li>
-                    <li>🎁 <b>Bonus Saldo:</b> Rp 2.000</li>
+                    <li>🎁 <b>Bonus Saldo:</b> Rp 2.500</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -1638,9 +1643,11 @@ def show_pricing_dialog():
             <div style='font-size: 14px; color: #333;'>
                 <ul style='margin-bottom: 10px;'>
                     <li><i>Standar Staff / Humas (Setara ± Rp 148 / menit audio).</i></li>
-                    <li>📄 <b>10x</b> Ekstrak AI (+ Akses <b>Ringkasan & Berita</b>)</li>
-                    <li>💬 <b>4x</b> Tanya AI / Dokumen (Gratis)</li>
-                    <li>⏱️ <b>Kapasitas:</b> Maks. 1 Jam / File</li>
+                    <li>📄 <b>Kuota:</b> 10 Dokumen <i>(1 Kuota = 1 File Audio ATAU 1 File Teks)</i></li>
+                    <li>🤖 <b>FUP AI:</b> 4x Ekstrak <b>Per Dokumen</b> <i>(+ Akses Ringkasan & Berita)</i></li>
+                    <li>💬 <b>Chatbot:</b> 4x Tanya AI / Dokumen (Gratis)</li>
+                    <li>⏱️ <b>Batas Audio:</b> Maks. 60 Menit / Kuota</li>
+                    <li>📝 <b>Batas Teks:</b> Maks. 60.000 Karakter / Kuota</li>
                     <li>📅 <b>Masa Aktif:</b> 30 Hari</li>
                     <li>🗑️ <b>Arsip:</b> Sekali pakai (Tanpa riwayat)</li>
                     <li>🎁 <b>Bonus Saldo:</b> Rp 5.000</li>
@@ -1665,9 +1672,11 @@ def show_pricing_dialog():
             <div style='font-size: 14px; color: #333;'>
                 <ul style='margin-bottom: 10px;'>
                     <li><i>Target B2B / Manajerial (Setara ± Rp 110 / menit audio).</i></li>
-                    <li>📄 <b>30x</b> Ekstrak AI (+ Akses <b>Matriks RTL & Q&A</b>)</li>
-                    <li>💬 <b>6x</b> Tanya AI / Dokumen (Gratis)</li>
-                    <li>⏱️ <b>Kapasitas:</b> Maks. 1,5 Jam / File</li>
+                    <li>📄 <b>Kuota:</b> 30 Dokumen <i>(1 Kuota = 1 File Audio ATAU 1 File Teks)</i></li>
+                    <li>🤖 <b>FUP AI:</b> 6x Ekstrak <b>Per Dokumen</b> <i>(+ Akses Matriks RTL & Q&A)</i></li>
+                    <li>💬 <b>Chatbot:</b> 6x Tanya AI / Dokumen (Gratis)</li>
+                    <li>⏱️ <b>Batas Audio:</b> Maks. 90 Menit / Kuota</li>
+                    <li>📝 <b>Batas Teks:</b> Maks. 90.000 Karakter / Kuota</li>
                     <li>📅 <b>Masa Aktif:</b> 45 Hari</li>
                     <li>🗂️ <b>Arsip:</b> Akses riwayat Cloud</li>
                     <li>🎁 <b>Bonus Saldo:</b> Rp 15.000</li>
@@ -1692,13 +1701,15 @@ def show_pricing_dialog():
             <div style='font-size: 14px; color: #333;'>
                 <ul style='margin-bottom: 10px;'>
                     <li><i>Korporat / Heavy Duty / Legal (Sangat hemat! ± Rp 61 / menit audio).</i></li>
-                    <li>📄 <b>65x</b> Ekstrak AI (+ Akses <b>SWOT & Verbatim</b>)</li>
-                    <li>💬 <b>8x</b> Tanya AI / Dokumen (Gratis)</li>
+                    <li>📄 <b>Kuota:</b> 65 Dokumen <i>(1 Kuota = 1 File Audio ATAU 1 File Teks)</i></li>
+                    <li>🤖 <b>FUP AI:</b> 8x Ekstrak <b>Per Dokumen</b> <i>(+ Akses SWOT & Verbatim)</i></li>
+                    <li>💬 <b>Chatbot:</b> 8x Tanya AI / Dokumen (Gratis)</li>
                     <li>⚡ <b>Server Prioritas:</b> Tanpa antrean, akurasi absolut</li>
-                    <li>⏱️ <b>Kapasitas:</b> Maks. 2,5 Jam / File</li>
+                    <li>⏱️ <b>Batas Audio:</b> Maks. 150 Menit / Kuota</li>
+                    <li>📝 <b>Batas Teks:</b> Maks. 150.000 Karakter / Kuota</li>
                     <li>📅 <b>Masa Aktif:</b> 60 Hari</li>
                     <li>🗂️ <b>Arsip:</b> Akses riwayat Cloud</li>
-                    <li>🎁 <b>Bonus Saldo:</b> Rp 35.000</li>
+                    <li>🎁 <b>Bonus Saldo:</b> Rp 30.000</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -1726,13 +1737,15 @@ def show_pricing_dialog():
             <div style='font-size: 14px; color: #333;'>
                 <ul style='margin-bottom: 10px;'>
                     <li><i>Instansi Besar (Harga termurah! Hanya ± Rp 33 perak / menit audio).</i></li>
-                    <li>📄 <b>150x</b> Ekstrak AI <b>(Full Fitur 8 Dokumen)</b></li>
-                    <li>💬 <b>15x</b> Tanya AI Gratis / Dokumen</li>
+                    <li>📄 <b>Kuota:</b> 150 Dokumen <i>(1 Kuota = 1 File Audio ATAU 1 File Teks)</i></li>
+                    <li>🤖 <b>FUP AI:</b> 15x Ekstrak <b>Per Dokumen</b> <i>(Full Fitur 8 Dokumen)</i></li>
+                    <li>💬 <b>Chatbot:</b> 15x Tanya AI / Dokumen (Gratis)</li>
                     <li>⚡ <b>Server Prioritas:</b> Tanpa antrean, akurasi absolut</li>
-                    <li>⏱️ <b>Kapasitas:</b> Maks. <b>4 Jam</b> / File (Bebas Hambatan)</li>
+                    <li>⏱️ <b>Batas Audio:</b> Maks. 240 Menit / Kuota (Bebas Hambatan)</li>
+                    <li>📝 <b>Batas Teks:</b> Maks. 240.000 Karakter / Kuota</li>
                     <li>📅 <b>Masa Aktif:</b> 90 Hari</li>
                     <li>🗂️ <b>Arsip:</b> Akses riwayat Cloud</li>
-                    <li>🎁 <b>Bonus Saldo:</b> Rp 80.000</li>
+                    <li>🎁 <b>Bonus Saldo:</b> Rp 75.000</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -1864,23 +1877,22 @@ def show_pricing_dialog():
     st.markdown("---")
 
     # KOTAK INFO (DIGABUNG DALAM COLLAPSE BOX MENGGUNAKAN MARKDOWN ASLI)
-    with st.expander("Informasi Sistem, Ketentuan & FUP", expanded=False):
+    with st.expander("📚 INFO & KETENTUAN PAKET (Wajib Baca)", expanded=False):
         st.markdown("""
-        **💡 Informasi Sistem & Ketentuan:**
-        * 🎟️ **Sistem Tiket:** 1 Kuota = 1x Pembuatan Dokumen (Notulen / Laporan / Ringkasan / Artikel / RTL / Q&A / SWOT / Transkrip Verbatim).
-        * 💬 **Tanya AI (Chatbot):** Tersedia jatah gratis per dokumen. Jika habis, dikenakan tarif sangat ringan **Rp 500 / pertanyaan** (memotong Saldo Utama).
-        * ⚖️ **Tagihan Adil (Deteksi Jeda):** Durasi dihitung berdasarkan jumlah kata aktual yang diucapkan, BUKAN total waktu rekaman mentah.
-        * 📅 **Akumulasi Masa Aktif:** Pembelian paket baru otomatis menambah sisa masa aktif Anda *(Maksimal 150 Hari)*.
-        * 💳 **Saldo Tambahan:** Jika rekaman melebihi batas durasi maksimal, sistem memotong Saldo Utama dengan tarif **Rp 350 / Menit**.
+        **💡 Ketentuan Sistem & Kuota:**
+        * 📄 **Aturan Upload Teks (.txt):** Mengunggah dokumen teks manual kini akan memotong kuota utama Anda.
+          👉 **User AIO:** Memotong **Saldo Universal (Menit)** berdasarkan estimasi panjang teks.
+          👉 **User Reguler:** Memotong **1 Kuota** (sama seperti mengunggah 1 file audio).
+        * 🔄 **Subsidi Silang (AIO ke Reguler):** Jika Anda mengunggah file namun sisa Bank Menit AIO tidak cukup, sistem akan otomatis memotong **1 Kuota Reguler** Anda (jika ada) sebagai cadangan.
+        * 🛡️ ***Tier* Tertinggi Selalu Aman:** Anda bebas menumpuk berbagai jenis paket. Sistem selalu memberikan batas *tier* tertinggi berdasarkan paket aktif yang Anda miliki. Membeli paket kecil tidak akan menurunkan status *tier* tinggi Anda.
+        * 💬 **Tanya AI (Chatbot):** Jika jatah gratis habis, dikenakan tarif ringan **Rp 500 / pertanyaan** (memotong Saldo Utama).
 
         ---
         
-        **🛡️ Kebijakan Penggunaan Wajar (FUP) All-In-One:**
-        Untuk menjaga kecepatan dan stabilitas server bagi seluruh pengguna, fitur Ekstrak AI pada paket AIO memiliki batas harian (FUP):
-        * **AIO 10 JAM:** Maksimal 35 Ekstrak Dokumen / Hari.
-        * **AIO 30 JAM:** Maksimal 50 Ekstrak Dokumen / Hari.
-        * **AIO 100 JAM:** Maksimal 100 Ekstrak Dokumen / Hari.
-        Limit FUP ini akan di-reset (kembali menjadi 0) secara otomatis setiap jam 00:00 WIB.
+        **👑 Keistimewaan *Tier* AIO:**
+        Jika Anda memiliki Bank Menit AIO aktif, seluruh dokumen Anda akan menggunakan **FUP Harian AIO** (Misal: 75x klik/hari) yang bebas digunakan untuk file apapun di hari tersebut. Ini sangat menguntungkan dibanding FUP Reguler yang batasannya akan hangus jika Anda berganti file.
+        
+        *Limit FUP AIO akan di-reset (kembali penuh) secara otomatis setiap jam 00:00 WIB.*
         """)
                     
 with st.sidebar:
@@ -2741,11 +2753,6 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 st.session_state.sisa_nyawa_dok = max_fup
                 st.session_state.is_using_aio = False
                 
-        # 🚀 KUNCI RAHASIA: Hapus cache dompet di sini!
-        # Agar saat JS memindah Tab (yang memicu rerun), sistem menarik saldo terbaru.
-        if 'temp_user_data' in st.session_state:
-            del st.session_state['temp_user_data']
-        
         st.write("")
         
         # 🔥 FITUR BARU: TOMBOL PINDAH TAB OTOMATIS (JAVASCRIPT INJECTION)
@@ -4277,7 +4284,7 @@ if st.session_state.user_role == "admin":
         sys_config = get_system_config()
         
         with st.container(border=True):
-            use_groq = st.toggle("⚡ Aktifkan Groq Whisper API (Mode Sultan)", value=sys_config.get("use_groq_stt", False))
+            use_groq = st.toggle("⚡ Aktifkan Groq Whisper API", value=sys_config.get("use_groq_stt", False))
             
             if use_groq:
                 st.success("Groq Whisper AKTIF. Silahkan atur hak akses di bawah ini:")
