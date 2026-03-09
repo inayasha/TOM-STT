@@ -314,6 +314,11 @@ def cek_status_pembayaran_duitku(username, user_data):
     if ada_perubahan:
         user_data["pending_trx"] = sisa_pending
         db.collection('users').document(username).update({"pending_trx": sisa_pending})
+        
+        # 🚀 AUTO-REFRESH DOMPET JIKA ADA TAGIHAN LUNAS
+        if 'temp_user_data' in st.session_state:
+            del st.session_state['temp_user_data']
+            
     return user_data
     
 def check_expired(username, user_data):
@@ -1814,6 +1819,13 @@ def show_pricing_dialog():
                     if sukses:
                         st.success(pesan)
                         st.toast("Voucher berhasil diklaim!", icon="🎁")
+                        
+                        # 🚀 AUTO-REFRESH DOMPET SETELAH KLAIM VOUCHER
+                        if 'temp_user_data' in st.session_state:
+                            del st.session_state['temp_user_data']
+                        import time
+                        time.sleep(1)
+                        st.rerun()
                     else:
                         st.error(pesan)
             else:
@@ -2273,7 +2285,7 @@ def jalankan_proses_transkrip(audio_to_process, source_name, lang_code):
             
             progress_percent = int(((i + 1) / total_chunks) * 100)
             progress_bar.progress(progress_percent)
-            status_box.caption(f"Sedang memproses... ({progress_percent}%) - Mohon JANGAN tutup layar ini!")
+            status_box.caption(f"Sedang memproses... ({progress_percent}%) - MOHON JANGAN TUTUP LAYAR INI!")
             
             partial_text = " ".join(full_transcript)
             st.session_state.transcript = partial_text
@@ -2697,6 +2709,10 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 st.session_state.sisa_nyawa_dok = max_fup
                 st.session_state.is_using_aio = False
         
+        # 🚀 AUTO-REFRESH DOMPET SETELAH TRANSKRIP BERHASIL
+        if 'temp_user_data' in st.session_state:
+            del st.session_state['temp_user_data']
+
         st.write("")
         
         # 🔥 FITUR BARU: TOMBOL PINDAH TAB OTOMATIS (JAVASCRIPT INJECTION)
@@ -3732,6 +3748,10 @@ Gunakan bahasa PR taktis yang cepat tanggap, modern, sistematis, dan berorientas
                                 })
                                 
                                 st.success(f"✅ **Proses Selesai!**")
+                                
+                                # 🚀 AUTO-REFRESH DOMPET SETELAH AI SELESAI
+                                if 'temp_user_data' in st.session_state:
+                                    del st.session_state['temp_user_data']
                                 
                                 # 🚀 FITUR BARU: JEDA & REFRESH HALAMAN AGAR MENU OTOMATIS TERTUTUP
                                 import time
