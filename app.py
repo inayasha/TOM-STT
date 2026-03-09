@@ -2721,7 +2721,7 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 "is_text_upload": False
             })
             
-            # --- PERBAIKAN LOGIKA FUP: STRICT ORIGIN (SESUAI TIKET YG DIPOTONG) ---
+        # --- PERBAIKAN LOGIKA FUP: STRICT ORIGIN (SESUAI TIKET YG DIPOTONG) ---
             is_fallback = getattr(st.session_state, 'force_use_reguler_audio', False)
             
             if u_info.get("bank_menit", 0) > 0 and not is_fallback:
@@ -2741,6 +2741,10 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 st.session_state.sisa_nyawa_dok = max_fup
                 st.session_state.is_using_aio = False
         
+        # 🚀 AUTO-REFRESH DOMPET SETELAH TRANSKRIP AUDIO BERHASIL
+        if 'temp_user_data' in st.session_state:
+            del st.session_state['temp_user_data']
+
         st.write("")
         
         # 🔥 FITUR BARU: TOMBOL PINDAH TAB OTOMATIS (JAVASCRIPT INJECTION)
@@ -4929,3 +4933,4 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
+
