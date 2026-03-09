@@ -3033,7 +3033,7 @@ Namun, jika Anda ingin menggunakan FAST TRACK untuk upload file teks (.txt) seca
                 st.markdown(html_lock_txt, unsafe_allow_html=True)
                 uploaded_txt = None
             else:
-                st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia.<br><strong>ATAU</strong> Upload file .txt di bawah ini:</div>', unsafe_allow_html=True)
+                st.markdown('<div class="custom-info-box">Transkrip belum tersedia.<br><strong>ATAU</strong> Upload file .txt di bawah ini:</div>', unsafe_allow_html=True)
                 # 🛡️ HARD LIMIT 1MB CEGATAN AWAL (Zip-Bomb Teks)
                 uploaded_txt = st.file_uploader("Upload File Transkrip (.txt) - Maks 1MB", type=["txt"], key=st.session_state.get('uploader_key', 'txt_up'))
 
@@ -4188,7 +4188,7 @@ if st.session_state.user_role == "admin":
             
             if selected_archive_pkgs != current_archive_pkgs or selected_txt_pkgs != current_txt_pkgs:
                 st.write("")
-                if st.button("💾 Simpan Perubahan Hak Akses", type="primary"):
+                if st.button("💾 Simpan Perubahan Hak Akses", type="primary, use_container_width=True):
                     db.collection('settings').document('system_config').set({
                         "archive_allowed_packages": selected_archive_pkgs,
                         "txt_allowed_packages": selected_txt_pkgs
