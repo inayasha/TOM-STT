@@ -1950,34 +1950,32 @@ with st.sidebar:
                 if bank_menit_side > 0 and max_aud_reg > 0:
                     # User Sultan: Punya KEDUANYA (AIO & Reguler)
                     str_txt_reg = f"{max_txt_reg:,}".replace(",", ".")
-                    html_hak_akses = f"""
-                    <div style="margin-bottom: 6px;">
-                        <b style="color: #b45309; font-size: 12px;">🌟 Fasilitas Prioritas (AIO):</b><br>
-                        <span style="font-size: 11.5px; color: #444; line-height: 1.6;">
-                        🎙️ Audio: Bebas (Sesuai Saldo)<br>
-                        📄 Teks: 999.000 Karakter<br>
-                        🎁 Ekstrak AI: {user_data.get('fup_dok_harian_limit', 35)}x / Hari
-                        </span>
-                    </div>
-                    <div style="border-top: 1px dashed #93c5fd; margin-top: 6px; padding-top: 6px;">
-                        <b style="color: #0369a1; font-size: 12px;">📦 Cadangan Reguler:</b><br>
-                        <span style="font-size: 11.5px; color: #444; line-height: 1.6;">
-                        🎙️ Audio: {max_aud_reg} Menit / File<br>
-                        📄 Teks: {str_txt_reg} Karakter<br>
-                        🎁 Ekstrak AI: {max_fup_reg}x / File
-                        </span>
-                    </div>
-                    """
+                    html_hak_akses = f"""<div style="margin-bottom: 6px;">
+<b style="color: #b45309; font-size: 12px;">🌟 Fasilitas Prioritas (AIO):</b><br>
+<span style="font-size: 11.5px; color: #444; line-height: 1.6;">
+🎙️ Audio: Bebas (Sesuai Saldo)<br>
+📄 Teks: 999.000 Karakter<br>
+🎁 Ekstrak AI: {user_data.get('fup_dok_harian_limit', 35)}x / Hari
+</span>
+</div>
+<div style="border-top: 1px dashed #93c5fd; margin-top: 6px; padding-top: 6px;">
+<b style="color: #0369a1; font-size: 12px;">📦 Cadangan Reguler:</b><br>
+<span style="font-size: 11.5px; color: #444; line-height: 1.6;">
+🎙️ Audio: {max_aud_reg} Menit / File<br>
+📄 Teks: {str_txt_reg} Karakter<br>
+🎁 Ekstrak AI: {max_fup_reg}x / File
+</span>
+</div>"""
+
                 elif bank_menit_side > 0:
                     # User Punya AIO Saja
-                    html_hak_akses = f"""
-                    <b style="color: #b45309; font-size: 12px;">🌟 Fasilitas Prioritas (AIO):</b><br>
-                    <span style="font-size: 11.5px; color: #444; line-height: 1.6;">
-                    🎙️ Audio: Bebas (Sesuai Saldo)<br>
-                    📄 Teks: 999.000 Karakter<br>
-                    🎁 Ekstrak AI: {user_data.get('fup_dok_harian_limit', 35)}x / Hari
-                    </span>
-                    """
+                    html_hak_akses = f"""<b style="color: #b45309; font-size: 12px;">🌟 Fasilitas Prioritas (AIO):</b><br>
+<span style="font-size: 11.5px; color: #444; line-height: 1.6;">
+🎙️ Audio: Bebas (Sesuai Saldo)<br>
+📄 Teks: 999.000 Karakter<br>
+🎁 Ekstrak AI: {user_data.get('fup_dok_harian_limit', 35)}x / Hari
+</span>"""
+
                 else:
                     # User Punya Reguler Saja atau Freemium
                     if max_aud_reg > 0:
@@ -1991,14 +1989,12 @@ with st.sidebar:
                         txt_text = "45.000 Karakter"
                         fup_text = "0x (Paket Habis)"
                         
-                    html_hak_akses = f"""
-                    <b style="color: #0369a1; font-size: 12px;">{title_text}</b><br>
-                    <span style="font-size: 11.5px; color: #444; line-height: 1.6;">
-                    🎙️ Audio: {aud_text}<br>
-                    📄 Teks: {txt_text}<br>
-                    🎁 Ekstrak AI: {fup_text}
-                    </span>
-                    """
+                    html_hak_akses = f"""<b style="color: #0369a1; font-size: 12px;">{title_text}</b><br>
+<span style="font-size: 11.5px; color: #444; line-height: 1.6;">
+🎙️ Audio: {aud_text}<br>
+📄 Teks: {txt_text}<br>
+🎁 Ekstrak AI: {fup_text}
+</span>"""
 
                 # 3. Cetak HTML Sidebar 
                 html_sidebar = f"""
