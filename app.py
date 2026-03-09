@@ -319,35 +319,35 @@ def cek_status_pembayaran_duitku(username, user_data):
         sign_str = merchant_code + order_id + api_key
         signature = hashlib.md5(sign_str.encode('utf-8')).hexdigest()
 
-            try:
-                res = requests.post(url, json={"merchantCode": merchant_code, "merchantOrderId": order_id, "signature": signature}).json()
-                status = res.get("statusCode")
+        try:
+            res = requests.post(url, json={"merchantCode": merchant_code, "merchantOrderId": order_id, "signature": signature}).json()
+            status = res.get("statusCode")
 
-                if status == "00": # LUNAS
-                    # 🚀 FIX: Eksekusi database DULU, baru tampilkan sukses!
-                    user_data = berikan_paket_ke_user(username, user_data, paket)
-                    st.toast(f"Tagihan {paket} Lunas! Paket/Saldo ditambahkan.", icon="✅")
-                    ada_perubahan = True
-                elif status in ["01", "02"]: # PENDING
-                    sisa_pending.append(trx)
-                else: # EXPIRED
-                    st.toast(f"⚠️ Tagihan {paket} kadaluarsa/dibatalkan.", icon="❌")
-                    ada_perubahan = True
-            except Exception as e: 
-                # 🚀 FIX: Cegah silent crash, lempar print ke console terminal server
-                print(f"Error Duitku Polling: {e}")
+            if status == "00": # LUNAS
+                # 🚀 FIX: Eksekusi database DULU, baru tampilkan sukses!
+                user_data = berikan_paket_ke_user(username, user_data, paket)
+                st.toast(f"Tagihan {paket} Lunas! Paket/Saldo ditambahkan.", icon="✅")
+                ada_perubahan = True
+            elif status in ["01", "02"]: # PENDING
                 sisa_pending.append(trx)
+            else: # EXPIRED
+                st.toast(f"⚠️ Tagihan {paket} kadaluarsa/dibatalkan.", icon="❌")
+                ada_perubahan = True
+        except Exception as e: 
+            # 🚀 FIX: Cegah silent crash, lempar print ke console terminal server
+            print(f"Error Duitku Polling: {e}")
+            sisa_pending.append(trx)
 
-        if ada_perubahan:
-            user_data["pending_trx"] = sisa_pending
-            db.collection('users').document(username).update({"pending_trx": sisa_pending})
-            
-            # 🚀 AUTO-REFRESH DOMPET JIKA ADA TAGIHAN LUNAS
-            if 'temp_user_data' in st.session_state:
-                del st.session_state['temp_user_data']
-            st.rerun() # 🚀 FIX: Paksa muat ulang layar seketika agar dompet otomatis berubah!
-            
-        return user_data
+    if ada_perubahan:
+        user_data["pending_trx"] = sisa_pending
+        db.collection('users').document(username).update({"pending_trx": sisa_pending})
+        
+        # 🚀 AUTO-REFRESH DOMPET JIKA ADA TAGIHAN LUNAS
+        if 'temp_user_data' in st.session_state:
+            del st.session_state['temp_user_data']
+        st.rerun() # 🚀 FIX: Paksa muat ulang layar seketika agar dompet otomatis berubah!
+        
+    return user_data
     
 def check_expired(username, user_data):
     """SATPAM: Mengecek kedaluwarsa & MIGRASI OTOMATIS data lama."""
