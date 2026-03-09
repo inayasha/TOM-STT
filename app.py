@@ -1915,24 +1915,92 @@ with st.sidebar:
                         status_waktu = exp_date_wib.strftime('%d %b %Y, %H:%M')
                     except: pass
 
-                # --- FASE 4: INJEKSI LIMIT AUDIO, TEKS & FUP KE SIDEBAR ---
-                limit_audio = int(user_data.get("batas_audio_menit", 45))
-                limit_teks = int(user_data.get("batas_teks_karakter", 45000))
+                # --- FASE 4: INJEKSI LIMIT AUDIO, TEKS & FUP KE SIDEBAR (SMART SPLIT) ---
+                bank_menit_side = user_data.get("bank_menit", 0)
                 
-                # LOGIKA MENENTUKAN JATAH EKSTRAK AI (FUP) UNTUK SIDEBAR
-                if user_data.get("bank_menit", 0) > 0:
-                    label_fup = f"{user_data.get('fup_dok_harian_limit', 35)}x / Hari"
-                else:
-                    max_fup = 2  # Default Lite
-                    for pkt in user_data.get("inventori", []):
-                        p_name = pkt.get("nama", "").upper()
-                        if "ENTERPRISE" in p_name: max_fup = max(max_fup, 15)
-                        elif "VIP" in p_name: max_fup = max(max_fup, 8)
-                        elif "EKSEKUTIF" in p_name: max_fup = max(max_fup, 6)
-                        elif "STARTER" in p_name: max_fup = max(max_fup, 4)
-                    label_fup = f"{max_fup}x / File"
+                # 1. Hitung kasta tertinggi dari tiket REGULER yang masih dimiliki
+                max_aud_reg = 0
+                max_txt_reg = 0
+                max_fup_reg = 0
+                
+                for pkt in user_data.get("inventori", []):
+                    p_name = pkt.get("nama", "").upper()
+                    # Filter: Jangan hitung AIO, dan pastikan tiket reguler masih ada sisa
+                    if "AIO" not in p_name and pkt.get("kuota", 0) > 0:
+                        max_aud_reg = max(max_aud_reg, pkt.get("batas_durasi", 0))
+                        if "ENTERPRISE" in p_name: 
+                            max_fup_reg = max(max_fup_reg, 15)
+                            max_txt_reg = max(max_txt_reg, 240000)
+                        elif "VIP" in p_name: 
+                            max_fup_reg = max(max_fup_reg, 8)
+                            max_txt_reg = max(max_txt_reg, 150000)
+                        elif "EKSEKUTIF" in p_name: 
+                            max_fup_reg = max(max_fup_reg, 6)
+                            max_txt_reg = max(max_txt_reg, 90000)
+                        elif "STARTER" in p_name: 
+                            max_fup_reg = max(max_fup_reg, 4)
+                            max_txt_reg = max(max_txt_reg, 60000)
+                        elif "LITE" in p_name: 
+                            max_fup_reg = max(max_fup_reg, 2)
+                            max_txt_reg = max(max_txt_reg, 45000)
 
-                # Cetak HTML Sidebar 
+                # 2. RAKIT HTML BLOK KAPASITAS BERDASARKAN KEPEMILIKAN PAKET
+                html_hak_akses = ""
+                
+                if bank_menit_side > 0 and max_aud_reg > 0:
+                    # User Sultan: Punya KEDUANYA (AIO & Reguler)
+                    str_txt_reg = f"{max_txt_reg:,}".replace(",", ".")
+                    html_hak_akses = f"""
+                    <div style="margin-bottom: 6px;">
+                        <b style="color: #b45309; font-size: 12px;">🌟 Fasilitas Prioritas (AIO):</b><br>
+                        <span style="font-size: 11.5px; color: #444; line-height: 1.6;">
+                        🎙️ Audio: Bebas (Sesuai Saldo)<br>
+                        📄 Teks: 999.000 Karakter<br>
+                        🎁 Ekstrak AI: {user_data.get('fup_dok_harian_limit', 35)}x / Hari
+                        </span>
+                    </div>
+                    <div style="border-top: 1px dashed #93c5fd; margin-top: 6px; padding-top: 6px;">
+                        <b style="color: #0369a1; font-size: 12px;">📦 Cadangan Reguler:</b><br>
+                        <span style="font-size: 11.5px; color: #444; line-height: 1.6;">
+                        🎙️ Audio: {max_aud_reg} Menit / File<br>
+                        📄 Teks: {str_txt_reg} Karakter<br>
+                        🎁 Ekstrak AI: {max_fup_reg}x / File
+                        </span>
+                    </div>
+                    """
+                elif bank_menit_side > 0:
+                    # User Punya AIO Saja
+                    html_hak_akses = f"""
+                    <b style="color: #b45309; font-size: 12px;">🌟 Fasilitas Prioritas (AIO):</b><br>
+                    <span style="font-size: 11.5px; color: #444; line-height: 1.6;">
+                    🎙️ Audio: Bebas (Sesuai Saldo)<br>
+                    📄 Teks: 999.000 Karakter<br>
+                    🎁 Ekstrak AI: {user_data.get('fup_dok_harian_limit', 35)}x / Hari
+                    </span>
+                    """
+                else:
+                    # User Punya Reguler Saja atau Freemium
+                    if max_aud_reg > 0:
+                        title_text = "📦 Fasilitas Reguler:"
+                        aud_text = f"{max_aud_reg} Menit / File"
+                        txt_text = f"{max_txt_reg:,} Karakter".replace(",", ".")
+                        fup_text = f"{max_fup_reg}x / File"
+                    else:
+                        title_text = "🔒 Batas Akun (Freemium):"
+                        aud_text = "20 Menit / File"
+                        txt_text = "45.000 Karakter"
+                        fup_text = "0x (Paket Habis)"
+                        
+                    html_hak_akses = f"""
+                    <b style="color: #0369a1; font-size: 12px;">{title_text}</b><br>
+                    <span style="font-size: 11.5px; color: #444; line-height: 1.6;">
+                    🎙️ Audio: {aud_text}<br>
+                    📄 Teks: {txt_text}<br>
+                    🎁 Ekstrak AI: {fup_text}
+                    </span>
+                    """
+
+                # 3. Cetak HTML Sidebar 
                 html_sidebar = f"""
 <div class="sidebar-card">
 <div class="wallet-title">💳 Saldo Utama</div>
@@ -1943,11 +2011,8 @@ with st.sidebar:
 <div style="line-height: 1.8;">{pills_html}</div>
 </div>
 
-<div style="background-color: #f0f7ff; padding: 8px 10px; border-radius: 8px; font-size: 11px; color: #0369a1; margin-bottom: 10px; border: 1px solid #bae6fd;">
-<b>Kapasitas Maksimal & Hak Akses:</b><br>
-🎙️ Audio: {limit_audio} Menit<br>
-📄 Teks: {limit_teks:,} Karakter<br>
-🎁 Jatah Ekstrak AI: {label_fup}
+<div style="background-color: #f0f7ff; padding: 12px 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #bae6fd;">
+{html_hak_akses}
 </div>
 
 <div style="background-color: #f9fafb; padding: 8px 10px; border-radius: 8px; font-size: 11.5px; color: #4b5563; display: flex; justify-content: space-between; border: 1px solid #f3f4f6;">
