@@ -2957,10 +2957,33 @@ with tab_ai:
         user_info = get_user(st.session_state.current_user)
         
         if not st.session_state.transcript:
-            st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia.<br><strong>ATAU</strong> Upload file .txt di bawah ini:</div>', unsafe_allow_html=True)
-
-            # 🛡️ HARD LIMIT 1MB CEGATAN AWAL (Zip-Bomb Teks)
-            uploaded_txt = st.file_uploader("Upload File Transkrip (.txt) - Maks 1MB", type=["txt"], key=st.session_state.get('uploader_key', 'txt_up'))
+            # --- 🚀 SISTEM PAYWALL: CEK HAK AKSES UPLOAD TEKS ---
+            has_txt_access = False
+            sys_conf_txt = get_system_config().get("txt_allowed_packages", ["VIP", "ENTERPRISE", "AIO 30 JAM", "AIO 100 JAM"])
+            
+            if st.session_state.user_role == "admin":
+                has_txt_access = True
+            else:
+                for pkt in user_info.get("inventori", []):
+                    nama_pkt_up = pkt.get("nama", "").upper()
+                    if any(allowed_pkt in nama_pkt_up for allowed_pkt in sys_conf_txt):
+                        # Syarat 2: Kuota/Menitnya masih ada (Bukan bungkus kosong)
+                        if "AIO" in nama_pkt_up:
+                            if user_info.get("bank_menit", 0) > 0:
+                                has_txt_access = True
+                                break
+                        elif pkt.get("kuota", 0) > 0:
+                            has_txt_access = True
+                            break
+                            
+            if not has_txt_access:
+                st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia. Silahkan upload/rekam audio.</div>', unsafe_allow_html=True)
+                st.info("🔒 **Fitur Eksklusif Terkunci**\n\nFasilitas upload teks manual (.txt) khusus untuk pengguna tingkat atas. Silakan **Upgrade** ke paket **VIP, ENTERPRISE, AIO 30 JAM, atau AIO 100 JAM** untuk menikmati fitur analisis dokumen instan (tanpa upload audio).")
+                uploaded_txt = None
+            else:
+                st.markdown('<div class="custom-info-box">👆 Transkrip belum tersedia.<br><strong>ATAU</strong> Upload file .txt di bawah ini:</div>', unsafe_allow_html=True)
+                # 🛡️ HARD LIMIT 1MB CEGATAN AWAL (Zip-Bomb Teks)
+                uploaded_txt = st.file_uploader("Upload File Transkrip (.txt) - Maks 1MB", type=["txt"], key=st.session_state.get('uploader_key', 'txt_up'))
 
             if uploaded_txt:
                 if uploaded_txt.size > 1 * 1024 * 1024:
@@ -4062,28 +4085,41 @@ if st.session_state.user_role == "admin":
                     
         st.markdown("---")
         
-        # --- 🗂️ PENGATURAN HAK AKSES ARSIP ---
+        # --- 🗂️ PENGATURAN HAK AKSES ARSIP & UPLOAD TEKS ---
         st.write("")
-        st.markdown("#### 🗂️ Hak Akses Tab Arsip (Cloud Storage)")
-        st.caption("Tentukan paket mana saja yang memiliki saklar 'ON' untuk mengakses Tab Arsip.")
+        st.markdown("#### 🗂️ Hak Akses Fitur Premium (Arsip & Upload Teks)")
+        st.caption("Tentukan paket mana saja yang diizinkan untuk mengakses fitur eksklusif di bawah ini.")
         
         with st.container(border=True):
             all_packages = ["LITE", "STARTER", "EKSEKUTIF", "VIP", "ENTERPRISE", "AIO 10 JAM", "AIO 30 JAM", "AIO 100 JAM"]
-            current_allowed = sys_config.get("archive_allowed_packages", ["EKSEKUTIF", "VIP", "ENTERPRISE", "AIO 10 JAM", "AIO 30 JAM", "AIO 100 JAM"])
             
-            new_allowed = st.multiselect(
-                "Daftar Paket yang Diizinkan (Tambahkan/Hapus nama paket di bawah ini):", 
+            st.markdown("**1. Hak Akses Tab Arsip (Cloud Storage)**")
+            current_archive_pkgs = sys_config.get("archive_allowed_packages", ["EKSEKUTIF", "VIP", "ENTERPRISE", "AIO 10 JAM", "AIO 30 JAM", "AIO 100 JAM"])
+            selected_archive_pkgs = st.multiselect(
+                "Paket yang diizinkan melihat riwayat Arsip:", 
                 options=all_packages, 
-                default=[p for p in current_allowed if p in all_packages]
+                default=[p for p in current_archive_pkgs if p in all_packages]
             )
             
-            if new_allowed != current_allowed:
-                if st.button("💾 Simpan Perubahan Hak Akses Arsip", type="primary"):
+            st.markdown("---")
+            
+            st.markdown("**2. Hak Akses Upload Teks Manual (.txt)**")
+            current_txt_pkgs = sys_config.get("txt_allowed_packages", ["VIP", "ENTERPRISE", "AIO 30 JAM", "AIO 100 JAM"])
+            selected_txt_pkgs = st.multiselect(
+                "Paket yang diizinkan upload file .txt tanpa audio:", 
+                options=all_packages, 
+                default=[p for p in current_txt_pkgs if p in all_packages]
+            )
+            
+            if selected_archive_pkgs != current_archive_pkgs or selected_txt_pkgs != current_txt_pkgs:
+                st.write("")
+                if st.button("💾 Simpan Perubahan Hak Akses", type="primary"):
                     db.collection('settings').document('system_config').set({
-                        "archive_allowed_packages": new_allowed
+                        "archive_allowed_packages": selected_archive_pkgs,
+                        "txt_allowed_packages": selected_txt_pkgs
                     }, merge=True)
                     get_system_config.clear()
-                    st.toast("Hak Akses Arsip berhasil diperbarui!", icon="✅")
+                    st.toast("Hak Akses berhasil diperbarui!", icon="✅")
                     st.rerun()
         
         # --- 🚧 MODE PEMELIHARAAN (FEATURE FLAGS) ---
@@ -4777,3 +4813,4 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
+
