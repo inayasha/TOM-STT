@@ -4822,3 +4822,4 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
+
