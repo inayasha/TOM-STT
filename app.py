@@ -2982,8 +2982,8 @@ with tab_ai:
 <div style="font-size: 40px; margin-bottom: 10px;">🔒</div>
 <h3 style="color: #d68910; margin-top: 0;">Fitur Eksklusif Paket Premium</h3>
 <p style="color: #d68910; font-weight: 500; font-size: 15px; line-height: 1.6; margin-bottom: 0;">
-Analisis AI terbuka setelah Anda memproses <b>Transkrip Audio</b> di menu sebelumnya.<br><br>
-Namun, jika Anda ingin menggunakan <i>"FAST TRACK"</i> untuk <b>upload file teks (.txt) secara manual</b> tanpa perlu memproses audio, silahkan upgrade Paket anda ke <b>VIP, ENTERPRISE, atau AIO tingkat atas</b>.
+Analisis AI terbuka setelah Anda memproses Transkrip Audio ke Teks.<br><br>
+Namun, jika Anda ingin menggunakan FAST TRACK untuk upload file teks (.txt) secara manual tanpa perlu memproses audio, silahkan upgrade Paket anda ke VIP, ENTERPRISE, atau AIO tingkat atas.
 </p>
 </div>"""
                 st.markdown(html_lock_txt, unsafe_allow_html=True)
