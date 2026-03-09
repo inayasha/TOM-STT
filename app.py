@@ -2983,7 +2983,7 @@ with tab_ai:
 <h3 style="color: #d68910; margin-top: 0;">Fitur Eksklusif Paket Premium</h3>
 <p style="color: #d68910; font-weight: 500; font-size: 15px; line-height: 1.6; margin-bottom: 0;">
 Analisis AI terbuka setelah Anda memproses <b>Transkrip Audio</b> di menu sebelumnya.<br><br>
-Namun, jika Anda ingin menggunakan <i>"FAST TRACK"</i> untuk <b>upload file teks (.txt) secara manual</b> tanpa perlu memproses audio, silahkan upgrade ke paket <b>VIP, ENTERPRISE, atau AIO tingkat atas</b>.
+Namun, jika Anda ingin menggunakan <i>"FAST TRACK"</i> untuk <b>upload file teks (.txt) secara manual</b> tanpa perlu memproses audio, silahkan upgrade Paket anda ke <b>VIP, ENTERPRISE, atau AIO tingkat atas</b>.
 </p>
 </div>"""
                 st.markdown(html_lock_txt, unsafe_allow_html=True)
@@ -3928,7 +3928,7 @@ with tab_arsip:
                     break
         
         if not berhak_cloud:
-            st.markdown('<div style="text-align: center; padding: 25px; background-color: #fdfaf6; border-radius: 10px; border: 1px solid #f39c12; margin-bottom: 20px;"><div style="font-size: 40px; margin-bottom: 10px;">🔒</div><h3 style="color: #d68910; margin-top: 0;">Fitur Eksklusif Paket Premium</h3><p style="color: #d68910; font-weight: 500; font-size: 15px;">Upgrade paket Anda sesuai dengan ketentuan untuk membuka fitur Cloud Storage. Nikmati kemudahan menyimpan dan mendownload seluruh riwayat Laporan & Notulen rapat Anda kapan saja.</p></div>', unsafe_allow_html=True)
+            st.markdown('<div style="text-align: center; padding: 25px; background-color: #fdfaf6; border-radius: 10px; border: 1px solid #f39c12; margin-bottom: 20px;"><div style="font-size: 40px; margin-bottom: 10px;">🔒</div><h3 style="color: #d68910; margin-top: 0;">Fitur Eksklusif Paket Premium</h3><p style="color: #d68910; font-weight: 500; font-size: 15px;">Upgrade Paket Anda ke Eksekutif, VIP, Enterprise dan seluruh Paket AIO untuk membuka fitur Cloud Storage. Nikmati kemudahan menyimpan dan mendownload seluruh riwayat Laporan & Notulen rapat Anda kapan saja.</p></div>', unsafe_allow_html=True)
             if st.button("🚀 Lihat Pilihan Paket", use_container_width=True, key="btn_upgrade_arsip"):
                 show_pricing_dialog()
         else:
