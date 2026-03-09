@@ -1936,7 +1936,7 @@ html_sidebar = f"""
     </div>
 </div>
 """
-                st.markdown(html_sidebar, unsafe_allow_html=True)
+            st.markdown(html_sidebar, unsafe_allow_html=True)
                 
             # ==========================================
             # KARTU 3: TOMBOL AKSI (HIERARKI BARU)
