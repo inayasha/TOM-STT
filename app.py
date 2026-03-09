@@ -319,9 +319,9 @@ def cek_status_pembayaran_duitku(username, user_data):
         sign_str = merchant_code + order_id + api_key
         signature = hashlib.md5(sign_str.encode('utf-8')).hexdigest()
 
-        try:
-            res = requests.post(url, json={"merchantCode": merchant_code, "merchantOrderId": order_id, "signature": signature}).json()
-            status = res.get("statusCode")
+            try:
+                res = requests.post(url, json={"merchantCode": merchant_code, "merchantOrderId": order_id, "signature": signature}).json()
+                status = res.get("statusCode")
 
                 if status == "00": # LUNAS
                     # 🚀 FIX: Eksekusi database DULU, baru tampilkan sukses!
