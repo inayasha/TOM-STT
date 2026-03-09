@@ -261,17 +261,16 @@ def berikan_paket_ke_user(username, user_data, nama_paket):
         # Injeksi Bank Menit jika ini adalah paket AIO
         new_bank_menit = user_data.get("bank_menit", 0) + cfg.get('bank_menit', 0)
 
-        # --- FASE 1: INJEKSI METADATA KASTA (BLUEPRINT 2026 - FIX ANTI DOWNGRADE) ---
-        # 🚀 KUNCI PERBAIKAN: Gunakan fungsi max() agar kasta selalu mengambil nilai tertinggi
+        # --- FASE 1: INJEKSI METADATA KASTA (BLUEPRINT 2026) ---
         update_data = {
             "inventori": inventori, 
             "saldo": new_saldo, 
             "tanggal_expired": new_exp_date, 
             "bank_menit": new_bank_menit,
-            "batas_audio_menit": max(user_data.get("batas_audio_menit", 0), cfg.get("limit_audio", 45)),
-            "batas_teks_karakter": max(user_data.get("batas_teks_karakter", 0), cfg.get("limit_teks", 45000)),
-            "fup_dok_per_file": max(user_data.get("fup_dok_per_file", 0), cfg.get("fup_per_file", 2)),
-            "fup_dok_harian_limit": max(user_data.get("fup_dok_harian_limit", 0), cfg.get("fup_harian", 0))
+            "batas_audio_menit": cfg.get("limit_audio", 45),
+            "batas_teks_karakter": cfg.get("limit_teks", 45000),
+            "fup_dok_per_file": cfg.get("fup_per_file", 2),
+            "fup_dok_harian_limit": cfg.get("fup_harian", 0)
         }
 
         user_data.update(update_data)
