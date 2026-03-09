@@ -96,27 +96,41 @@ def delete_user(username):
             st.error(f"Gagal mencabut akses Login (Auth) karena: {e}. Penghapusan dibatalkan.")
             return False 
 
-    # 2. Hapus semua data terkait di collection lain (PENTING untuk membersihkan Firestore)
+    # 2. HAPUS SUB-COLLECTION 'history' (PENTING!)
+    # Jika tidak dihapus, ID user akan tetap terlihat di Console Firestore sebagai "Dokumen Hantu"
     try:
-        # Daftar collection yang mungkin menyimpan jejak user. Sesuaikan jika ada nama lain.
+        history_docs = db.collection('users').document(username).collection('history').stream()
+        for doc in history_docs:
+            doc.reference.delete()
+    except Exception as e:
+        pass # Lanjut terus walaupun kosong/error
+
+    # 3. HAPUS DOKUMEN UTAMA PROFIL USER
+    # Diletakkan di atas agar dijamin terhapus tanpa menunggu proses eksternal selesai
+    try:
+        db.collection('users').document(username).delete()
+    except Exception as e:
+        import streamlit as st
+        st.warning(f"Gagal menghapus data profil Firestore: {e}")
+
+    # 4. Hapus data terkait di collection eksternal (Pembersihan Lanjutan)
+    try:
+        # Daftar collection eksternal yang mungkin menyimpan jejak user.
         collections_to_clean = ["transcriptions", "folders", "transactions", "topup_requests", "chats", "riwayat_ai"]
         
         for col_name in collections_to_clean:
-            # Cari dan hapus jika direlasikan dengan field 'username'
+            # Cari dan hapus berdasarkan field 'username'
             docs_by_username = db.collection(col_name).where("username", "==", username).stream()
             for doc in docs_by_username:
                 doc.reference.delete()
                 
-            # Cari dan hapus jika direlasikan dengan field 'user_id' (untuk berjaga-jaga jika beda penamaan)
+            # Cari dan hapus berdasarkan field 'user_id'
             docs_by_user_id = db.collection(col_name).where("user_id", "==", username).stream()
             for doc in docs_by_user_id:
                 doc.reference.delete()
     except Exception as e:
-        import streamlit as st
-        st.warning(f"Peringatan saat membersihkan riwayat: {e}")
+        pass # Abaikan jika gagal agar tidak mengganggu notifikasi sukses utama
 
-    # 3. Baru hapus data utama di collection 'users'
-    db.collection('users').document(username).delete()
     return True
 	
 def berikan_paket_ke_user(username, user_data, nama_paket):
@@ -4763,4 +4777,3 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
