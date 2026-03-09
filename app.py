@@ -141,8 +141,10 @@ def berikan_paket_ke_user(username, user_data, nama_paket):
                  "AIO10": 189000, "AIO30": 489000, "AIO100": 1299000,
                  "RefillTiket": 25500, "EkstensiWaktu": 35700, 
                  "Topup10k": 10200, "Topup20k": 20400, "Topup30k": 30600, "Topup40k": 40800}
+    
     nominal_masuk = harga_map.get(nama_paket, 0)
-    new_spending = user_data.get("total_spending", 0) + nominal_masuk
+    # 🚀 FIX: Paksa jadi integer agar kebal crash tipe data teks
+    new_spending = int(user_data.get("total_spending", 0)) + nominal_masuk 
     user_data["total_spending"] = new_spending
     db.collection('users').document(username).update({"total_spending": new_spending})
 
@@ -261,16 +263,37 @@ def berikan_paket_ke_user(username, user_data, nama_paket):
         # Injeksi Bank Menit jika ini adalah paket AIO
         new_bank_menit = user_data.get("bank_menit", 0) + cfg.get('bank_menit', 0)
 
-        # --- FASE 1: INJEKSI METADATA KASTA (BLUEPRINT 2026) ---
+        # --- FASE 1: DYNAMIC SCANNER (ANTI-CRASH & BACA KASTA TERKINI) ---
+        # 1. Pastikan semua default dijadikan Integer
+        max_aud = int(cfg.get("limit_audio", 45))
+        max_txt = int(cfg.get("limit_teks", 45000))
+        max_fup = int(cfg.get("fup_per_file", 2))
+        max_fup_h = int(cfg.get("fup_harian", 0))
+        
+        # 2. Pindai dompet mencari kasta tertinggi DARI TIKET YANG BELUM HABIS
+        for pkt in inventori:
+            p_nama = pkt.get("nama", "").upper()
+            if int(pkt.get("kuota", 0)) > 0 or "AIO" in p_nama: 
+                if "ENTERPRISE" in p_nama: max_aud = max(max_aud, 240); max_txt = max(max_txt, 240000); max_fup = max(max_fup, 15)
+                elif "VIP" in p_nama: max_aud = max(max_aud, 150); max_txt = max(max_txt, 150000); max_fup = max(max_fup, 8)
+                elif "EKSEKUTIF" in p_nama: max_aud = max(max_aud, 90); max_txt = max(max_txt, 90000); max_fup = max(max_fup, 6)
+                elif "STARTER" in p_nama: max_aud = max(max_aud, 60); max_txt = max(max_txt, 60000); max_fup = max(max_fup, 4)
+                
+                if "AIO" in p_nama: 
+                    max_aud = 9999; max_txt = 999999
+                    if "100" in p_nama: max_fup_h = max(max_fup_h, 75)
+                    elif "30" in p_nama: max_fup_h = max(max_fup_h, 50)
+                    else: max_fup_h = max(max_fup_h, 35)
+
         update_data = {
             "inventori": inventori, 
-            "saldo": new_saldo, 
+            "saldo": int(new_saldo), 
             "tanggal_expired": new_exp_date, 
-            "bank_menit": new_bank_menit,
-            "batas_audio_menit": cfg.get("limit_audio", 45),
-            "batas_teks_karakter": cfg.get("limit_teks", 45000),
-            "fup_dok_per_file": cfg.get("fup_per_file", 2),
-            "fup_dok_harian_limit": cfg.get("fup_harian", 0)
+            "bank_menit": int(new_bank_menit),
+            "batas_audio_menit": max_aud,
+            "batas_teks_karakter": max_txt,
+            "fup_dok_per_file": max_fup,
+            "fup_dok_harian_limit": max_fup_h
         }
 
         user_data.update(update_data)
@@ -300,21 +323,31 @@ def cek_status_pembayaran_duitku(username, user_data):
             res = requests.post(url, json={"merchantCode": merchant_code, "merchantOrderId": order_id, "signature": signature}).json()
             status = res.get("statusCode")
 
-            if status == "00": # LUNAS
-                st.toast(f"Tagihan {paket} Lunas! Paket/Saldo ditambahkan.", icon="✅")
-                user_data = berikan_paket_ke_user(username, user_data, paket)
-                ada_perubahan = True
-            elif status in ["01", "02"]: # PENDING
+                if status == "00": # LUNAS
+                    # 🚀 FIX: Eksekusi database DULU, baru tampilkan sukses!
+                    user_data = berikan_paket_ke_user(username, user_data, paket)
+                    st.toast(f"Tagihan {paket} Lunas! Paket/Saldo ditambahkan.", icon="✅")
+                    ada_perubahan = True
+                elif status in ["01", "02"]: # PENDING
+                    sisa_pending.append(trx)
+                else: # EXPIRED
+                    st.toast(f"⚠️ Tagihan {paket} kadaluarsa/dibatalkan.", icon="❌")
+                    ada_perubahan = True
+            except Exception as e: 
+                # 🚀 FIX: Cegah silent crash, lempar print ke console terminal server
+                print(f"Error Duitku Polling: {e}")
                 sisa_pending.append(trx)
-            else: # EXPIRED
-                st.toast(f"⚠️ Tagihan {paket} kadaluarsa/dibatalkan.", icon="❌")
-                ada_perubahan = True
-        except: sisa_pending.append(trx)
 
-    if ada_perubahan:
-        user_data["pending_trx"] = sisa_pending
-        db.collection('users').document(username).update({"pending_trx": sisa_pending})
-    return user_data
+        if ada_perubahan:
+            user_data["pending_trx"] = sisa_pending
+            db.collection('users').document(username).update({"pending_trx": sisa_pending})
+            
+            # 🚀 AUTO-REFRESH DOMPET JIKA ADA TAGIHAN LUNAS
+            if 'temp_user_data' in st.session_state:
+                del st.session_state['temp_user_data']
+            st.rerun() # 🚀 FIX: Paksa muat ulang layar seketika agar dompet otomatis berubah!
+            
+        return user_data
     
 def check_expired(username, user_data):
     """SATPAM: Mengecek kedaluwarsa & MIGRASI OTOMATIS data lama."""
@@ -340,12 +373,13 @@ def check_expired(username, user_data):
             exp_date = datetime.datetime.fromisoformat(exp_val.replace("Z", "+00:00")) if isinstance(exp_val, str) else exp_val
             if now > exp_date:
                 st.toast("⚠️ Masa aktif habis. Inventori, Saldo & Bank Waktu di-reset.", icon="🚨")
-                db.collection('users').document(username).update({
-                    "inventori": [], "saldo": 0, "bank_menit": 0, "tanggal_expired": firestore.DELETE_FIELD
-                })
-                user_data["inventori"] = []
-                user_data["saldo"] = 0
-                user_data["bank_menit"] = 0
+                # 🚀 FIX: Turunkan kembali batas kasta ke titik terendah (Freemium)
+                reset_kasta = {
+                    "inventori": [], "saldo": 0, "bank_menit": 0, "tanggal_expired": firestore.DELETE_FIELD,
+                    "batas_audio_menit": 45, "batas_teks_karakter": 45000, "fup_dok_per_file": 2, "fup_dok_harian_limit": 0
+                }
+                db.collection('users').document(username).update(reset_kasta)
+                user_data.update(reset_kasta)
                 user_data.pop("tanggal_expired", None)
         except: pass
             
