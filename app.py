@@ -3059,51 +3059,107 @@ Namun, jika Anda ingin menggunakan FAST TRACK untuk upload file teks (.txt) seca
                         st.warning("💡 Silakan kurangi isi teks atau **Upgrade Paket** di menu samping.")
                         st.stop()
                     else:
-                        # 4. Lolos Validasi: Jalankan proses seperti biasa
-                        st.session_state.transcript = raw_text
-                        st.session_state.filename = os.path.splitext(uploaded_txt.name)[0]
-                        st.session_state.is_text_upload = True
-                        st.session_state.chat_history = [] 
-                        st.session_state.chat_usage_count = 0 
-                        st.session_state.ai_result = ""
+                        # --- 🚀 FASE 3: PEMOTONGAN KUOTA (TARIF KARCIS MASUK TEKS) ---
+                        durasi_teks = hitung_estimasi_menit(raw_text)
+                        berhasil_potong = False
+                        is_fallback_reguler = False
                         
-                        # --- 🚀 STRICT ORIGIN FUP (AIO SEBAGAI RAJA ABSOLUT) ---
-                        max_fup_reg = 0
-                        for pkt in u_info.get("inventori", []):
-                            p_name = pkt.get("nama", "").upper()
-                            if "AIO" not in p_name and pkt.get("kuota", 0) > 0:
-                                if "ENTERPRISE" in p_name: max_fup_reg = max(max_fup_reg, 15)
-                                elif "VIP" in p_name: max_fup_reg = max(max_fup_reg, 8)
-                                elif "EKSEKUTIF" in p_name: max_fup_reg = max(max_fup_reg, 6)
-                                elif "STARTER" in p_name: max_fup_reg = max(max_fup_reg, 4)
-                                elif "LITE" in p_name: max_fup_reg = max(max_fup_reg, 2)
-                                
-                        if u_info.get("bank_menit", 0) > 0:
-                            # 1. AIO ADALAH RAJA: Selalu berikan FUP Tertinggi jika punya AIO!
-                            st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
-                            st.session_state.is_using_aio = True
-                        elif max_fup_reg > 0:
-                            # 2. Jika tidak punya AIO, gunakan tiket Reguler
-                            st.session_state.sisa_nyawa_dok = max_fup_reg
-                            st.session_state.is_using_aio = False
+                        if st.session_state.user_role == "admin":
+                            berhasil_potong = True # Admin bebas hambatan
                         else:
-                            # 3. User Freemium
-                            st.session_state.sisa_nyawa_dok = 2
-                            st.session_state.is_using_aio = False
-                        # --- AKHIR KODE BARU ---
-    
-                        # Simpan ke Firebase agar tidak hilang saat di-refresh
-                        if st.session_state.logged_in:
-                            db.collection('users').document(st.session_state.current_user).update({
-                                "draft_transcript": st.session_state.transcript,
-                                "draft_filename": st.session_state.filename,
-                                "draft_ai_result": "",
-                                "draft_ai_prefix": "",
-                                "is_text_upload": True
-                            })
-                        
-                        st.success(f"✅ Teks Berhasil Dimuat ({jumlah_char:,} Karakter).")
-                        st.rerun()
+                            u_doc = db.collection('users').document(st.session_state.current_user)
+                            
+                            # 1. Cari Tiket Reguler yang tersedia
+                            inv = u_info.get("inventori", [])
+                            idx_to_cut = -1
+                            for i, pkt in enumerate(inv):
+                                if pkt.get('batas_durasi', 0) != 9999 and pkt.get('kuota', 0) > 0:
+                                    idx_to_cut = i
+                                    break
+                            
+                            bank_menit_user = u_info.get("bank_menit", 0)
+                            
+                            # 2. Eksekusi Pemotongan Cerdas
+                            if bank_menit_user > 0:
+                                if durasi_teks <= bank_menit_user:
+                                    # Skenario AIO Normal: Potong Bank Menit
+                                    new_bank = bank_menit_user - durasi_teks
+                                    u_doc.update({"bank_menit": new_bank})
+                                    st.toast(f"🌟 Teks setara {durasi_teks} Menit. Saldo AIO terpotong!", icon="⏳")
+                                    berhasil_potong = True
+                                else:
+                                    # Skenario Fallback Reguler: AIO Kurang, coba potong tiket reguler
+                                    if idx_to_cut != -1:
+                                        is_fallback_reguler = True
+                                        inv[idx_to_cut]['kuota'] -= 1
+                                        if inv[idx_to_cut]['kuota'] <= 0: inv.pop(idx_to_cut)
+                                        u_doc.update({"inventori": inv})
+                                        st.toast(f"🎟️ Waktu AIO kurang ({bank_menit_user} Mnt). 1 Tiket Reguler terpotong!", icon="✅")
+                                        berhasil_potong = True
+                                    else:
+                                        st.error(f"❌ **WAKTU AIO TIDAK CUKUP:** Beban teks Anda setara **{durasi_teks} Menit**, sisa AIO Anda **{bank_menit_user} Menit**.")
+                                        st.stop()
+                            else:
+                                # Skenario Murni Reguler: Potong 1 Tiket
+                                if idx_to_cut != -1:
+                                    inv[idx_to_cut]['kuota'] -= 1
+                                    if inv[idx_to_cut]['kuota'] <= 0: inv.pop(idx_to_cut)
+                                    u_doc.update({"inventori": inv})
+                                    st.toast("🎟️ 1 Tiket Reguler terpotong untuk upload Teks!", icon="✅")
+                                    berhasil_potong = True
+                                else:
+                                    st.error("❌ **TIKET HABIS:** Anda tidak memiliki tiket/kuota yang tersisa untuk memproses dokumen ini.")
+                                    st.stop()
+                                    
+                        # --- 4. LOLOS VALIDASI & SUDAH BAYAR: JALANKAN PROSES AI ---
+                        if berhasil_potong:
+                            st.session_state.transcript = raw_text
+                            st.session_state.filename = os.path.splitext(uploaded_txt.name)[0]
+                            st.session_state.is_text_upload = True
+                            st.session_state.chat_history = [] 
+                            st.session_state.chat_usage_count = 0 
+                            st.session_state.ai_result = ""
+                            st.session_state.durasi_audio_kotor = durasi_teks # Simpan jejak beban teks
+                            
+                            # --- 🚀 STRICT ORIGIN FUP (AIO SEBAGAI RAJA ABSOLUT) ---
+                            max_fup_reg = 0
+                            for pkt in u_info.get("inventori", []):
+                                p_name = pkt.get("nama", "").upper()
+                                if "AIO" not in p_name and pkt.get("kuota", 0) > 0:
+                                    if "ENTERPRISE" in p_name: max_fup_reg = max(max_fup_reg, 15)
+                                    elif "VIP" in p_name: max_fup_reg = max(max_fup_reg, 8)
+                                    elif "EKSEKUTIF" in p_name: max_fup_reg = max(max_fup_reg, 6)
+                                    elif "STARTER" in p_name: max_fup_reg = max(max_fup_reg, 4)
+                                    elif "LITE" in p_name: max_fup_reg = max(max_fup_reg, 2)
+                                    
+                            # FIX FUP: Jika kena Fallback Reguler, kasta AIO ditarik sementara untuk sesi ini!
+                            if u_info.get("bank_menit", 0) > 0 and not is_fallback_reguler:
+                                st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
+                                st.session_state.is_using_aio = True
+                            elif max_fup_reg > 0:
+                                st.session_state.sisa_nyawa_dok = max_fup_reg
+                                st.session_state.is_using_aio = False
+                            else:
+                                st.session_state.sisa_nyawa_dok = 2
+                                st.session_state.is_using_aio = False
+        
+                            # Simpan ke Firebase agar memori nyangkut permanen
+                            if st.session_state.logged_in:
+                                db.collection('users').document(st.session_state.current_user).update({
+                                    "draft_transcript": st.session_state.transcript,
+                                    "draft_filename": st.session_state.filename,
+                                    "draft_ai_result": "",
+                                    "draft_ai_prefix": "",
+                                    "is_text_upload": True
+                                })
+                                # Clear cache biar saldo Sidebar langsung berubah seketika!
+                                if 'temp_user_data' in st.session_state:
+                                    del st.session_state['temp_user_data']
+                            
+                            st.success(f"✅ Teks Berhasil Dimuat ({jumlah_char:,} Karakter | Beban Setara {durasi_teks} Menit).")
+                            import time
+                            time.sleep(1) # Jeda agar animasi notifikasi & pemotongan saldo terlihat oleh User
+                            st.rerun()
         else:
             st.success("Teks Transkrip Siap Diproses!")
             st.markdown("📄 **Teks Saat Ini:**")
@@ -4873,4 +4929,3 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
