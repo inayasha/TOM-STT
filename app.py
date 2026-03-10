@@ -38,7 +38,9 @@ if getattr(cookie_manager, '_CookieController__cookies', None) is None:
     
 # --- PENANGKAP SINYAL GOOGLE OAUTH2 ---
 if "code" in st.query_params and not st.session_state.get('logged_in', False):
+    st.info("⏳ Memproses tiket masuk dari Google... Mohon tunggu sebentar.")
     code = st.query_params["code"]
+    
     if "google_oauth" in st.secrets:
         import requests
         client_id = st.secrets["google_oauth"]["client_id"]
@@ -65,12 +67,17 @@ if "code" in st.query_params and not st.session_state.get('logged_in', False):
                 # Eksekusi Login!
                 st.session_state.current_user = email
                 st.session_state.logged_in = True
+                
+                # Perintah simpan cookie
                 cookie_manager.set('tomstt_session', email, max_age=2592000)
                 
-                # Bersihkan URL agar bersih kembali
+                # Hapus URL dari kode rahasia agar bersih, TAPI JANGAN DI-RERUN DULU
                 st.query_params.clear()
-                time.sleep(1) # Beri jeda 1 detik agar cookie menempel
+                st.success(f"✅ Berhasil masuk sebagai {email}! Memuat ulang area kerja...")
+                time.sleep(2) # KUNCI UTAMA: Beri jeda 2 detik agar browser sempat mencatat Cookie!
                 st.rerun()
+        else:
+            st.error(f"❌ Terjadi kesalahan saat menghubungi Google: {res.text}")
 
 # --- FIREBASE INITIALIZATION ---
 if "firebase" not in st.secrets:
@@ -2934,7 +2941,7 @@ with tab_auth:
     if not st.session_state.logged_in:
         st.markdown('<div class="login-box" style="text-align: center;"><h3>🔒 Portal Akses</h3><p>Silahkan masuk atau buat akun baru untuk mulai menggunakan AI.</p></div>', unsafe_allow_html=True)
         
-# 🚀 TOMBOL GOOGLE SIGN-IN (VERSI NATIVE PYTHON OAUTH2)
+# 🚀 TOMBOL OAUTH2 FIX KLIK & ANTI-IFRAME
         if "google_oauth" in st.secrets:
             client_id = st.secrets["google_oauth"]["client_id"]
             redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
@@ -2942,15 +2949,13 @@ with tab_auth:
             # Buat Link Pengalihan Resmi ke Google
             auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=openid%20email%20profile"
             
-            # 🚀 TOMBOL OAUTH2 DENGAN TARGET="_TOP" (ANTI-IFRAME BLOCK)
             st.markdown(f"""
-            <a href="{auth_url}" target="_top" style="text-decoration: none;">
-                <div style="display: flex; align-items: center; justify-content: center; width: 100%; background: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 10px;">
-                    Lanjutkan dengan Google
-                </div>
+            <a href="{auth_url}" target="_top" style="display: flex; align-items: center; justify-content: center; width: 100%; background: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; text-decoration: none; box-sizing: border-box;">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 10px;">
+                Lanjutkan dengan Google
             </a>
             """, unsafe_allow_html=True)
+            
             # 🚀 PEMBATAS ELEGAN (GARIS KIRI - TEKS - GARIS KANAN)
             st.markdown("""
             <div style="display: flex; align-items: center; text-align: center; margin-top: 5px; margin-bottom: 20px;">
