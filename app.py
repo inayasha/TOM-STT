@@ -2959,10 +2959,13 @@ with tab_auth:
             # Buat Link Pengalihan Resmi ke Google
             auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=openid%20email%20profile"
             
+            # 🚀 TOMBOL OAUTH2 (VERSI BUTTON HTML MURNI ANTI-BLOKIR)
             st.markdown(f"""
-            <a href="{auth_url}" target="_top" style="display: flex; align-items: center; justify-content: center; width: 100%; background: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; text-decoration: none; box-sizing: border-box;">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 10px;">
-                Lanjutkan dengan Google
+            <a href="{auth_url}" target="_top" style="text-decoration: none; display: block; margin-bottom: 15px;">
+                <button style="display: flex; align-items: center; justify-content: center; width: 100%; background-color: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-family: inherit; font-size: 15px; transition: 0.2s;">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 12px;">
+                    Lanjutkan dengan Google
+                </button>
             </a>
             """, unsafe_allow_html=True)
             
