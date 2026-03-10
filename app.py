@@ -2959,20 +2959,16 @@ with tab_auth:
             client_id = st.secrets["google_oauth"]["client_id"]
             redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
             
-            # 🚀 TOMBOL OAUTH2 (VERSI FORM SUBMIT - ANTI BUKA TAB BARU)
-            st.markdown(f"""
-            <form action="https://accounts.google.com/o/oauth2/v2/auth" method="GET" target="_top" style="margin-bottom: 15px;">
-                <input type="hidden" name="response_type" value="code">
-                <input type="hidden" name="client_id" value="{client_id}">
-                <input type="hidden" name="redirect_uri" value="{redirect_uri}">
-                <input type="hidden" name="scope" value="openid email profile">
-                
-                <button type="submit" style="display: flex; align-items: center; justify-content: center; width: 100%; background-color: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; transition: 0.2s;">
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 12px;">
-                    Lanjutkan dengan Google
-                </button>
-            </form>
-            """, unsafe_allow_html=True)
+            # Buat Link Pengalihan Resmi ke Google
+            auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=openid%20email%20profile"
+            
+            # 🚀 TOMBOL OAUTH2 (VERSI JAVASCRIPT REDIRECT - SAMA TAB & ANTI-BLOKIR)
+            st.components.v1.html(f"""
+            <button onclick="window.top.location.href='{auth_url}'" style="display: flex; align-items: center; justify-content: center; width: 98%; background-color: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; margin: 2px auto;">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 12px;">
+                Lanjutkan dengan Google
+            </button>
+            """, height=65)
             
             # 🚀 PEMBATAS ELEGAN (GARIS KIRI - TEKS - GARIS KANAN)
             st.markdown("""
