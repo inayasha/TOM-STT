@@ -35,6 +35,42 @@ cookie_manager = CookieController()
 # FIX: Mencegah error 'NoneType' pada Cookie saat proses Login/Logout
 if getattr(cookie_manager, '_CookieController__cookies', None) is None:
     cookie_manager._CookieController__cookies = {}
+    
+# --- PENANGKAP SINYAL GOOGLE OAUTH2 ---
+if "code" in st.query_params and not st.session_state.get('logged_in', False):
+    code = st.query_params["code"]
+    if "google_oauth" in st.secrets:
+        import requests
+        client_id = st.secrets["google_oauth"]["client_id"]
+        client_secret = st.secrets["google_oauth"]["client_secret"]
+        redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
+        
+        # Tukar kode dengan Tiket Masuk Google
+        token_url = "https://oauth2.googleapis.com/token"
+        data = {"code": code, "client_id": client_id, "client_secret": client_secret, "redirect_uri": redirect_uri, "grant_type": "authorization_code"}
+        res = requests.post(token_url, data=data)
+        
+        if res.status_code == 200:
+            access_token = res.json().get("access_token")
+            # Ambil profil user
+            user_info = requests.get("https://www.googleapis.com/oauth2/v2/userinfo", headers={"Authorization": f"Bearer {access_token}"}).json()
+            email = user_info.get("email")
+            
+            if email:
+                # Daftarkan ke Firestore jika belum ada
+                user_data = get_user(email)
+                if not user_data:
+                    save_user(email, "GOOGLE_SSO_USER", "user")
+                
+                # Eksekusi Login!
+                st.session_state.current_user = email
+                st.session_state.logged_in = True
+                cookie_manager.set('tomstt_session', email, max_age=2592000)
+                
+                # Bersihkan URL agar bersih kembali
+                st.query_params.clear()
+                time.sleep(1) # Beri jeda 1 detik agar cookie menempel
+                st.rerun()
 
 # --- FIREBASE INITIALIZATION ---
 if "firebase" not in st.secrets:
@@ -2898,70 +2934,22 @@ with tab_auth:
     if not st.session_state.logged_in:
         st.markdown('<div class="login-box" style="text-align: center;"><h3>🔒 Portal Akses</h3><p>Silahkan masuk atau buat akun baru untuk mulai menggunakan AI.</p></div>', unsafe_allow_html=True)
         
-        # 🚀 INJEKSI TOMBOL GOOGLE SIGN-IN (HTML & FIREBASE JS SDK)
-        api_key = st.secrets.get("firebase_web_api_key", "")
-        project_id = ""
-        if "firebase" in st.secrets and "project_id" in st.secrets["firebase"]:
-            project_id = st.secrets["firebase"]["project_id"]
+# 🚀 TOMBOL GOOGLE SIGN-IN (VERSI NATIVE PYTHON OAUTH2)
+        if "google_oauth" in st.secrets:
+            client_id = st.secrets["google_oauth"]["client_id"]
+            redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
             
-        if api_key and project_id:
-            auth_domain = f"{project_id}.firebaseapp.com"
-            google_login_html = f"""
-            <script type="module">
-              import {{ initializeApp }} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-              import {{ getAuth, signInWithPopup, GoogleAuthProvider }} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-
-              const firebaseConfig = {{
-                apiKey: "{api_key}",
-                authDomain: "{auth_domain}",
-                projectId: "{project_id}"
-              }};
-
-              const app = initializeApp(firebaseConfig);
-              const auth = getAuth(app);
-              const provider = new GoogleAuthProvider();
-
-              document.getElementById('google-btn').addEventListener('click', () => {{
-                const btn = document.getElementById('google-btn');
-                btn.innerHTML = "⏳ Menghubungkan ke Google...";
-                btn.style.pointerEvents = "none";
-
-                signInWithPopup(auth, provider)
-                  .then((result) => {{
-                    const user = result.user;
-                    try {{
-                        window.parent.document.cookie = "tomstt_session=" + user.email + "; path=/; max-age=2592000";
-                        window.parent.location.reload();
-                    }} catch(e) {{
-                        alert("Keamanan Browser memblokir auto-login. Silahkan gunakan form manual Email/Password.");
-                        btn.innerHTML = "Login Google Diblokir Browser";
-                    }}
-                  }}).catch((error) => {{
-                    console.error(error);
-                    alert("Gagal Login: " + error.message);
-                    btn.innerHTML = `<img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style="width: 20px; height: 20px; margin-right: 12px;"> Lanjutkan dengan Google`;
-                    btn.style.pointerEvents = "auto";
-                  }});
-              }});
-            </script>
-            <style>
-              body {{ margin: 0; padding: 0; background-color: transparent; }}
-              .g-btn {{
-                 display: flex; align-items: center; justify-content: center; width: 100%;
-                 background: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px;
-                 border-radius: 10px; font-family: 'Plus Jakarta Sans', sans-serif;
-                 font-weight: 700; font-size: 15px; cursor: pointer; transition: all 0.2s; 
-                 box-shadow: 0 2px 4px rgba(0,0,0,0.05); box-sizing: border-box;
-              }}
-              .g-btn:hover {{ background: #f9fafb; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-color: #9ca3af; }}
-              .g-btn img {{ width: 20px; height: 20px; margin-right: 12px; }}
-            </style>
-            <button id="google-btn" class="g-btn">
-              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G">
-              Lanjutkan dengan Google
-            </button>
-            """
-            components.html(google_login_html, height=65)
+            # Buat Link Pengalihan Resmi ke Google
+            auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=openid%20email%20profile"
+            
+            st.markdown(f"""
+            <a href="{auth_url}" target="_self" style="text-decoration: none;">
+                <div style="display: flex; align-items: center; justify-content: center; width: 100%; background: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 10px;">
+                    Lanjutkan dengan Google
+                </div>
+            </a>
+            """, unsafe_allow_html=True)
             st.markdown("<div style='text-align: center; color: #9ca3af; font-size: 13px; margin-top: -5px; margin-bottom: 15px; font-weight: 600;'>ATAU GUNAKAN EMAIL</div>", unsafe_allow_html=True)
             
         auth_tab1, auth_tab2 = st.tabs(["🔑 Masuk (Login)", "📝 Daftar Baru (Register)"])
