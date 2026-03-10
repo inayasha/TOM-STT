@@ -2942,15 +2942,23 @@ with tab_auth:
             # Buat Link Pengalihan Resmi ke Google
             auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=openid%20email%20profile"
             
+            # 🚀 TOMBOL OAUTH2 DENGAN TARGET="_TOP" (ANTI-IFRAME BLOCK)
             st.markdown(f"""
-            <a href="{auth_url}" target="_self" style="text-decoration: none;">
+            <a href="{auth_url}" target="_top" style="text-decoration: none;">
                 <div style="display: flex; align-items: center; justify-content: center; width: 100%; background: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
                     <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 10px;">
                     Lanjutkan dengan Google
                 </div>
             </a>
             """, unsafe_allow_html=True)
-            st.markdown("<div style='text-align: center; color: #9ca3af; font-size: 13px; margin-top: -5px; margin-bottom: 15px; font-weight: 600;'>ATAU GUNAKAN EMAIL</div>", unsafe_allow_html=True)
+            # 🚀 PEMBATAS ELEGAN (GARIS KIRI - TEKS - GARIS KANAN)
+            st.markdown("""
+            <div style="display: flex; align-items: center; text-align: center; margin-top: 5px; margin-bottom: 20px;">
+                <div style="flex: 1; border-bottom: 1px solid #e5e7eb;"></div>
+                <span style="padding: 0 15px; color: #9ca3af; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">ATAU GUNAKAN EMAIL</span>
+                <div style="flex: 1; border-bottom: 1px solid #e5e7eb;"></div>
+            </div>
+            """, unsafe_allow_html=True)
             
         auth_tab1, auth_tab2 = st.tabs(["🔑 Masuk (Login)", "📝 Daftar Baru (Register)"])
         
