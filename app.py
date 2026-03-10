@@ -38,46 +38,56 @@ if getattr(cookie_manager, '_CookieController__cookies', None) is None:
     
 # --- PENANGKAP SINYAL GOOGLE OAUTH2 ---
 if "code" in st.query_params and not st.session_state.get('logged_in', False):
-    st.info("⏳ Memproses tiket masuk dari Google... Mohon tunggu sebentar.")
     code = st.query_params["code"]
     
-    if "google_oauth" in st.secrets:
-        import requests
-        client_id = st.secrets["google_oauth"]["client_id"]
-        client_secret = st.secrets["google_oauth"]["client_secret"]
-        redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
+    # 🛡️ MENCEGAH DOUBLE-FIRE (PENYEBAB ERROR INVALID_GRANT)
+    if st.session_state.get('last_oauth_code') == code:
+        st.query_params.clear()
+    else:
+        st.session_state['last_oauth_code'] = code
+        st.info("⏳ Memvalidasi tiket masuk dari Google...")
         
-        # Tukar kode dengan Tiket Masuk Google
-        token_url = "https://oauth2.googleapis.com/token"
-        data = {"code": code, "client_id": client_id, "client_secret": client_secret, "redirect_uri": redirect_uri, "grant_type": "authorization_code"}
-        res = requests.post(token_url, data=data)
-        
-        if res.status_code == 200:
-            access_token = res.json().get("access_token")
-            # Ambil profil user
-            user_info = requests.get("https://www.googleapis.com/oauth2/v2/userinfo", headers={"Authorization": f"Bearer {access_token}"}).json()
-            email = user_info.get("email")
+        if "google_oauth" in st.secrets:
+            import requests
+            client_id = st.secrets["google_oauth"]["client_id"]
+            client_secret = st.secrets["google_oauth"]["client_secret"]
+            redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
             
-            if email:
-                # Daftarkan ke Firestore jika belum ada
-                user_data = get_user(email)
-                if not user_data:
-                    save_user(email, "GOOGLE_SSO_USER", "user")
+            token_url = "https://oauth2.googleapis.com/token"
+            data = {"code": code, "client_id": client_id, "client_secret": client_secret, "redirect_uri": redirect_uri, "grant_type": "authorization_code"}
+            
+            res = requests.post(token_url, data=data)
+            
+            if res.status_code == 200:
+                access_token = res.json().get("access_token")
+                user_info = requests.get("https://www.googleapis.com/oauth2/v2/userinfo", headers={"Authorization": f"Bearer {access_token}"}).json()
+                email = user_info.get("email")
                 
-                # Eksekusi Login!
-                st.session_state.current_user = email
-                st.session_state.logged_in = True
-                
-                # Perintah simpan cookie
-                cookie_manager.set('tomstt_session', email, max_age=2592000)
-                
-                # Hapus URL dari kode rahasia agar bersih, TAPI JANGAN DI-RERUN DULU
+                if email:
+                    # Daftarkan ke Firestore jika belum ada
+                    user_data = get_user(email)
+                    if not user_data:
+                        save_user(email, "GOOGLE_SSO_USER", "user")
+                    
+                    # Eksekusi Login
+                    st.session_state.current_user = email
+                    st.session_state.logged_in = True
+                    st.session_state.user_role = user_data.get("role", "user") if user_data else "user"
+                    
+                    # Perintah simpan cookie
+                    cookie_manager.set('tomstt_session', email, max_age=2592000, path='/')
+                    
+                    # Bersihkan URL di browser agar tidak error jika di-refresh
+                    st.query_params.clear()
+                    
+                    st.success(f"✅ Berhasil masuk sebagai **{email}**! Selamat datang.")
+                    
+                    # 🚀 KUNCI PERBAIKAN: HAPUS st.rerun() di sini!
+                    # Membiarkan script terus berjalan ke bawah akan memastikan Javascript Cookie terkirim aman ke browser.
+            else:
+                # Menangani error jika kode sudah kedaluwarsa/terpakai
                 st.query_params.clear()
-                st.success(f"✅ Berhasil masuk sebagai {email}! Memuat ulang area kerja...")
-                time.sleep(2) # KUNCI UTAMA: Beri jeda 2 detik agar browser sempat mencatat Cookie!
-                st.rerun()
-        else:
-            st.error(f"❌ Terjadi kesalahan saat menghubungi Google: {res.text}")
+                st.error("❌ Sesi Google terputus/kedaluwarsa. Silakan klik ulang tombol 'Lanjutkan dengan Google'.")
 
 # --- FIREBASE INITIALIZATION ---
 if "firebase" not in st.secrets:
