@@ -2164,7 +2164,10 @@ with st.sidebar:
                 
         st.write("")
         if st.button("🚪 Logout", use_container_width=True):
-            cookie_manager.remove('tomstt_session') 
+            try:
+                cookie_manager.remove('tomstt_session')
+            except Exception:
+                pass
             st.session_state.logged_in, st.session_state.current_user, st.session_state.user_role = False, "", ""
             st.session_state.ai_result = ""
             st.rerun()
@@ -2959,13 +2962,11 @@ with tab_auth:
             # Buat Link Pengalihan Resmi ke Google
             auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=openid%20email%20profile"
             
-            # 🚀 TOMBOL OAUTH2 (VERSI BUTTON HTML MURNI ANTI-BLOKIR)
+            # 🚀 TOMBOL OAUTH2 (VERSI <a> TAG MURNI ANTI-BLOKIR)
             st.markdown(f"""
-            <a href="{auth_url}" target="_top" style="text-decoration: none; display: block; margin-bottom: 15px;">
-                <button style="display: flex; align-items: center; justify-content: center; width: 100%; background-color: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-family: inherit; font-size: 15px; transition: 0.2s;">
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 12px;">
-                    Lanjutkan dengan Google
-                </button>
+            <a href="{auth_url}" target="_top" style="display: flex; align-items: center; justify-content: center; width: 100%; background-color: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; text-decoration: none; transition: 0.2s; margin-bottom: 15px;">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 12px;">
+                Lanjutkan dengan Google
             </a>
             """, unsafe_allow_html=True)
             
@@ -3095,10 +3096,13 @@ with tab_auth:
         """, unsafe_allow_html=True)
         
         # TOMBOL LOGOUT UTAMA (Khusus Tab Akun, Menempel di bawah Email)
-        c_out1, c_out2, c_out3 = st.columns([1, 3, 1]) # Angka 3 bisa Anda ubah-ubah untuk mengatur panjang tombol di PC
+        c_out1, c_out2, c_out3 = st.columns([1, 3, 1]) 
         with c_out2:
             if st.button("Logout", type="primary", use_container_width=True):
-                cookie_manager.remove('tomstt_session') 
+                try:
+                    cookie_manager.remove('tomstt_session')
+                except Exception:
+                    pass
                 st.session_state.logged_in, st.session_state.current_user, st.session_state.user_role = False, "", ""
                 st.session_state.ai_result = ""
                 st.rerun()
