@@ -36,59 +36,6 @@ cookie_manager = CookieController()
 if getattr(cookie_manager, '_CookieController__cookies', None) is None:
     cookie_manager._CookieController__cookies = {}
     
-# --- PENANGKAP SINYAL GOOGLE OAUTH2 ---
-if "code" in st.query_params and not st.session_state.get('logged_in', False):
-    code = st.query_params["code"]
-    
-    # 🛡️ MENCEGAH DOUBLE-FIRE (PENYEBAB ERROR INVALID_GRANT)
-    if st.session_state.get('last_oauth_code') == code:
-        st.query_params.clear()
-    else:
-        st.session_state['last_oauth_code'] = code
-        st.info("⏳ Memvalidasi tiket masuk dari Google...")
-        
-        if "google_oauth" in st.secrets:
-            import requests
-            client_id = st.secrets["google_oauth"]["client_id"]
-            client_secret = st.secrets["google_oauth"]["client_secret"]
-            redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
-            
-            token_url = "https://oauth2.googleapis.com/token"
-            data = {"code": code, "client_id": client_id, "client_secret": client_secret, "redirect_uri": redirect_uri, "grant_type": "authorization_code"}
-            
-            res = requests.post(token_url, data=data)
-            
-            if res.status_code == 200:
-                access_token = res.json().get("access_token")
-                user_info = requests.get("https://www.googleapis.com/oauth2/v2/userinfo", headers={"Authorization": f"Bearer {access_token}"}).json()
-                email = user_info.get("email")
-                
-                if email:
-                    # Daftarkan ke Firestore jika belum ada
-                    user_data = get_user(email)
-                    if not user_data:
-                        save_user(email, "GOOGLE_SSO_USER", "user")
-                    
-                    # Eksekusi Login
-                    st.session_state.current_user = email
-                    st.session_state.logged_in = True
-                    st.session_state.user_role = user_data.get("role", "user") if user_data else "user"
-                    
-                    # Perintah simpan cookie
-                    cookie_manager.set('tomstt_session', email, max_age=2592000, path='/')
-                    
-                    # Bersihkan URL di browser agar tidak error jika di-refresh
-                    st.query_params.clear()
-                    
-                    st.success(f"✅ Berhasil masuk sebagai **{email}**! Selamat datang.")
-                    
-                    # 🚀 KUNCI PERBAIKAN: HAPUS st.rerun() di sini!
-                    # Membiarkan script terus berjalan ke bawah akan memastikan Javascript Cookie terkirim aman ke browser.
-            else:
-                # Menangani error jika kode sudah kedaluwarsa/terpakai
-                st.query_params.clear()
-                st.error("❌ Sesi Google terputus/kedaluwarsa. Silakan klik ulang tombol 'Lanjutkan dengan Google'.")
-
 # --- FIREBASE INITIALIZATION ---
 if "firebase" not in st.secrets:
     st.error("⚠️ Kredensial Firebase belum di-set di Streamlit Secrets. Ikuti panduan untuk memasukkan JSON Firebase.")
@@ -779,6 +726,59 @@ if 'chat_usage_count' not in st.session_state: st.session_state.chat_usage_count
 
 if "temp_user_data" not in st.session_state:
     st.session_state.temp_user_data = {}
+    
+# --- PENANGKAP SINYAL GOOGLE OAUTH2 ---
+if "code" in st.query_params and not st.session_state.get('logged_in', False):
+    code = st.query_params["code"]
+    
+    # 🛡️ MENCEGAH DOUBLE-FIRE (PENYEBAB ERROR INVALID_GRANT)
+    if st.session_state.get('last_oauth_code') == code:
+        st.query_params.clear()
+    else:
+        st.session_state['last_oauth_code'] = code
+        st.info("⏳ Memvalidasi tiket masuk dari Google...")
+        
+        if "google_oauth" in st.secrets:
+            import requests
+            client_id = st.secrets["google_oauth"]["client_id"]
+            client_secret = st.secrets["google_oauth"]["client_secret"]
+            redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
+            
+            token_url = "https://oauth2.googleapis.com/token"
+            data = {"code": code, "client_id": client_id, "client_secret": client_secret, "redirect_uri": redirect_uri, "grant_type": "authorization_code"}
+            
+            res = requests.post(token_url, data=data)
+            
+            if res.status_code == 200:
+                access_token = res.json().get("access_token")
+                user_info = requests.get("https://www.googleapis.com/oauth2/v2/userinfo", headers={"Authorization": f"Bearer {access_token}"}).json()
+                email = user_info.get("email")
+                
+                if email:
+                    # Daftarkan ke Firestore jika belum ada
+                    user_data = get_user(email)
+                    if not user_data:
+                        save_user(email, "GOOGLE_SSO_USER", "user")
+                    
+                    # Eksekusi Login
+                    st.session_state.current_user = email
+                    st.session_state.logged_in = True
+                    st.session_state.user_role = user_data.get("role", "user") if user_data else "user"
+                    
+                    # Perintah simpan cookie
+                    cookie_manager.set('tomstt_session', email, max_age=2592000, path='/')
+                    
+                    # Bersihkan URL di browser agar tidak error jika di-refresh
+                    st.query_params.clear()
+                    
+                    st.success(f"✅ Berhasil masuk sebagai **{email}**! Selamat datang.")
+                    
+                    # 🚀 KUNCI PERBAIKAN: HAPUS st.rerun() di sini!
+                    # Membiarkan script terus berjalan ke bawah akan memastikan Javascript Cookie terkirim aman ke browser.
+            else:
+                # Menangani error jika kode sudah kedaluwarsa/terpakai
+                st.query_params.clear()
+                st.error("❌ Sesi Google terputus/kedaluwarsa. Silakan klik ulang tombol 'Lanjutkan dengan Google'.")
 
 # --- SISTEM AUTO-LOGIN (VERSI STABIL PERSISTENT LOGIN) ---
 if not st.session_state.get('logged_in', False):
