@@ -738,6 +738,12 @@ if not st.session_state.get('logged_in', False):
 
     if saved_user:
         user_data = get_user(saved_user)
+        
+        # 🚀 SSO GATEWAY: OTOMATIS BUAT DOMPET JIKA USER GOOGLE BARU
+        if not user_data:
+            save_user(saved_user, "GOOGLE_SSO_USER", "user")
+            user_data = {"role": "user"}
+            
         if user_data:
             # Kembalikan seluruh state penting
             st.session_state.logged_in = True
@@ -2892,6 +2898,72 @@ with tab_auth:
     if not st.session_state.logged_in:
         st.markdown('<div class="login-box" style="text-align: center;"><h3>🔒 Portal Akses</h3><p>Silahkan masuk atau buat akun baru untuk mulai menggunakan AI.</p></div>', unsafe_allow_html=True)
         
+        # 🚀 INJEKSI TOMBOL GOOGLE SIGN-IN (HTML & FIREBASE JS SDK)
+        api_key = st.secrets.get("firebase_web_api_key", "")
+        project_id = ""
+        if "firebase" in st.secrets and "project_id" in st.secrets["firebase"]:
+            project_id = st.secrets["firebase"]["project_id"]
+            
+        if api_key and project_id:
+            auth_domain = f"{project_id}.firebaseapp.com"
+            google_login_html = f"""
+            <script type="module">
+              import {{ initializeApp }} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+              import {{ getAuth, signInWithPopup, GoogleAuthProvider }} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+              const firebaseConfig = {{
+                apiKey: "{api_key}",
+                authDomain: "{auth_domain}",
+                projectId: "{project_id}"
+              }};
+
+              const app = initializeApp(firebaseConfig);
+              const auth = getAuth(app);
+              const provider = new GoogleAuthProvider();
+
+              document.getElementById('google-btn').addEventListener('click', () => {{
+                const btn = document.getElementById('google-btn');
+                btn.innerHTML = "⏳ Menghubungkan ke Google...";
+                btn.style.pointerEvents = "none";
+
+                signInWithPopup(auth, provider)
+                  .then((result) => {{
+                    const user = result.user;
+                    try {{
+                        window.parent.document.cookie = "tomstt_session=" + user.email + "; path=/; max-age=2592000";
+                        window.parent.location.reload();
+                    }} catch(e) {{
+                        alert("Keamanan Browser memblokir auto-login. Silahkan gunakan form manual Email/Password.");
+                        btn.innerHTML = "Login Google Diblokir Browser";
+                    }}
+                  }}).catch((error) => {{
+                    console.error(error);
+                    alert("Gagal Login: " + error.message);
+                    btn.innerHTML = `<img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style="width: 20px; height: 20px; margin-right: 12px;"> Lanjutkan dengan Google`;
+                    btn.style.pointerEvents = "auto";
+                  }});
+              }});
+            </script>
+            <style>
+              body {{ margin: 0; padding: 0; background-color: transparent; }}
+              .g-btn {{
+                 display: flex; align-items: center; justify-content: center; width: 100%;
+                 background: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px;
+                 border-radius: 10px; font-family: 'Plus Jakarta Sans', sans-serif;
+                 font-weight: 700; font-size: 15px; cursor: pointer; transition: all 0.2s; 
+                 box-shadow: 0 2px 4px rgba(0,0,0,0.05); box-sizing: border-box;
+              }}
+              .g-btn:hover {{ background: #f9fafb; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-color: #9ca3af; }}
+              .g-btn img {{ width: 20px; height: 20px; margin-right: 12px; }}
+            </style>
+            <button id="google-btn" class="g-btn">
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G">
+              Lanjutkan dengan Google
+            </button>
+            """
+            components.html(google_login_html, height=65)
+            st.markdown("<div style='text-align: center; color: #9ca3af; font-size: 13px; margin-top: -5px; margin-bottom: 15px; font-weight: 600;'>ATAU GUNAKAN EMAIL</div>", unsafe_allow_html=True)
+            
         auth_tab1, auth_tab2 = st.tabs(["🔑 Masuk (Login)", "📝 Daftar Baru (Register)"])
         
 # --- TAB LOGIN ---
@@ -4956,3 +5028,4 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
+
