@@ -2971,7 +2971,7 @@ with tab_auth:
             """, unsafe_allow_html=True)
             
             # (Cadangan Keamanan: Tombol Bawaan Streamlit jika sewaktu-waktu HTML di atas diblokir browser pengguna)
-            st.link_button("🌐 Lanjutkan dengan Google", auth_url, type="secondary", use_container_width=True)
+            # st.link_button("Lanjutkan dengan Google", auth_url, type="secondary", use_container_width=True)
             
             # 🚀 PEMBATAS ELEGAN (GARIS KIRI - TEKS - GARIS KANAN)
             st.markdown("""
