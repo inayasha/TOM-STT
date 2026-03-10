@@ -2962,13 +2962,16 @@ with tab_auth:
             # Buat Link Pengalihan Resmi ke Google
             auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=openid%20email%20profile"
             
-            # 🚀 TOMBOL OAUTH2 (VERSI JAVASCRIPT REDIRECT - SAMA TAB & ANTI-BLOKIR)
-            st.components.v1.html(f"""
-            <button onclick="window.top.location.href='{auth_url}'" style="display: flex; align-items: center; justify-content: center; width: 98%; background-color: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; margin: 2px auto;">
+            # 🚀 TOMBOL OAUTH2 (VERSI TAB/WINDOW BARU - 100% PASTI BISA DIKLIK)
+            st.markdown(f"""
+            <a href="{auth_url}" target="_blank" style="display: flex; align-items: center; justify-content: center; width: 100%; background-color: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; text-decoration: none; margin-bottom: 15px;">
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 12px;">
                 Lanjutkan dengan Google
-            </button>
-            """, height=65)
+            </a>
+            """, unsafe_allow_html=True)
+            
+            # (Cadangan Keamanan: Tombol Bawaan Streamlit jika sewaktu-waktu HTML di atas diblokir browser pengguna)
+            # st.link_button("Lanjutkan dengan Google", auth_url, type="secondary", use_container_width=True)
             
             # 🚀 PEMBATAS ELEGAN (GARIS KIRI - TEKS - GARIS KANAN)
             st.markdown("""
