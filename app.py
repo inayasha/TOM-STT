@@ -2275,7 +2275,7 @@ def jalankan_proses_transkrip(audio_to_process, source_name, lang_code):
         tmp_file.write(audio_to_process.getvalue())
         input_path = tmp_file.name
         
-# --- FASE 2: THE INTERCEPTOR (AUDIO GATE) ---
+    # --- FASE 2: THE INTERCEPTOR (AUDIO GATE) ---
     with st.spinner("🛡️ Menjalankan Front-Gate Validation..."):
         # 1. Ambil durasi riil & Tarik data user terbaru
         durasi_menit = math.ceil(get_duration(input_path) / 60)
@@ -2283,6 +2283,10 @@ def jalankan_proses_transkrip(audio_to_process, source_name, lang_code):
         
         # 2. Ambil Batas Kasta (Default 45m jika user belum update paket di sistem baru)
         batas_kasta = u_info.get("batas_audio_menit", 45) 
+        
+        # 🚀 BYPASS KHUSUS ADMIN
+        if u_info.get("role") == "admin":
+            batas_kasta = 999999
         
         # 3. Filter Kasta (BLOCKIR TOTAL)
         if durasi_menit > batas_kasta:
@@ -2416,6 +2420,10 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
         u_info = get_user(st.session_state.current_user)
         # Default 45 menit jika metadata kasta belum ada (User lama)
         batas_kasta = u_info.get("batas_audio_menit", 45) 
+        
+        # 🚀 BYPASS KHUSUS ADMIN
+        if u_info.get("role") == "admin":
+            batas_kasta = 999999
         
         # 3. Filter Kasta (BLOCKIR SEBELUM PROSES)
         if durasi_menit > batas_kasta:
@@ -3067,6 +3075,10 @@ Namun, jika Anda ingin menggunakan FAST TRACK untuk upload file teks (.txt) seca
                     
                     # 2. Ambil batas kasta dari profil user
                     batas_char = u_info.get("batas_teks_karakter", 45000)
+                    
+                    # 🚀 BYPASS KHUSUS ADMIN
+                    if u_info.get("role") == "admin":
+                        batas_char = 99999999
                     
                     # 3. FASE 2: INTERCEPTOR (Validasi Karakter)
                     if jumlah_char > batas_char:
@@ -4944,4 +4956,3 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
