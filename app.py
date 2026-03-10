@@ -2959,19 +2959,20 @@ with tab_auth:
             client_id = st.secrets["google_oauth"]["client_id"]
             redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
             
-            # Buat Link Pengalihan Resmi ke Google
-            auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=openid%20email%20profile"
-            
-            # 🚀 TOMBOL OAUTH2 (VERSI TAB/WINDOW BARU - 100% PASTI BISA DIKLIK)
+            # 🚀 TOMBOL OAUTH2 (VERSI FORM SUBMIT - ANTI BUKA TAB BARU)
             st.markdown(f"""
-            <a href="{auth_url}" target="_blank" style="display: flex; align-items: center; justify-content: center; width: 100%; background-color: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; text-decoration: none; margin-bottom: 15px;">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 12px;">
-                Lanjutkan dengan Google
-            </a>
+            <form action="https://accounts.google.com/o/oauth2/v2/auth" method="GET" target="_top" style="margin-bottom: 15px;">
+                <input type="hidden" name="response_type" value="code">
+                <input type="hidden" name="client_id" value="{client_id}">
+                <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+                <input type="hidden" name="scope" value="openid email profile">
+                
+                <button type="submit" style="display: flex; align-items: center; justify-content: center; width: 100%; background-color: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; transition: 0.2s;">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 12px;">
+                    Lanjutkan dengan Google
+                </button>
+            </form>
             """, unsafe_allow_html=True)
-            
-            # (Cadangan Keamanan: Tombol Bawaan Streamlit jika sewaktu-waktu HTML di atas diblokir browser pengguna)
-            # st.link_button("Lanjutkan dengan Google", auth_url, type="secondary", use_container_width=True)
             
             # 🚀 PEMBATAS ELEGAN (GARIS KIRI - TEKS - GARIS KANAN)
             st.markdown("""
