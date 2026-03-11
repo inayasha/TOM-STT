@@ -35,14 +35,21 @@ cookie_manager = CookieController()
 # FIX: Mencegah error 'NoneType' pada Cookie saat proses Login/Logout
 if getattr(cookie_manager, '_CookieController__cookies', None) is None:
     cookie_manager._CookieController__cookies = {}
-    
+
 # --- FIREBASE INITIALIZATION ---
 if "firebase" not in st.secrets:
     st.error("⚠️ Kredensial Firebase belum di-set di Streamlit Secrets. Ikuti panduan untuk memasukkan JSON Firebase.")
     st.stop()
 
 if not firebase_admin._apps:
-    cred = credentials.Certificate(dict(st.secrets["firebase"]))
+    # 1. Ambil rahasia Firebase dari st.secrets
+    firebase_secrets = dict(st.secrets["firebase"])
+    
+    # 2. 🚀 FIX ANTI-ERROR: Paksa ubah teks harfiah '\n' menjadi karakter Enter sesungguhnya
+    firebase_secrets["private_key"] = firebase_secrets["private_key"].replace('\\n', '\n')
+    
+    # 3. Masukkan ke dalam sistem mesin Firebase
+    cred = credentials.Certificate(firebase_secrets)
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
@@ -570,22 +577,26 @@ def redeem_voucher(username, kode_voucher):
         else:
             base_date = now
             
-        # Tentukan tambahan hari & BONUS SALDO sesuai paket (Blueprint Baru)
-        hari_tambah = 14
-        bonus_saldo = 2000  # Default Paket LITE
+        # --- 🚀 FIX 1: TENTUKAN TAMBAHAN HARI & BONUS SALDO (100% SINKRON DENGAN HARGA ASLI) ---
+        nama_pkt_v = v_latest['nama_paket'].upper()
         
-        if "STARTER" in v_latest['nama_paket'].upper() or "Starter" in v_latest['nama_paket']: 
-            hari_tambah = 30
-            bonus_saldo = 5000
-        elif "EKSEKUTIF" in v_latest['nama_paket'].upper() or "Eksekutif" in v_latest['nama_paket']: 
-            hari_tambah = 45
-            bonus_saldo = 15000
-        elif "VIP" in v_latest['nama_paket'].upper(): 
-            hari_tambah = 60
-            bonus_saldo = 35000
-        elif "ENTERPRISE" in v_latest['nama_paket'].upper() or "Enterprise" in v_latest['nama_paket']: 
-            hari_tambah = 90
-            bonus_saldo = 80000
+        hari_tambah = 14
+        bonus_saldo = 2500  # Default LITE (Disamakan dengan asli)
+        
+        if "STARTER" in nama_pkt_v: 
+            hari_tambah = 30; bonus_saldo = 5000
+        elif "EKSEKUTIF" in nama_pkt_v: 
+            hari_tambah = 45; bonus_saldo = 15000
+        elif "VIP" in nama_pkt_v: 
+            hari_tambah = 60; bonus_saldo = 30000 # Disamakan dengan asli
+        elif "ENTERPRISE" in nama_pkt_v: 
+            hari_tambah = 90; bonus_saldo = 75000 # Disamakan dengan asli
+        elif "AIO 10" in nama_pkt_v: 
+            hari_tambah = 30; bonus_saldo = 10000 # Injeksi Logika AIO yang terlewat
+        elif "AIO 30" in nama_pkt_v: 
+            hari_tambah = 60; bonus_saldo = 25000
+        elif "AIO 100" in nama_pkt_v: 
+            hari_tambah = 90; bonus_saldo = 75000
         
         # Kalkulasi Expired (Maks 150 Hari)
         new_exp_date = base_date + datetime.timedelta(days=hari_tambah)
@@ -596,19 +607,36 @@ def redeem_voucher(username, kode_voucher):
         inventori = u_data.get("inventori", [])
         ditemukan = False
         for pkt in inventori:
-            # FIX: Tumpuk kuota dengan aman (Abaikan huruf besar/kecil)
-            if pkt['nama'].upper() == v_latest['nama_paket'].upper() and pkt['batas_durasi'] == v_latest['batas_durasi']:
+            if pkt['nama'].upper() == nama_pkt_v and pkt['batas_durasi'] == v_latest['batas_durasi']:
                 pkt['kuota'] += v_latest['kuota_paket']
                 ditemukan = True
                 break
         if not ditemukan:
-            inventori.append({"nama": v_latest['nama_paket'].upper(), "kuota": v_latest['kuota_paket'], "batas_durasi": v_latest['batas_durasi']})
+            inventori.append({"nama": nama_pkt_v, "kuota": v_latest['kuota_paket'], "batas_durasi": v_latest['batas_durasi']})
             
-        # Eksekusi Pembaruan Database (Tambahkan Inventori, Expired, dan SALDO BARU)
+        # Eksekusi Pembaruan Saldo & Bank Menit
         new_saldo = current_saldo + bonus_saldo
-        
-        # 🚀 FIX: TAMBAHKAN BANK MENIT DARI VOUCHER (JIKA ADA)
         new_bank_menit = u_data.get("bank_menit", 0) + v_latest.get('bank_menit', 0)
+        
+        # --- 🚀 FIX 2: UPDATE KASTA LIMIT AUDIO, TEKS & FUP (AGAR USER VOUCHER OTOMATIS NAIK KELAS) ---
+        max_aud = 45
+        max_txt = 45000
+        max_fup = 2
+        max_fup_h = 0
+        
+        for pkt in inventori:
+            p_nama = pkt.get("nama", "").upper()
+            if int(pkt.get("kuota", 0)) > 0 or "AIO" in p_nama: 
+                if "ENTERPRISE" in p_nama: max_aud = max(max_aud, 240); max_txt = max(max_txt, 240000); max_fup = max(max_fup, 15)
+                elif "VIP" in p_nama: max_aud = max(max_aud, 150); max_txt = max(max_txt, 150000); max_fup = max(max_fup, 8)
+                elif "EKSEKUTIF" in p_nama: max_aud = max(max_aud, 90); max_txt = max(max_txt, 90000); max_fup = max(max_fup, 6)
+                elif "STARTER" in p_nama: max_aud = max(max_aud, 60); max_txt = max(max_txt, 60000); max_fup = max(max_fup, 4)
+                
+                if "AIO" in p_nama: 
+                    max_aud = 9999; max_txt = 999999
+                    if "100" in p_nama: max_fup_h = max(max_fup_h, 75)
+                    elif "30" in p_nama: max_fup_h = max(max_fup_h, 50)
+                    else: max_fup_h = max(max_fup_h, 35)
         
         # Format Waktu Klaim (WIB)
         wib_tz = datetime.timezone(datetime.timedelta(hours=7))
@@ -619,11 +647,14 @@ def redeem_voucher(username, kode_voucher):
             "inventori": inventori, 
             "tanggal_expired": new_exp_date,
             "saldo": new_saldo,
-            "bank_menit": new_bank_menit # 🚀 UPDATE BANK MENIT
+            "bank_menit": new_bank_menit,
+            "batas_audio_menit": max_aud,      # INJEKSI LIMIT BARU
+            "batas_teks_karakter": max_txt,    # INJEKSI LIMIT BARU
+            "fup_dok_per_file": max_fup,       # INJEKSI FUP BARU
+            "fup_dok_harian_limit": max_fup_h  # INJEKSI FUP HARIAN BARU
         })
         transaction.update(v_ref, {"jumlah_terklaim": firestore.Increment(1), "riwayat_pengguna": firestore.ArrayUnion([klaim_str])})
         
-        # Tampilkan pesan sukses dengan nominal bonus
         pesan_sukses = f"Paket {v_latest['nama_paket']} + Bonus Saldo Rp {bonus_saldo:,} berhasil ditambahkan!"
         return True, pesan_sukses.replace(',', '.')
         
@@ -737,59 +768,6 @@ if 'chat_usage_count' not in st.session_state: st.session_state.chat_usage_count
 
 if "temp_user_data" not in st.session_state:
     st.session_state.temp_user_data = {}
-    
-# --- PENANGKAP SINYAL GOOGLE OAUTH2 ---
-if "code" in st.query_params and not st.session_state.get('logged_in', False):
-    code = st.query_params["code"]
-    
-    # 🛡️ MENCEGAH DOUBLE-FIRE (PENYEBAB ERROR INVALID_GRANT)
-    if st.session_state.get('last_oauth_code') == code:
-        st.query_params.clear()
-    else:
-        st.session_state['last_oauth_code'] = code
-        st.info("⏳ Memvalidasi tiket masuk dari Google...")
-        
-        if "google_oauth" in st.secrets:
-            import requests
-            client_id = st.secrets["google_oauth"]["client_id"]
-            client_secret = st.secrets["google_oauth"]["client_secret"]
-            redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
-            
-            token_url = "https://oauth2.googleapis.com/token"
-            data = {"code": code, "client_id": client_id, "client_secret": client_secret, "redirect_uri": redirect_uri, "grant_type": "authorization_code"}
-            
-            res = requests.post(token_url, data=data)
-            
-            if res.status_code == 200:
-                access_token = res.json().get("access_token")
-                user_info = requests.get("https://www.googleapis.com/oauth2/v2/userinfo", headers={"Authorization": f"Bearer {access_token}"}).json()
-                email = user_info.get("email")
-                
-                if email:
-                    # Daftarkan ke Firestore jika belum ada
-                    user_data = get_user(email)
-                    if not user_data:
-                        save_user(email, "GOOGLE_SSO_USER", "user")
-                    
-                    # Eksekusi Login
-                    st.session_state.current_user = email
-                    st.session_state.logged_in = True
-                    st.session_state.user_role = user_data.get("role", "user") if user_data else "user"
-                    
-                    # Perintah simpan cookie
-                    cookie_manager.set('tomstt_session', email, max_age=2592000, path='/')
-                    
-                    # Bersihkan URL di browser agar tidak error jika di-refresh
-                    st.query_params.clear()
-                    
-                    st.success(f"✅ Berhasil masuk sebagai **{email}**! Selamat datang.")
-                    
-                    # 🚀 KUNCI PERBAIKAN: HAPUS st.rerun() di sini!
-                    # Membiarkan script terus berjalan ke bawah akan memastikan Javascript Cookie terkirim aman ke browser.
-            else:
-                # Menangani error jika kode sudah kedaluwarsa/terpakai
-                st.query_params.clear()
-                st.error("❌ Sesi Google terputus/kedaluwarsa. Silakan klik ulang tombol 'Lanjutkan dengan Google'.")
 
 # --- SISTEM AUTO-LOGIN (VERSI STABIL PERSISTENT LOGIN) ---
 if not st.session_state.get('logged_in', False):
@@ -802,12 +780,6 @@ if not st.session_state.get('logged_in', False):
 
     if saved_user:
         user_data = get_user(saved_user)
-        
-        # 🚀 SSO GATEWAY: OTOMATIS BUAT DOMPET JIKA USER GOOGLE BARU
-        if not user_data:
-            save_user(saved_user, "GOOGLE_SSO_USER", "user")
-            user_data = {"role": "user"}
-            
         if user_data:
             # Kembalikan seluruh state penting
             st.session_state.logged_in = True
@@ -2179,10 +2151,7 @@ with st.sidebar:
                 
         st.write("")
         if st.button("🚪 Logout", use_container_width=True):
-            try:
-                cookie_manager.remove('tomstt_session')
-            except Exception:
-                pass
+            cookie_manager.remove('tomstt_session') 
             st.session_state.logged_in, st.session_state.current_user, st.session_state.user_role = False, "", ""
             st.session_state.ai_result = ""
             st.rerun()
@@ -2382,7 +2351,7 @@ def jalankan_proses_transkrip(audio_to_process, source_name, lang_code):
         # 4. Filter Kasta (BLOCKIR SEBELUM PROSES MESIN AI)
         if durasi_menit > batas_kasta:
             if os.path.exists(input_path): os.remove(input_path)
-            st.error(f"⚠️ **FILE DITOLAK!** Durasi file ({durasi_menit} Menit) melampaui batas PER FILE untuk kasta paket Anda (Maks {batas_kasta} Menit).")
+            st.error(f"⚠️ **FILE DITOLAK!** Durasi file ({durasi_menit} Menit) melampaui batas PER FILE untuk tier paket Anda (Maks {batas_kasta} Menit).")
             st.info("💡 Demi menjaga kestabilan server AI, silakan potong audio Anda menjadi beberapa bagian, atau pastikan jenis paket Anda sesuai.")
             st.stop()
             return None
@@ -2531,7 +2500,7 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
         # 4. Filter Kasta (BLOCKIR SEBELUM PROSES MESIN AI)
         if durasi_menit > batas_kasta:
             if os.path.exists(input_path): os.remove(input_path)
-            st.error(f"⚠️ **FILE DITOLAK!** Durasi file ({durasi_menit} Menit) melampaui batas PER FILE untuk tier paket Anda (Maks {batas_kasta} Menit).")
+            st.error(f"⚠️ **FILE DITOLAK!** Durasi file ({durasi_menit} Menit) melampaui batas PER FILE untuk kasta paket Anda (Maks {batas_kasta} Menit).")
             st.info("💡 Demi menjaga kestabilan server AI, silakan potong audio Anda menjadi beberapa bagian, atau pastikan jenis paket Anda sesuai.")
             st.stop()
             return None
@@ -2993,34 +2962,6 @@ with tab_auth:
     if not st.session_state.logged_in:
         st.markdown('<div class="login-box" style="text-align: center;"><h3>🔒 Portal Akses</h3><p>Silahkan masuk atau buat akun baru untuk mulai menggunakan AI.</p></div>', unsafe_allow_html=True)
         
-# 🚀 TOMBOL OAUTH2 FIX KLIK & ANTI-IFRAME
-        if "google_oauth" in st.secrets:
-            client_id = st.secrets["google_oauth"]["client_id"]
-            redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
-            
-            # Buat Link Pengalihan Resmi ke Google
-            auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=openid%20email%20profile"
-            
-            # 🚀 TOMBOL OAUTH2 (VERSI TAB/WINDOW BARU - 100% PASTI BISA DIKLIK)
-            st.markdown(f"""
-            <a href="{auth_url}" target="_blank" style="display: flex; align-items: center; justify-content: center; width: 100%; background-color: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; text-decoration: none; margin-bottom: 15px;">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width: 20px; margin-right: 12px;">
-                Lanjutkan dengan Google
-            </a>
-            """, unsafe_allow_html=True)
-            
-            # (Cadangan Keamanan: Tombol Bawaan Streamlit jika sewaktu-waktu HTML di atas diblokir browser pengguna)
-            # st.link_button("Lanjutkan dengan Google", auth_url, type="secondary", use_container_width=True)
-            
-            # 🚀 PEMBATAS ELEGAN (GARIS KIRI - TEKS - GARIS KANAN)
-            st.markdown("""
-            <div style="display: flex; align-items: center; text-align: center; margin-top: 5px; margin-bottom: 20px;">
-                <div style="flex: 1; border-bottom: 1px solid #e5e7eb;"></div>
-                <span style="padding: 0 15px; color: #9ca3af; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">ATAU GUNAKAN EMAIL</span>
-                <div style="flex: 1; border-bottom: 1px solid #e5e7eb;"></div>
-            </div>
-            """, unsafe_allow_html=True)
-            
         auth_tab1, auth_tab2 = st.tabs(["🔑 Masuk (Login)", "📝 Daftar Baru (Register)"])
         
 # --- TAB LOGIN ---
@@ -3138,13 +3079,10 @@ with tab_auth:
         """, unsafe_allow_html=True)
         
         # TOMBOL LOGOUT UTAMA (Khusus Tab Akun, Menempel di bawah Email)
-        c_out1, c_out2, c_out3 = st.columns([1, 3, 1]) 
+        c_out1, c_out2, c_out3 = st.columns([1, 3, 1]) # Angka 3 bisa Anda ubah-ubah untuk mengatur panjang tombol di PC
         with c_out2:
             if st.button("Logout", type="primary", use_container_width=True):
-                try:
-                    cookie_manager.remove('tomstt_session')
-                except Exception:
-                    pass
+                cookie_manager.remove('tomstt_session') 
                 st.session_state.logged_in, st.session_state.current_user, st.session_state.user_role = False, "", ""
                 st.session_state.ai_result = ""
                 st.rerun()
@@ -5088,4 +5026,3 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
