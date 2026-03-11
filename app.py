@@ -310,12 +310,23 @@ def berikan_paket_ke_user(username, user_data, nama_paket):
     
 def cek_status_pembayaran_duitku(username, user_data):
     """Menanyakan ke Duitku status tagihan yang gantung"""
+    import hashlib
+    import requests
+    import streamlit as st
+    
     pending_trx = user_data.get("pending_trx", [])
     if not pending_trx: return user_data
 
-    merchant_code = "DS28433"
-    api_key = "e9aa4bd21906930232e28dab0ab794ac"
-    url = "https://api-sandbox.duitku.com/api/merchant/transactionStatus"
+    # 🔒 MENGAMBIL KUNCI PRODUCTION DARI BRANKAS RAHASIA STREAMLIT (SECRETS)
+    try:
+        merchant_code = st.secrets["duitku"]["merchant_code"]
+        api_key = st.secrets["duitku"]["api_key"]
+    except KeyError:
+        print("⚠️ Kunci API Duitku belum dikonfigurasi di Streamlit Secrets!")
+        return user_data
+
+    # 🚀 URL API Status Duitku (PRODUCTION)
+    url = "https://api-prod.duitku.com/api/merchant/transactionStatus"
 
     sisa_pending = []
     ada_perubahan = False
@@ -1439,12 +1450,16 @@ def buat_tagihan_duitku(nama_paket, harga, user_email):
     import requests
     import streamlit as st
     
-    # Kunci Sandbox Duitku Anda
-    merchant_code = "DS28433" 
-    api_key = "e9aa4bd21906930232e28dab0ab794ac"
+    # 🔒 MENGAMBIL KUNCI PRODUCTION DARI BRANKAS RAHASIA STREAMLIT (SECRETS)
+    try:
+        merchant_code = st.secrets["duitku"]["merchant_code"]
+        api_key = st.secrets["duitku"]["api_key"]
+    except KeyError:
+        st.error("⚠️ Kunci API Duitku belum dikonfigurasi di Streamlit Secrets!")
+        return None
     
-    # URL API Resmi Duitku POP Terbaru
-    url = "https://api-sandbox.duitku.com/api/merchant/createInvoice"
+    # 🚀 URL API Resmi Duitku POP (PRODUCTION)
+    url = "https://api-prod.duitku.com/api/merchant/createInvoice"
     
     # Membuat Order ID unik & Timestamp waktu saat ini
     order_id = f"TOM-{nama_paket.split()[0].upper()}-{uuid.uuid4().hex[:6].upper()}"
@@ -2337,24 +2352,38 @@ def jalankan_proses_transkrip(audio_to_process, source_name, lang_code):
         tmp_file.write(audio_to_process.getvalue())
         input_path = tmp_file.name
         
-    # --- FASE 2: THE INTERCEPTOR (AUDIO GATE) ---
+    # --- FASE 2: THE INTERCEPTOR (AUDIO GATE CERDAS & AMAN) ---
     with st.spinner("🛡️ Menjalankan Front-Gate Validation..."):
-        # 1. Ambil durasi riil & Tarik data user terbaru
-        durasi_menit = math.ceil(get_duration(input_path) / 60)
+        # 1. Ambil durasi riil via FFmpeg
+        durasi_detik = get_duration(input_path)
+        durasi_menit = math.ceil(durasi_detik / 60)
+        
+        # 2. Tarik data user terbaru dari Firestore
         u_info = get_user(st.session_state.current_user)
         
-        # 2. Ambil Batas Kasta (Default 45m jika user belum update paket di sistem baru)
-        batas_kasta = u_info.get("batas_audio_menit", 45) 
+        # 3. PENENTUAN HARD-LIMIT PER FILE (Anti-Jebol Server)
+        batas_kasta = 20 # Kasta Terendah: Default Freemium 20 Menit
         
-        # 🚀 BYPASS KHUSUS ADMIN
-        if u_info.get("role") == "admin":
-            batas_kasta = 999999
+        if u_info:
+            if u_info.get("role") == "admin":
+                batas_kasta = 999999 # Sultan Admin: Bebas hambatan
+            elif u_info.get("bank_menit", 0) > 0:
+                batas_kasta = 600 # 🚀 Kasta AIO: Maks 10 Jam (600 Menit) per file
+            else:
+                # Kasta Reguler: Cari tiket dengan batas durasi terbesar di inventori
+                max_reguler = 0
+                for pkt in u_info.get("inventori", []):
+                    if pkt.get("kuota", 0) > 0:
+                        max_reguler = max(max_reguler, pkt.get("batas_durasi", 0))
+                
+                if max_reguler > 0:
+                    batas_kasta = max_reguler # Kasta Reguler: Sesuai tiket terbesar
         
-        # 3. Filter Kasta (BLOCKIR TOTAL)
+        # 4. Filter Kasta (BLOCKIR SEBELUM PROSES MESIN AI)
         if durasi_menit > batas_kasta:
             if os.path.exists(input_path): os.remove(input_path)
-            st.error(f"⚠️ **FILE DITOLAK!** Durasi file ({durasi_menit} Menit) melampaui batas kasta paket Anda (Maks {batas_kasta} Menit).")
-            st.info("💡 Silakan lakukan **Upgrade Paket** di menu samping untuk memproses durasi yang lebih panjang.")
+            st.error(f"⚠️ **FILE DITOLAK!** Durasi file ({durasi_menit} Menit) melampaui batas PER FILE untuk kasta paket Anda (Maks {batas_kasta} Menit).")
+            st.info("💡 Demi menjaga kestabilan server AI, silakan potong audio Anda menjadi beberapa bagian, atau pastikan jenis paket Anda sesuai.")
             st.stop()
             return None
 
@@ -2472,7 +2501,7 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
         tmp_file.write(audio_to_process.getvalue())
         input_path = tmp_file.name
 
-    # --- FASE 2: THE INTERCEPTOR (AUDIO GATE) ---
+    # --- FASE 2: THE INTERCEPTOR (AUDIO GATE CERDAS & AMAN) ---
     with st.spinner("🛡️ Menjalankan Front-Gate Validation..."):
         # 1. Ambil durasi riil via FFmpeg
         durasi_detik = get_duration(input_path)
@@ -2480,21 +2509,31 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
         
         # 2. Tarik data user terbaru dari Firestore
         u_info = get_user(st.session_state.current_user)
-        # Default 45 menit jika metadata kasta belum ada (User lama)
-        batas_kasta = u_info.get("batas_audio_menit", 45) 
         
-        # 🚀 BYPASS KHUSUS ADMIN
-        if u_info.get("role") == "admin":
-            batas_kasta = 999999
+        # 3. PENENTUAN HARD-LIMIT PER FILE (Anti-Jebol Server)
+        batas_kasta = 20 # Kasta Terendah: Default Freemium 20 Menit
         
-        # 3. Filter Kasta (BLOCKIR SEBELUM PROSES)
+        if u_info:
+            if u_info.get("role") == "admin":
+                batas_kasta = 999999 # Sultan Admin: Bebas hambatan
+            elif u_info.get("bank_menit", 0) > 0:
+                batas_kasta = 600 # 🚀 Kasta AIO: Maks 10 Jam (600 Menit) per file
+            else:
+                # Kasta Reguler: Cari tiket dengan batas durasi terbesar di inventori
+                max_reguler = 0
+                for pkt in u_info.get("inventori", []):
+                    if pkt.get("kuota", 0) > 0:
+                        max_reguler = max(max_reguler, pkt.get("batas_durasi", 0))
+                
+                if max_reguler > 0:
+                    batas_kasta = max_reguler # Kasta Reguler: Sesuai tiket terbesar
+        
+        # 4. Filter Kasta (BLOCKIR SEBELUM PROSES MESIN AI)
         if durasi_menit > batas_kasta:
-            # Hapus file sementara agar tidak memenuhi storage
             if os.path.exists(input_path): os.remove(input_path)
-            
-            st.error(f"⚠️ **FILE DITOLAK!** Durasi file Anda ({durasi_menit} Menit) melampaui batas kasta paket Anda (Maks {batas_kasta} Menit).")
-            st.info("💡 Silakan lakukan **Upgrade Paket / Top-Up** di menu samping untuk memproses durasi yang lebih panjang.")
-            st.stop() # Hentikan seluruh proses di sini
+            st.error(f"⚠️ **FILE DITOLAK!** Durasi file ({durasi_menit} Menit) melampaui batas PER FILE untuk tier paket Anda (Maks {batas_kasta} Menit).")
+            st.info("💡 Demi menjaga kestabilan server AI, silakan potong audio Anda menjadi beberapa bagian, atau pastikan jenis paket Anda sesuai.")
+            st.stop()
             return None
 
     try:
