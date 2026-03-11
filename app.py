@@ -139,8 +139,8 @@ def berikan_paket_ke_user(username, user_data, nama_paket):
     # --- PENCATATAN TOTAL SPENDING (LTV) ---
     harga_map = {"LITE": 29000, "STARTER": 89000, "EKSEKUTIF": 299000, "VIP": 599000, "ENTERPRISE": 1199000, 
                  "AIO10": 189000, "AIO30": 489000, "AIO100": 1299000,
-                 "RefillTiket": 25500, "EkstensiWaktu": 35700, 
-                 "Topup10k": 10200, "Topup20k": 20400, "Topup30k": 30600, "Topup40k": 40800}
+                 "RefillTiket": 28000, "EkstensiWaktu": 38000, 
+                 "Topup10k": 13000, "Topup20k": 23000, "Topup30k": 33000, "Topup40k": 43000}
     
     nominal_masuk = harga_map.get(nama_paket, 0)
     # 🚀 FIX: Paksa jadi integer agar kebal crash tipe data teks
@@ -771,7 +771,7 @@ if "code" in st.query_params and not st.session_state.get('logged_in', False):
         st.query_params.clear()
     else:
         st.session_state['last_oauth_code'] = code
-        st.info("⏳ Memvalidasi tiket masuk dari Google...")
+        st.info("⏳ Validasi Google...")
         
         if "google_oauth" in st.secrets:
             import requests
@@ -1879,16 +1879,16 @@ def show_pricing_dialog():
         # ==========================================
         with st.expander("💳 Top-Up Saldo Reguler", expanded=False):
             st.caption("Isi ulang saldo murni untuk Chatbot AI (Rp 1.000/tanya) dan bayar subsidi kelebihan karakter teks.")
-            st.warning("**Catatan:** Harga tagihan sudah termasuk Biaya Layanan Payment Gateway (2%).")
+            st.warning("**Catatan:** Harga tagihan sudah termasuk Biaya Layanan Payment Gateway (Flat Rp 3.000).")
             
             col_s1, col_s2 = st.columns(2)
             with col_s1:
                 st.markdown("**Saldo Rp 10.000**")
-                if st.button("💳 Bayar Rp 10.200", use_container_width=True, key="topup_10", type="primary"):
+                if st.button("💳 Bayar Rp 13.000", use_container_width=True, key="topup_10", type="primary"):
                     if not st.session_state.logged_in: st.error("Silahkan Login terlebih dahulu.")
                     else:
                         with st.spinner("Mencetak tagihan..."):
-                            link_bayar, order_id = buat_tagihan_duitku("Topup10k", 10200, user_email) 
+                            link_bayar, order_id = buat_tagihan_duitku("Topup10k", 13000, user_email) 
                             if link_bayar: 
                                 db.collection('users').document(user_email).update({"pending_trx": firestore.ArrayUnion([{"order_id": order_id, "paket": "Topup10k"}])})
                                 st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
@@ -1896,11 +1896,11 @@ def show_pricing_dialog():
                 st.markdown("---")
                 
                 st.markdown("**Saldo Rp 20.000**")
-                if st.button("💳 Bayar Rp 20.400", use_container_width=True, key="topup_20", type="primary"):
+                if st.button("💳 Bayar Rp 23.000", use_container_width=True, key="topup_20", type="primary"):
                     if not st.session_state.logged_in: st.error("Silahkan Login terlebih dahulu.")
                     else:
                         with st.spinner("Mencetak tagihan..."):
-                            link_bayar, order_id = buat_tagihan_duitku("Topup20k", 20400, user_email)
+                            link_bayar, order_id = buat_tagihan_duitku("Topup20k", 23000, user_email)
                             if link_bayar: 
                                 db.collection('users').document(user_email).update({"pending_trx": firestore.ArrayUnion([{"order_id": order_id, "paket": "Topup20k"}])})
                                 st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
@@ -1909,11 +1909,11 @@ def show_pricing_dialog():
 
             with col_s2:
                 st.markdown("**Saldo Rp 30.000**")
-                if st.button("💳 Bayar Rp 30.600", use_container_width=True, key="topup_30", type="primary"):
+                if st.button("💳 Bayar Rp 33.000", use_container_width=True, key="topup_30", type="primary"):
                     if not st.session_state.logged_in: st.error("Silahkan Login terlebih dahulu.")
                     else:
                         with st.spinner("Mencetak tagihan..."):
-                            link_bayar, order_id = buat_tagihan_duitku("Topup30k", 30600, user_email)
+                            link_bayar, order_id = buat_tagihan_duitku("Topup30k", 33000, user_email)
                             if link_bayar: 
                                 db.collection('users').document(user_email).update({"pending_trx": firestore.ArrayUnion([{"order_id": order_id, "paket": "Topup30k"}])})
                                 st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
@@ -1921,36 +1921,36 @@ def show_pricing_dialog():
                 st.markdown("---")
                 
                 st.markdown("**Saldo Rp 40.000**")
-                if st.button("💳 Bayar Rp 40.800", use_container_width=True, key="topup_40", type="primary"):
+                if st.button("💳 Bayar Rp 43.000", use_container_width=True, key="topup_40", type="primary"):
                     if not st.session_state.logged_in: st.error("Silahkan Login terlebih dahulu.")
                     else:
                         with st.spinner("Mencetak tagihan..."):
-                            link_bayar, order_id = buat_tagihan_duitku("Topup40k", 40800, user_email)
+                            link_bayar, order_id = buat_tagihan_duitku("Topup40k", 43000, user_email)
                             if link_bayar: 
                                 db.collection('users').document(user_email).update({"pending_trx": firestore.ArrayUnion([{"order_id": order_id, "paket": "Topup40k"}])})
                                 st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
 
-        # ==========================================
+# ==========================================
         # BAGIAN 2: 3 ADD-ON ECERAN (BLUEPRINT)
         # ==========================================
-        with st.expander("🎟 Refill Kuota Eceran - Rp 25.500", expanded=False):
+        with st.expander("🎟 Refill Kuota Eceran - Rp 28.000", expanded=False):
             st.markdown("*Kehabisan kuota tapi masa aktif masih panjang? Suntikkan tiket instan ke dompet Anda.*\n* **Mendapatkan:** 5x Ekstrak AI (Bisa untuk semua format dokumen yang terbuka di paket Anda).\n* **Masa Aktif:** Menyesuaikan dengan tanggal kedaluwarsa paket utama Anda saat ini.")
-            if st.button("🛒 Beli Refill (5x AI) - Rp 25.500", use_container_width=True, key="buy_refill", type="primary"):
+            if st.button("🛒 Beli Refill (5x AI) - Rp 28.000", use_container_width=True, key="buy_refill", type="primary"):
                 if not st.session_state.logged_in: st.error("Silahkan Login terlebih dahulu.")
                 else:
                     with st.spinner("Mencetak tagihan..."):
-                        link_bayar, order_id = buat_tagihan_duitku("RefillTiket", 25500, user_email) 
+                        link_bayar, order_id = buat_tagihan_duitku("RefillTiket", 28000, user_email) 
                         if link_bayar: 
                             db.collection('users').document(user_email).update({"pending_trx": firestore.ArrayUnion([{"order_id": order_id, "paket": "RefillTiket"}])})
                             st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
                             
-        with st.expander("📅 Perpanjang Masa Aktif - Rp 35.700", expanded=False):
+        with st.expander("📅 Perpanjang Masa Aktif - Rp 38.000", expanded=False):
             st.markdown("*Jadwal rapat sedang kosong? Perpanjang napas kuota Anda agar tidak hangus sia-sia.*\n* **Mendapatkan:** Tambahan +30 Hari masa aktif.\n* **Berlaku Untuk:** Seluruh sisa tiket & saldo yang ada di dompet Anda saat ini.")
-            if st.button("🛒 Beli Ekstensi (+30 Hari) - Rp 35.700", use_container_width=True, key="buy_ekstensi", type="primary"):
+            if st.button("🛒 Beli Ekstensi (+30 Hari) - Rp 38.000", use_container_width=True, key="buy_ekstensi", type="primary"):
                 if not st.session_state.logged_in: st.error("Silahkan Login terlebih dahulu.")
                 else:
                     with st.spinner("Mencetak tagihan..."):
-                        link_bayar, order_id = buat_tagihan_duitku("EkstensiWaktu", 35700, user_email) 
+                        link_bayar, order_id = buat_tagihan_duitku("EkstensiWaktu", 38000, user_email) 
                         if link_bayar: 
                             db.collection('users').document(user_email).update({"pending_trx": firestore.ArrayUnion([{"order_id": order_id, "paket": "EkstensiWaktu"}])})
                             st.link_button("💳 Lanjut Bayar", link_bayar, use_container_width=True)
