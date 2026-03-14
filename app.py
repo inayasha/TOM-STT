@@ -2395,11 +2395,11 @@ a.ann-btn:hover {{
 
 # KOTAK SELAMAT DATANG (VERSI SINGKAT & RATA TENGAH)
 st.markdown("""
-<div style="background-color: #e6f3ff; color: #0068c9; padding: 15px; border-radius: 10px; border: 1px solid #cce5ff; text-align: center; margin-bottom: 25px;">
-    <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; line-height: 1.2;">
+<div style="background-color: #e6f3ff; color: #0068c9; padding: 15px; border-radius: 10px; border: 1px solid #cce5ff; text-align: center; margin-bottom: 25px; display: flex; flex-direction: column; align-items: center;">
+    <div style="font-size: 15px; font-weight: bold; line-height: 1.4; margin-bottom: 8px; width: 100%;">
         Ubah Rekaman Audio Rapat Jadi Dokumen Apapun Secara Instan
     </div>
-    <a href="https://info.tom-stt.com" target="_blank" style="text-decoration: none; font-weight: 800; color: #e74c3c; font-size: 14px; display: block; margin-top: 5px;">
+    <a href="https://info.tom-stt.com" target="_blank" style="text-decoration: none; font-weight: 800; color: #e74c3c; font-size: 14px; display: block; width: 100%;">
         Panduan Penggunaan & Info Paket
     </a>
 </div>
