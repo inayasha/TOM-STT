@@ -5223,40 +5223,115 @@ if st.session_state.user_role == "admin":
                 all_users_raw.append(u_data)
                 
             st.markdown("##### 🔍 Filter & Urutkan Pengguna")
-            col_search, col_sort = st.columns([3, 2])
-            with col_search:
-                search_q = st.text_input("Cari Email User:", placeholder="Ketik email...", label_visibility="collapsed").strip().lower()
-            with col_sort:
-                sort_opt = st.selectbox("Urutkan:", ["Terbaru (Tanggal)", "Terlama (Tanggal)", "Abjad (A-Z)", "Abjad (Z-A)"], label_visibility="collapsed")
+            
+            # 🚀 Inisialisasi session state untuk pencarian & tombol Clear
+            if "search_user_email" not in st.session_state:
+                st.session_state.search_user_email = ""
                 
-            # Filter & Sorting
+            def clear_search():
+                st.session_state.search_user_email = ""
+                
+            col_search, col_clear, col_sort = st.columns([4, 1, 3])
+            with col_search:
+                search_q = st.text_input("Cari Email User:", key="search_user_email", placeholder="Ketik email...", label_visibility="collapsed").strip().lower()
+            with col_clear:
+                st.button("✖️ Clear", on_click=clear_search, use_container_width=True)
+            with col_sort:
+                sort_opt = st.selectbox("Urutkan berdasarkan:", [
+                    "Terbaru (Tanggal Daftar)", 
+                    "Terlama (Tanggal Daftar)", 
+                    "Total Spending (Tertinggi)", 
+                    "Total Aset (Tertinggi)",
+                    "Arsip Terbanyak",
+                    "Arsip Terbaru",
+                    "Abjad (A-Z)", 
+                    "Abjad (Z-A)"
+                ], label_visibility="collapsed")
+                
+            # 1. Eksekusi Filter Pencarian Email
             filtered_users = []
             for u in all_users_raw:
                 if search_q in u['id'].lower():
                     filtered_users.append(u)
                     
+            # 2. Persiapan Data Angka untuk Keperluan Sorting
             def get_timestamp(user_dict):
                 t = user_dict.get('created_at')
-                return t.timestamp() if t else 0
+                try:
+                    return t.timestamp() if t else 0
+                except:
+                    return 0
 
-            if sort_opt == "Terbaru (Tanggal)":
+            for u_data in filtered_users:
+                # Kalkulasi Total Aset (Rupiah)
+                inventori = u_data.get('inventori', [])
+                saldo = u_data.get('saldo', 0)
+                bank_menit_user = u_data.get('bank_menit', 0)
+                
+                estimasi_rupiah = saldo
+                if inventori:
+                    for pkt in inventori:
+                        nama_up = pkt.get('nama', '').upper()
+                        kuota = pkt.get('kuota', 0)
+                        if "LITE" in nama_up: estimasi_rupiah += kuota * (29000 / 3)
+                        elif "STARTER" in nama_up or "PRO" in nama_up: estimasi_rupiah += kuota * (89000 / 10)
+                        elif "EKSEKUTIF" in nama_up: estimasi_rupiah += kuota * (299000 / 30)
+                        elif "VIP" in nama_up: estimasi_rupiah += kuota * (599000 / 65)
+                        elif "ENTERPRISE" in nama_up: estimasi_rupiah += kuota * (1199000 / 150)
+                        elif "ECERAN" in nama_up or "REFILL" in nama_up: estimasi_rupiah += kuota * (25500 / 5)
+                
+                if bank_menit_user > 0:
+                    estimasi_rupiah += bank_menit_user * 270 
+                    
+                u_data['calc_asset'] = estimasi_rupiah
+                u_data['calc_spending'] = u_data.get('total_spending', 0)
+
+            # Jika memilih sorting arsip, lakukan query ke dalam sub-collection (Hanya berjalan jika dipilih agar tidak memberatkan)
+            if sort_opt in ["Arsip Terbanyak", "Arsip Terbaru"]:
+                with st.spinner("⏳ Mengambil data aktivitas arsip pengguna... (Mohon tunggu)"):
+                    for u in filtered_users:
+                        arsip_ref = db.collection('users').document(u['id']).collection('arsip').get()
+                        u['calc_arsip_count'] = len(arsip_ref)
+                        
+                        latest_time = 0
+                        for a_doc in arsip_ref:
+                            a_data = a_doc.to_dict()
+                            t = a_data.get('created_at')
+                            try:
+                                ts = t.timestamp() if t else 0
+                                if ts > latest_time:
+                                    latest_time = ts
+                            except:
+                                pass
+                        u['calc_arsip_latest'] = latest_time
+
+            # 3. Logika Eksekusi Sorting
+            if sort_opt == "Terbaru (Tanggal Daftar)":
                 filtered_users.sort(key=get_timestamp, reverse=True)
-            elif sort_opt == "Terlama (Tanggal)":
+            elif sort_opt == "Terlama (Tanggal Daftar)":
                 filtered_users.sort(key=get_timestamp, reverse=False)
+            elif sort_opt == "Total Spending (Tertinggi)":
+                filtered_users.sort(key=lambda x: x['calc_spending'], reverse=True)
+            elif sort_opt == "Total Aset (Tertinggi)":
+                filtered_users.sort(key=lambda x: x['calc_asset'], reverse=True)
+            elif sort_opt == "Arsip Terbanyak":
+                filtered_users.sort(key=lambda x: x.get('calc_arsip_count', 0), reverse=True)
+            elif sort_opt == "Arsip Terbaru":
+                filtered_users.sort(key=lambda x: x.get('calc_arsip_latest', 0), reverse=True)
             elif sort_opt == "Abjad (A-Z)":
                 filtered_users.sort(key=lambda x: x['id'].lower(), reverse=False)
             elif sort_opt == "Abjad (Z-A)":
                 filtered_users.sort(key=lambda x: x['id'].lower(), reverse=True)
                 
-            st.markdown(f"**Total Pengguna:** {len(filtered_users)} Akun")
+            st.markdown(f"**Total Pengguna Ditampilkan:** {len(filtered_users)} Akun")
             st.markdown("---")
             
-            # Menampilkan List User & Analisis Paket (Bentuk Collapse)
+            # 4. Render Hasil ke Layar
             for u_data in filtered_users:
                 user_id = u_data['id']
                 role = u_data.get('role', 'user')
                 
-                # FIX: Konversi waktu pendaftaran ke WIB
+                # Konversi waktu pendaftaran ke WIB
                 import datetime
                 created_at = u_data.get('created_at')
                 tgl_daftar = "Data lama"
@@ -5268,32 +5343,16 @@ if st.session_state.user_role == "admin":
                     except:
                         tgl_daftar = created_at.strftime("%d %b %Y")
                 
-                # --- LOGIKA ANALISIS PAKET & ESTIMASI RUPIAH ---
+                # Menyiapkan text display paket
                 inventori = u_data.get('inventori', [])
-                saldo = u_data.get('saldo', 0)
-                total_spending = u_data.get('total_spending', 0)
-                
-                estimasi_rupiah = saldo
                 paket_teks = []
-                
                 if inventori:
                     for pkt in inventori:
                         nama = pkt.get('nama', '')
                         kuota = pkt.get('kuota', 0)
                         paket_teks.append(f"{nama} ({kuota}x)")
                         
-                        nama_up = nama.upper()
-                        if "LITE" in nama_up: estimasi_rupiah += kuota * (29000 / 3)
-                        elif "STARTER" in nama_up or "PRO" in nama_up: estimasi_rupiah += kuota * (89000 / 10)
-                        elif "EKSEKUTIF" in nama_up: estimasi_rupiah += kuota * (299000 / 30)
-                        elif "VIP" in nama_up: estimasi_rupiah += kuota * (599000 / 65)
-                        elif "ENTERPRISE" in nama_up: estimasi_rupiah += kuota * (1199000 / 150)
-                        elif "AIO 10" in nama_up or "AIO 30" in nama_up or "AIO 100" in nama_up: pass
-                        elif "ECERAN" in nama_up or "REFILL" in nama_up: estimasi_rupiah += kuota * (25500 / 5)
-                
                 bank_menit_user = u_data.get('bank_menit', 0)
-                if bank_menit_user > 0:
-                    estimasi_rupiah += bank_menit_user * 270 
                     
                 if paket_teks:
                     paket_html = "<ul style='margin-top: 5px; margin-bottom: 5px; padding-left: 20px;'>"
@@ -5316,11 +5375,23 @@ if st.session_state.user_role == "admin":
                 else:
                     paket_html += "<div style='margin-bottom: 10px;'></div>"
                 
-                str_rupiah = f"Rp {int(estimasi_rupiah):,}".replace(",", ".")
-                str_spending = f"Rp {int(total_spending):,}".replace(",", ".")
+                # Memanggil data rupiah hasil kalkulasi di atas
+                str_rupiah = f"Rp {int(u_data['calc_asset']):,}".replace(",", ".")
+                str_spending = f"Rp {int(u_data['calc_spending']):,}".replace(",", ".")
+                
+                # Fitur tambahan text indikator jika di-sort berdasarkan arsip
+                info_tambahan = ""
+                if sort_opt == "Arsip Terbanyak":
+                    info_tambahan = f" | 🗂️ {u_data.get('calc_arsip_count', 0)} Arsip"
+                elif sort_opt == "Arsip Terbaru":
+                    if u_data.get('calc_arsip_latest', 0) > 0:
+                        dt_latest = datetime.datetime.fromtimestamp(u_data['calc_arsip_latest'], tz=datetime.timezone(datetime.timedelta(hours=7)))
+                        info_tambahan = f" | 🆕 {dt_latest.strftime('%d %b, %H:%M')}"
+                    else:
+                        info_tambahan = " | 🆕 Belum ada arsip"
                 
                 # BUNGKUS DENGAN EXPANDER AGAR RINGKAS
-                with st.expander(f"👤 {user_id}  (Terdaftar: {tgl_daftar[:11]})"):
+                with st.expander(f"👤 {user_id}  (Terdaftar: {tgl_daftar[:11]}){info_tambahan}"):
                     col_info, col_aksi = st.columns([3, 2])
                     
                     with col_info:
@@ -5337,7 +5408,7 @@ if st.session_state.user_role == "admin":
                         if st.button("📂 Lihat Arsip", key=f"arsip_usr_{user_id}", use_container_width=True):
                             dialog_lihat_arsip(user_id)
                         if st.button("✏️ Edit Dompet", key=f"edit_usr_{user_id}", use_container_width=True):
-                            dialog_edit_dompet(user_id, saldo, bank_menit_user, u_data.get('tanggal_expired', 'Selamanya'), inventori)
+                            dialog_edit_dompet(user_id, u_data.get('saldo', 0), bank_menit_user, u_data.get('tanggal_expired', 'Selamanya'), inventori)
                             
                         is_self = (user_id == st.session_state.current_user)
                         if not is_self:
@@ -5356,4 +5427,3 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
