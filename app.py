@@ -2239,43 +2239,80 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- 🖼️ UI & TRIGGER POP-UP PROMO ---
-@st.dialog("📢 Informasi Spesial", width="small")
-def show_popup_promo_dialog(img_url, target_url):
-    # CSS Khusus untuk menghilangkan padding agar gambar terlihat penuh dan elegan
-    st.markdown("""
-        <style>
-        div[role="dialog"] div[data-testid="stMarkdownContainer"] { margin-bottom: 0px !important; }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    # 1. Tampilkan Gambar (Jika di-klik bisa menuju link target)
-    if img_url:
-        if target_url:
-            st.markdown(f'<a href="{target_url}" target="_blank"><img src="{img_url}" width="100%" style="border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></a>', unsafe_allow_html=True)
-        else:
-            st.image(img_url, use_container_width=True)
-            
-    # 2. Tampilkan Tombol Interaktif
-    if target_url:
-        st.link_button("👉 Buka Penawaran", target_url, type="primary", use_container_width=True)
-        
-    # 3. Tombol Tutup
-    if st.button("Tutup", use_container_width=True):
-        st.rerun()
-
-# Logika Pemicu (Hanya muncul jika aktif & belum pernah dilihat di sesi ini)
+# --- 🖼️ UI & TRIGGER POP-UP PROMO (HTML/JS FLOAT) ---
 sys_config = get_system_config()
 if sys_config.get("is_popup_active", False):
-    # Buat kunci ingatan unik berdasarkan versi popup terbaru
     versi_saat_ini = sys_config.get("popup_version", 1)
-    kunci_memori = f"sudah_lihat_popup_v{versi_saat_ini}"
+    img_url = sys_config.get("popup_image_url", "")
+    target_url = sys_config.get("popup_target_url", "#")
     
-    if not st.session_state.get(kunci_memori, False):
-        # 1. Tandai langsung ke otak Streamlit bahwa user ini sudah melihatnya (Anti-Loop)
-        st.session_state[kunci_memori] = True
-        # 2. Munculkan Layar Pop-Up
-        show_popup_promo_dialog(sys_config.get("popup_image_url", ""), sys_config.get("popup_target_url", ""))
+    # Cegah render jika admin belum memasukkan gambar
+    if img_url:
+        st.markdown(f"""
+        <style>
+            #custom-promo-modal {{
+                display: none; /* Disembunyikan sampai JS mengecek memori browser */
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background-color: rgba(255, 255, 255, 0.92);
+                backdrop-filter: blur(8px); z-index: 9999999;
+                justify-content: center; align-items: center; padding: 20px;
+            }}
+            .promo-content {{
+                background: #fff; padding: 25px 20px 20px 20px; border-radius: 16px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.15); max-width: 380px; width: 100%;
+                text-align: center; border: 1px solid #eee; font-family: 'Plus Jakarta Sans', sans-serif;
+            }}
+            .promo-img {{
+                width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            }}
+            .promo-btn-main {{
+                display: block; background-color: #000; color: #fff !important;
+                padding: 14px 20px; border-radius: 10px; text-decoration: none; font-weight: 800;
+                font-size: 15px; margin-bottom: 10px; transition: 0.2s; border: 1px solid #000;
+            }}
+            .promo-btn-main:hover {{ background-color: #333; transform: translateY(-2px); }}
+            .promo-btn-close {{
+                display: block; background-color: transparent; color: #e74c3c;
+                border: 1px solid #e74c3c; padding: 12px 20px; border-radius: 10px;
+                font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s;
+            }}
+            .promo-btn-close:hover {{ background-color: #fdeced; }}
+        </style>
+        
+        <div id="custom-promo-modal">
+            <div class="promo-content">
+                <h4 style="margin-top: 0; margin-bottom: 15px; color: #111; font-weight: 800; font-size: 18px;">📢 Informasi Spesial</h4>
+                <a href="{target_url}" target="_blank">
+                    <img src="{img_url}" class="promo-img" alt="Promo TOM'STT AI">
+                </a>
+                <a href="{target_url}" target="_blank" class="promo-btn-main">👉 Lihat Penawaran</a>
+                <button class="promo-btn-close" onclick="tutupPromoModal()">Tutup</button>
+            </div>
+        </div>
+        
+        <script>
+            function checkPromoModal() {{
+                const versi = "{versi_saat_ini}";
+                // Cek ingatan sementara di browser (Sesi)
+                const statusMemori = sessionStorage.getItem('promo_ditutup_v' + versi);
+                
+                // Jika user BELUM KLIK TUTUP, paksa modal terus mengambang!
+                if (statusMemori !== 'true') {{
+                    document.getElementById('custom-promo-modal').style.display = 'flex';
+                }}
+            }}
+            
+            function tutupPromoModal() {{
+                // 1. Sembunyikan modal
+                document.getElementById('custom-promo-modal').style.display = 'none';
+                // 2. Tanam ingatan ke browser agar tidak muncul lagi saat di-refresh (hilang kalau browser di-close)
+                sessionStorage.setItem('promo_ditutup_v{versi_saat_ini}', 'true');
+            }}
+            
+            // Jalankan segera
+            checkPromoModal();
+        </script>
+        """, unsafe_allow_html=True)
 
 # --- 📢 PAPAN PENGUMUMAN DINAMIS ---
 sys_config = get_system_config()
@@ -5186,3 +5223,4 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
+
