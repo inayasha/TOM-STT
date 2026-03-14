@@ -2239,7 +2239,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- 🖼️ UI & TRIGGER POP-UP PROMO (HTML/JS FLOAT) ---
+# --- 🖼️ UI & TRIGGER POP-UP PROMO (HTML/JS FLOAT FIX) ---
 sys_config = get_system_config()
 if sys_config.get("is_popup_active", False):
     versi_saat_ini = sys_config.get("popup_version", 1)
@@ -2248,6 +2248,7 @@ if sys_config.get("is_popup_active", False):
     
     # Cegah render jika admin belum memasukkan gambar
     if img_url:
+        # 1. CETAK HTML & CSS KE LAYAR UTAMA (TANPA JAVASCRIPT)
         st.markdown(f"""
         <style>
             #custom-promo-modal {{
@@ -2286,33 +2287,40 @@ if sys_config.get("is_popup_active", False):
                     <img src="{img_url}" class="promo-img" alt="Promo TOM'STT AI">
                 </a>
                 <a href="{target_url}" target="_blank" class="promo-btn-main">👉 Lihat Penawaran</a>
-                <button class="promo-btn-close" onclick="tutupPromoModal()">Tutup</button>
+                <button id="btn-tutup-promo" class="promo-btn-close">Tutup</button>
             </div>
         </div>
+        """, unsafe_allow_html=True)
         
+        # 2. INJEKSI JAVASCRIPT VIA COMPONENTS (Agar bebas dari blokir keamanan Streamlit)
+        components.html(f"""
         <script>
-            function checkPromoModal() {{
-                const versi = "{versi_saat_ini}";
-                // Cek ingatan sementara di browser (Sesi)
-                const statusMemori = sessionStorage.getItem('promo_ditutup_v' + versi);
+            // Targetkan DOM Utama (Di luar Iframe Components)
+            const parentDoc = window.parent.document;
+            const modal = parentDoc.getElementById('custom-promo-modal');
+            const btnTutup = parentDoc.getElementById('btn-tutup-promo');
+            
+            const versi = "{versi_saat_ini}";
+            const memoriKey = 'promo_ditutup_v' + versi;
+            
+            if (modal) {{
+                // Cek apakah user sudah pernah menutup versi ini
+                const statusMemori = window.parent.sessionStorage.getItem(memoriKey);
                 
-                // Jika user BELUM KLIK TUTUP, paksa modal terus mengambang!
                 if (statusMemori !== 'true') {{
-                    document.getElementById('custom-promo-modal').style.display = 'flex';
+                    modal.style.display = 'flex'; // Tampilkan Modal!
+                }}
+                
+                // Tempelkan fungsi klik untuk menyembunyikan modal
+                if (btnTutup) {{
+                    btnTutup.onclick = function() {{
+                        modal.style.display = 'none';
+                        window.parent.sessionStorage.setItem(memoriKey, 'true'); // Tanam ingatan ke Browser
+                    }};
                 }}
             }}
-            
-            function tutupPromoModal() {{
-                // 1. Sembunyikan modal
-                document.getElementById('custom-promo-modal').style.display = 'none';
-                // 2. Tanam ingatan ke browser agar tidak muncul lagi saat di-refresh (hilang kalau browser di-close)
-                sessionStorage.setItem('promo_ditutup_v{versi_saat_ini}', 'true');
-            }}
-            
-            // Jalankan segera
-            checkPromoModal();
         </script>
-        """, unsafe_allow_html=True)
+        """, height=0, width=0)
 
 # --- 📢 PAPAN PENGUMUMAN DINAMIS ---
 sys_config = get_system_config()
