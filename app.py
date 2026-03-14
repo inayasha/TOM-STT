@@ -2282,11 +2282,10 @@ if sys_config.get("is_popup_active", False):
         
         <div id="custom-promo-modal">
             <div class="promo-content">
-                <h4 style="margin-top: 0; margin-bottom: 15px; color: #111; font-weight: 800; font-size: 18px;">📢 Informasi Spesial</h4>
                 <a href="{target_url}" target="_blank">
                     <img src="{img_url}" class="promo-img" alt="Promo TOM'STT AI">
                 </a>
-                <a href="{target_url}" target="_blank" class="promo-btn-main">👉 Lihat Penawaran</a>
+                <a href="{target_url}" target="_blank" class="promo-btn-main">Lihat Detail</a>
                 <button id="btn-tutup-promo" class="promo-btn-close">Tutup</button>
             </div>
         </div>
@@ -4480,21 +4479,63 @@ if st.session_state.user_role == "admin":
             with st.form("form_popup_promo"):
                 toggle_popup = st.toggle("🚀 Aktifkan Pop-Up Promo", value=sys_config.get("is_popup_active", False))
                 
-                st.info("💡 **Tips:** Upload gambar promo Anda ke **Cloudinary** atau **Imgur**, lalu paste link-nya di sini.")
-                new_popup_img = st.text_input("URL Gambar Promo (Cloudinary/Imgur)", value=sys_config.get("popup_image_url", ""), placeholder="https://res.cloudinary.com/...")
+                st.info("💡 Upload gambar dari komputer Anda, sistem otomatis akan menyimpannya ke Server Cloudinary.")
+                
+                uploaded_promo = st.file_uploader("Upload Gambar Promo (JPG/PNG)", type=["jpg", "jpeg", "png"])
                 new_popup_url = st.text_input("URL Target (Saat gambar/tombol diklik)", value=sys_config.get("popup_target_url", ""), placeholder="https://...")
                 
-                # Hidden logic: Naikkan versi agar user yang sudah pernah menutup pop-up lama, akan melihat pop-up yang baru ini
+                current_img_url = sys_config.get("popup_image_url", "")
+                if current_img_url:
+                    st.caption(f"🔗 Gambar yang sedang aktif: {current_img_url}")
+                
+                # Hidden logic: Naikkan versi
                 curr_version = sys_config.get("popup_version", 1)
                 
                 st.write("")
-                if st.form_submit_button("💾 Simpan Pop-Up Promo", use_container_width=True):
+                if st.form_submit_button("💾 Upload & Simpan Pop-Up", use_container_width=True):
+                    final_img_url = current_img_url
+                    
+                    # LOGIKA UPLOAD CLOUDINARY
+                    if uploaded_promo is not None:
+                        import time
+                        import hashlib
+                        import requests
+                        
+                        cloud_name = "tomstt"
+                        api_key = "974711872256172"
+                        api_secret = "wNSQZs01GamY0coQ_Nf2OMi1qvA"
+                        timestamp = str(int(time.time()))
+                        
+                        # Keamanan: Buat Signature SHA-1 (Syarat Wajib Cloudinary)
+                        sign_str = f"timestamp={timestamp}{api_secret}"
+                        signature = hashlib.sha1(sign_str.encode('utf-8')).hexdigest()
+                        
+                        url_cloud = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
+                        files = {'file': (uploaded_promo.name, uploaded_promo.getvalue(), uploaded_promo.type)}
+                        data = {
+                            'api_key': api_key,
+                            'timestamp': timestamp,
+                            'signature': signature
+                        }
+                        
+                        try:
+                            res = requests.post(url_cloud, files=files, data=data).json()
+                            if 'secure_url' in res:
+                                final_img_url = res['secure_url']
+                                st.success("✅ Gambar berhasil diupload ke Cloudinary!")
+                            else:
+                                st.error("❌ Gagal mengupload gambar ke Cloudinary.")
+                        except Exception as e:
+                            st.error(f"Error Koneksi Cloudinary: {e}")
+
+                    # Simpan data ke Firestore
                     db.collection('settings').document('system_config').set({
                         "is_popup_active": toggle_popup,
-                        "popup_image_url": new_popup_img,
+                        "popup_image_url": final_img_url,
                         "popup_target_url": new_popup_url,
                         "popup_version": curr_version + 1 
                     }, merge=True)
+                    
                     get_system_config.clear()
                     st.toast("Pop-Up Promo berhasil diperbarui!", icon="✅")
                     st.rerun()
