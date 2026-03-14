@@ -2252,17 +2252,24 @@ if sys_config.get("is_popup_active", False):
         st.markdown(f"""
         <style>
             #custom-promo-modal {{
-                display: none; /* Disembunyikan sampai JS mengecek memori browser */
-                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
                 background-color: rgba(255, 255, 255, 0.92);
                 backdrop-filter: blur(8px); z-index: 9999999;
                 justify-content: center; align-items: center; padding: 20px;
             }}
             .promo-content {{
-                background: #fff; padding: 25px 20px 20px 20px; border-radius: 16px;
+                background: #fff; padding: 35px 20px 20px 20px; border-radius: 16px;
                 box-shadow: 0 10px 40px rgba(0,0,0,0.15); max-width: 380px; width: 100%;
                 text-align: center; border: 1px solid #eee; font-family: 'Plus Jakarta Sans', sans-serif;
+                position: relative; /* Wajib agar tombol X nempel di pojok kotak */
+                max-height: 85vh; /* 🚀 MAX TINGGI KOTAK 85% LAYAR */
+                overflow-y: auto; /* 🚀 OTOMATIS MUNCUL SCROLL BILA KEPANJANGAN */
             }}
+            /* 🚀 BIKIN SCROLLBAR JADI ELEGAN & TIPIS */
+            .promo-content::-webkit-scrollbar {{ width: 5px; }}
+            .promo-content::-webkit-scrollbar-track {{ background: transparent; }}
+            .promo-content::-webkit-scrollbar-thumb {{ background: #ccc; border-radius: 10px; }}
+            
             .promo-img {{
                 width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08);
             }}
@@ -2278,10 +2285,19 @@ if sys_config.get("is_popup_active", False):
                 font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s;
             }}
             .promo-btn-close:hover {{ background-color: #fdeced; }}
+            
+            /* 🚀 TOMBOL [X] POJOK KANAN ATAS */
+            .promo-btn-close-x {{
+                position: absolute; top: 10px; right: 15px; background: transparent; 
+                border: none; font-size: 24px; font-weight: bold; color: #bbb; 
+                cursor: pointer; transition: 0.2s; line-height: 1; padding: 0;
+            }}
+            .promo-btn-close-x:hover {{ color: #e74c3c; }}
         </style>
         
         <div id="custom-promo-modal">
             <div class="promo-content">
+                <button id="btn-tutup-x" class="promo-btn-close-x">&times;</button>
                 <a href="{target_url}" target="_blank">
                     <img src="{img_url}" class="promo-img" alt="Promo TOM'STT AI">
                 </a>
@@ -2291,32 +2307,31 @@ if sys_config.get("is_popup_active", False):
         </div>
         """, unsafe_allow_html=True)
         
-        # 2. INJEKSI JAVASCRIPT VIA COMPONENTS (Agar bebas dari blokir keamanan Streamlit)
+        # 2. INJEKSI JAVASCRIPT VIA COMPONENTS
         components.html(f"""
         <script>
-            // Targetkan DOM Utama (Di luar Iframe Components)
             const parentDoc = window.parent.document;
             const modal = parentDoc.getElementById('custom-promo-modal');
             const btnTutup = parentDoc.getElementById('btn-tutup-promo');
+            const btnTutupX = parentDoc.getElementById('btn-tutup-x');
             
             const versi = "{versi_saat_ini}";
             const memoriKey = 'promo_ditutup_v' + versi;
             
             if (modal) {{
-                // Cek apakah user sudah pernah menutup versi ini
                 const statusMemori = window.parent.sessionStorage.getItem(memoriKey);
-                
                 if (statusMemori !== 'true') {{
-                    modal.style.display = 'flex'; // Tampilkan Modal!
+                    modal.style.display = 'flex';
                 }}
                 
-                // Tempelkan fungsi klik untuk menyembunyikan modal
-                if (btnTutup) {{
-                    btnTutup.onclick = function() {{
-                        modal.style.display = 'none';
-                        window.parent.sessionStorage.setItem(memoriKey, 'true'); // Tanam ingatan ke Browser
-                    }};
-                }}
+                // 🚀 BIKIN FUNGSI TUTUP BISA DIPAKAI DI 2 TOMBOL SEKALIGUS
+                const aksiTutup = function() {{
+                    modal.style.display = 'none';
+                    window.parent.sessionStorage.setItem(memoriKey, 'true'); 
+                }};
+                
+                if (btnTutup) btnTutup.onclick = aksiTutup;
+                if (btnTutupX) btnTutupX.onclick = aksiTutup;
             }}
         </script>
         """, height=0, width=0)
@@ -4505,9 +4520,11 @@ if st.session_state.user_role == "admin":
                         api_key = "974711872256172"
                         api_secret = "wNSQZs01GamY0coQ_Nf2OMi1qvA"
                         timestamp = str(int(time.time()))
+                        folder_name = "TOMSTT_POPUP" # 🚀 NAMA FOLDER TARGET
                         
                         # Keamanan: Buat Signature SHA-1 (Syarat Wajib Cloudinary)
-                        sign_str = f"timestamp={timestamp}{api_secret}"
+                        # PERHATIAN: Parameter wajib urut abjad (f - folder, lalu t - timestamp)
+                        sign_str = f"folder={folder_name}&timestamp={timestamp}{api_secret}"
                         signature = hashlib.sha1(sign_str.encode('utf-8')).hexdigest()
                         
                         url_cloud = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
@@ -4515,6 +4532,7 @@ if st.session_state.user_role == "admin":
                         data = {
                             'api_key': api_key,
                             'timestamp': timestamp,
+                            'folder': folder_name,
                             'signature': signature
                         }
                         
