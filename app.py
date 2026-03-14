@@ -4819,28 +4819,31 @@ if st.session_state.user_role == "admin":
         count_groq_whisper = sum(1 for k in all_keys if k.get('provider') == 'Groq Whisper')
         
         st.markdown("#### 📋 Daftar API Key & Sisa Kuota")
-        col_rekap, col_reset = st.columns([3, 1])
-        with col_rekap:
-            st.markdown(f"""
-            <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
-                <div style="background-color: #f0f2f6; padding: 6px 16px; border-radius: 20px; font-size: 14px; color: #333; font-weight: 600; border: 1px solid #e4e4e4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    🤖 Gemini: <span style="color: #e74c3c; font-weight: 800; font-size: 15px;">{count_gemini}</span>
+        st.caption("Pantau ketersediaan dan atur ulang limit API harian sistem Anda.")
+        
+        with st.expander("📊 Buka Rekap Kuota & Reset API", expanded=False):
+            col_rekap, col_reset = st.columns([3, 1])
+            with col_rekap:
+                st.markdown(f"""
+                <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <div style="background-color: #f0f2f6; padding: 6px 16px; border-radius: 20px; font-size: 14px; color: #333; font-weight: 600; border: 1px solid #e4e4e4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        🤖 Gemini: <span style="color: #e74c3c; font-weight: 800; font-size: 15px;">{count_gemini}</span>
+                    </div>
+                    <div style="background-color: #f0f2f6; padding: 6px 16px; border-radius: 20px; font-size: 14px; color: #333; font-weight: 600; border: 1px solid #e4e4e4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        ⚡ Groq: <span style="color: #e74c3c; font-weight: 800; font-size: 15px;">{count_groq}</span>
+                    </div>
+                    <div style="background-color: #f0f2f6; padding: 6px 16px; border-radius: 20px; font-size: 14px; color: #333; font-weight: 600; border: 1px solid #e4e4e4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        🧭 Cohere: <span style="color: #e74c3c; font-weight: 800; font-size: 15px;">{count_cohere}</span>
+                    </div>
+                    <div style="background-color: #f0f2f6; padding: 6px 16px; border-radius: 20px; font-size: 14px; color: #333; font-weight: 600; border: 1px solid #e4e4e4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        🎙️ G-Whisper: <span style="color: #e74c3c; font-weight: 800; font-size: 15px;">{count_groq_whisper}</span>
+                    </div>
                 </div>
-                <div style="background-color: #f0f2f6; padding: 6px 16px; border-radius: 20px; font-size: 14px; color: #333; font-weight: 600; border: 1px solid #e4e4e4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    ⚡ Groq: <span style="color: #e74c3c; font-weight: 800; font-size: 15px;">{count_groq}</span>
-                </div>
-                <div style="background-color: #f0f2f6; padding: 6px 16px; border-radius: 20px; font-size: 14px; color: #333; font-weight: 600; border: 1px solid #e4e4e4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    🧭 Cohere: <span style="color: #e74c3c; font-weight: 800; font-size: 15px;">{count_cohere}</span>
-                </div>
-                <div style="background-color: #f0f2f6; padding: 6px 16px; border-radius: 20px; font-size: 14px; color: #333; font-weight: 600; border: 1px solid #e4e4e4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    🎙️ G-Whisper: <span style="color: #e74c3c; font-weight: 800; font-size: 15px;">{count_groq_whisper}</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        with col_reset:
-            # FITUR BARU: TOMBOL RESET KILAT
-            if st.button("Reset Kuota", type="primary", use_container_width=True):
-                dialog_reset_api()
+                """, unsafe_allow_html=True)
+            with col_reset:
+                # FITUR BARU: TOMBOL RESET KILAT
+                if st.button("Reset Kuota", type="primary", use_container_width=True):
+                    dialog_reset_api()
         
         # 4. FORM TAMBAH API KEY BARU (Dipindah ke atas)
         with st.expander("➕ Tambah API Key Baru"):
@@ -5337,4 +5340,3 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
