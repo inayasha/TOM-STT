@@ -4392,9 +4392,9 @@ with tab_arsip:
 if st.session_state.user_role == "admin":
     with tabs[5]:
         
-        # --- 📢 PAPAN PENGUMUMAN UTAMA ---
-        st.markdown("#### 📢 Papan Pengumuman Utama")
-        st.caption("Buat dan tampilkan pengumuman penting kepada seluruh pengguna di halaman depan.")
+        # --- 📢 PENGUMUMAN & INFORMASI ---
+        st.markdown("#### 📢 Pengumuman & Informasi")
+        st.caption("Kelola papan pengumuman teks dan pop-up gambar promo untuk halaman depan.")
         
         sys_config = get_system_config()
         
@@ -4468,13 +4468,7 @@ if st.session_state.user_role == "admin":
                     st.toast("Pengumuman berhasil diperbarui!", icon="✅")
                     st.rerun()
                     
-        st.markdown("---")
-        
-        # --- 🖼️ KELOLA POP-UP PROMO (MODAL) ---
-        st.markdown("#### 🖼️ Pop-Up Promo & Media Library")
-        st.caption("Kelola konten pop-up dan histori gambar yang pernah Anda unggah.")
-        
-        # Inisialisasi Kredensial & Data Saat Ini
+        # Inisialisasi Kredensial & Data Saat Ini (Untuk Pop-Up)
         import time
         import hashlib
         import requests
@@ -4495,7 +4489,7 @@ if st.session_state.user_role == "admin":
         # ==========================================
         # BAGIAN 1: FORM ATUR KONTEN & UPLOAD BARU
         # ==========================================
-        with st.expander("📝 Atur Konten & Upload Baru", expanded=False):
+        with st.expander("📝 Kelola Pop-Up", expanded=False):
             with st.form("form_popup_promo"):
                 toggle_popup = st.toggle("🚀 Aktifkan Pop-Up Promo", value=sys_config.get("is_popup_active", False))
                 
@@ -4560,7 +4554,7 @@ if st.session_state.user_role == "admin":
         # ==========================================
         # BAGIAN 2: MEDIA LIBRARY (GALERI HISTORI)
         # ==========================================
-        with st.expander("📂 Galeri & Histori Gambar", expanded=False):
+        with st.expander("📂 Kelola Histori Gambar Pop-Up", expanded=False):
             if not history_gambar:
                 st.info("Belum ada histori gambar yang tersimpan. Upload gambar baru untuk mulai membuat galeri.")
             else:
@@ -4621,7 +4615,7 @@ if st.session_state.user_role == "admin":
         st.markdown("#### 🗂️ Hak Akses Fitur Premium (Arsip & Upload Teks)")
         st.caption("Tentukan paket mana saja yang diizinkan untuk mengakses fitur eksklusif di bawah ini.")
         
-        with st.container(border=True):
+        with st.expander("⚙️ Buka Pengaturan Hak Akses", expanded=False):
             all_packages = ["LITE", "STARTER", "EKSEKUTIF", "VIP", "ENTERPRISE", "AIO 10 JAM", "AIO 30 JAM", "AIO 100 JAM"]
             
             st.markdown("**1. Hak Akses Tab Arsip (Cloud Storage)**")
@@ -4659,7 +4653,7 @@ if st.session_state.user_role == "admin":
         
         sys_config = get_system_config()
         
-        with st.container(border=True):
+        with st.expander("⚙️ Buka Pengaturan Pemeliharaan", expanded=False):
             col_m1, col_m2, col_m3 = st.columns(3)
             with col_m1:
                 toggle_aio = st.toggle("🌟 Penjualan AIO", value=sys_config.get("is_aio_active", True), help="Sembunyikan tombol beli AIO.")
@@ -4686,7 +4680,7 @@ if st.session_state.user_role == "admin":
         
         sys_config = get_system_config()
         
-        with st.container(border=True):
+        with st.expander("⚙️ Buka Konfigurasi Mesin STT", expanded=False):
             use_groq = st.toggle("⚡ Aktifkan Groq Whisper API", value=sys_config.get("use_groq_stt", False))
             
             if use_groq:
@@ -4744,9 +4738,6 @@ if st.session_state.user_role == "admin":
         st.markdown("---")
         
         # --- MANAJEMEN API KEY & LOAD BALANCER ---
-        st.markdown("#### 🏦 Bank API Key (Load Balancer)")
-        st.caption("Sistem akan otomatis membagi beban dan melompat jika ada kunci yang error/habis limit.")
-        
         # 1. DEKLARASI FUNGSI POP-UP (Harus di atas agar bisa dipanggil tombol di bawahnya)
         @st.dialog("✏️ Edit API Key")
         def dialog_edit_api(doc_id, current_name, current_limit):
