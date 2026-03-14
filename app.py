@@ -2257,18 +2257,23 @@ if sys_config.get("is_popup_active", False):
                 backdrop-filter: blur(8px); z-index: 9999999;
                 justify-content: center; align-items: center; padding: 20px;
             }}
-            .promo-content {{
-                background: #fff; padding: 35px 20px 20px 20px; border-radius: 16px;
+            /* 🚀 KOTAK LUAR (TIDAK IKUT SCROLL) */
+            .promo-container {{
+                background: #fff; border-radius: 16px;
                 box-shadow: 0 10px 40px rgba(0,0,0,0.15); max-width: 380px; width: 100%;
-                text-align: center; border: 1px solid #eee; font-family: 'Plus Jakarta Sans', sans-serif;
-                position: relative; /* Wajib agar tombol X nempel di pojok kotak */
-                max-height: 85vh; /* 🚀 MAX TINGGI KOTAK 85% LAYAR */
-                overflow-y: auto; /* 🚀 OTOMATIS MUNCUL SCROLL BILA KEPANJANGAN */
+                position: relative; display: flex; flex-direction: column;
+                max-height: 85vh; border: 1px solid #eee;
             }}
-            /* 🚀 BIKIN SCROLLBAR JADI ELEGAN & TIPIS */
-            .promo-content::-webkit-scrollbar {{ width: 5px; }}
-            .promo-content::-webkit-scrollbar-track {{ background: transparent; }}
-            .promo-content::-webkit-scrollbar-thumb {{ background: #ccc; border-radius: 10px; }}
+            /* 🚀 AREA DALAM (YANG BISA DI-SCROLL) */
+            .promo-scroll-content {{
+                padding: 35px 20px 20px 20px;
+                overflow-y: auto; flex: 1;
+                text-align: center; font-family: 'Plus Jakarta Sans', sans-serif;
+            }}
+            /* BIKIN SCROLLBAR JADI ELEGAN & TIPIS */
+            .promo-scroll-content::-webkit-scrollbar {{ width: 5px; }}
+            .promo-scroll-content::-webkit-scrollbar-track {{ background: transparent; }}
+            .promo-scroll-content::-webkit-scrollbar-thumb {{ background: #ccc; border-radius: 10px; }}
             
             .promo-img {{
                 width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08);
@@ -2286,23 +2291,31 @@ if sys_config.get("is_popup_active", False):
             }}
             .promo-btn-close:hover {{ background-color: #fdeced; }}
             
-            /* 🚀 TOMBOL [X] POJOK KANAN ATAS */
+            /* 🚀 TOMBOL [X] STICKY MIRIP BAWAAN STREAMLIT */
             .promo-btn-close-x {{
-                position: absolute; top: 10px; right: 15px; background: transparent; 
-                border: none; font-size: 24px; font-weight: bold; color: #bbb; 
-                cursor: pointer; transition: 0.2s; line-height: 1; padding: 0;
+                position: absolute; top: 10px; right: 10px; 
+                background: transparent; border: none; font-size: 22px; 
+                color: #7A7A8A; cursor: pointer; transition: 0.2s;
+                width: 32px; height: 32px; border-radius: 50%;
+                display: flex; align-items: center; justify-content: center;
+                z-index: 10; padding-bottom: 2px;
             }}
-            .promo-btn-close-x:hover {{ color: #e74c3c; }}
+            .promo-btn-close-x:hover {{ 
+                background: rgba(151, 160, 175, 0.2); color: #31333F; 
+            }}
         </style>
         
         <div id="custom-promo-modal">
-            <div class="promo-content">
+            <div class="promo-container">
                 <button id="btn-tutup-x" class="promo-btn-close-x">&times;</button>
-                <a href="{target_url}" target="_blank">
-                    <img src="{img_url}" class="promo-img" alt="Promo TOM'STT AI">
-                </a>
-                <a href="{target_url}" target="_blank" class="promo-btn-main">Lihat Detail</a>
-                <button id="btn-tutup-promo" class="promo-btn-close">Tutup</button>
+                
+                <div class="promo-scroll-content">
+                    <a href="{target_url}" target="_blank">
+                        <img src="{img_url}" class="promo-img" alt="Promo TOM'STT AI">
+                    </a>
+                    <a href="{target_url}" target="_blank" class="promo-btn-main">Lihat Detail</a>
+                    <button id="btn-tutup-promo" class="promo-btn-close">Tutup</button>
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -2324,7 +2337,6 @@ if sys_config.get("is_popup_active", False):
                     modal.style.display = 'flex';
                 }}
                 
-                // 🚀 BIKIN FUNGSI TUTUP BISA DIPAKAI DI 2 TOMBOL SEKALIGUS
                 const aksiTutup = function() {{
                     modal.style.display = 'none';
                     window.parent.sessionStorage.setItem(memoriKey, 'true'); 
