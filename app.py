@@ -5231,16 +5231,17 @@ if st.session_state.user_role == "admin":
             def clear_search():
                 st.session_state.search_user_email = ""
                 
-            # KUNCI PERBAIKAN: Gunakan 2 kolom utama agar seimbang di laptop (50:50)
             col_search, col_sort = st.columns(2)
             
             with col_search:
-                # Mengembalikan label agar sejajar secara visual
                 search_q = st.text_input("Cari Email User:", key="search_user_email", placeholder="Ketik alamat email...").strip().lower()
                 
-                # TOMBOL CLEAR PINTAR: Hanya muncul jika form tidak kosong
+                # TOMBOL CLEAR PINTAR (Dibuat Rata Tengah dengan Sub-Kolom)
                 if search_q != "":
-                    st.button("✖️ Hapus Pencarian", on_click=clear_search, type="secondary")
+                    # Membagi ruang menjadi 3: Kiri (1), Tengah (2), Kanan (1)
+                    col_spc1, col_btn, col_spc2 = st.columns([1, 2, 1])
+                    with col_btn:
+                        st.button("✖️ Hapus Pencarian", on_click=clear_search, type="secondary", use_container_width=True)
                     
             with col_sort:
                 sort_opt = st.selectbox("Urutkan berdasarkan:", [
@@ -5296,7 +5297,8 @@ if st.session_state.user_role == "admin":
             if sort_opt in ["Arsip Terbanyak", "Arsip Terbaru"]:
                 with st.spinner("⏳ Mengambil data aktivitas arsip pengguna... (Mohon tunggu)"):
                     for u in filtered_users:
-                        arsip_ref = db.collection('users').document(u['id']).collection('arsip').get()
+                        # 🚀 KUNCI PERBAIKAN: Ubah 'arsip' menjadi 'history' sesuai database Anda
+                        arsip_ref = db.collection('users').document(u['id']).collection('history').get()
                         u['calc_arsip_count'] = len(arsip_ref)
                         
                         latest_time = 0
@@ -5433,4 +5435,3 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
