@@ -5216,22 +5216,43 @@ if st.session_state.user_role == "admin":
             
             # Mengambil data dari Firestore
             users_ref = db.collection('users').stream()
-            all_users = []
+            all_users_raw = []
             for doc in users_ref:
                 u_data = doc.to_dict()
                 u_data['id'] = doc.id
-                all_users.append(u_data)
+                all_users_raw.append(u_data)
                 
-            # Menyortir data berdasarkan Tanggal Terdaftar (Terbaru di atas)
-            def sort_by_date(user_dict):
+            st.markdown("##### 🔍 Filter & Urutkan Pengguna")
+            col_search, col_sort = st.columns([3, 2])
+            with col_search:
+                search_q = st.text_input("Cari Email User:", placeholder="Ketik email...", label_visibility="collapsed").strip().lower()
+            with col_sort:
+                sort_opt = st.selectbox("Urutkan:", ["Terbaru (Tanggal)", "Terlama (Tanggal)", "Abjad (A-Z)", "Abjad (Z-A)"], label_visibility="collapsed")
+                
+            # Filter & Sorting
+            filtered_users = []
+            for u in all_users_raw:
+                if search_q in u['id'].lower():
+                    filtered_users.append(u)
+                    
+            def get_timestamp(user_dict):
                 t = user_dict.get('created_at')
                 return t.timestamp() if t else 0
-            all_users.sort(key=sort_by_date, reverse=True)
-    
-            st.write("Daftar Pengguna Saat Ini:")
+
+            if sort_opt == "Terbaru (Tanggal)":
+                filtered_users.sort(key=get_timestamp, reverse=True)
+            elif sort_opt == "Terlama (Tanggal)":
+                filtered_users.sort(key=get_timestamp, reverse=False)
+            elif sort_opt == "Abjad (A-Z)":
+                filtered_users.sort(key=lambda x: x['id'].lower(), reverse=False)
+            elif sort_opt == "Abjad (Z-A)":
+                filtered_users.sort(key=lambda x: x['id'].lower(), reverse=True)
+                
+            st.markdown(f"**Total Pengguna:** {len(filtered_users)} Akun")
+            st.markdown("---")
             
-            # Menampilkan List User & Analisis Paket
-            for u_data in all_users:
+            # Menampilkan List User & Analisis Paket (Bentuk Collapse)
+            for u_data in filtered_users:
                 user_id = u_data['id']
                 role = u_data.get('role', 'user')
                 
@@ -5262,21 +5283,18 @@ if st.session_state.user_role == "admin":
                         paket_teks.append(f"{nama} ({kuota}x)")
                         
                         nama_up = nama.upper()
-                        # Kalkulasi aset berdasarkan 5 Kasta B2B (Harga Paket / Jumlah Kuota)
                         if "LITE" in nama_up: estimasi_rupiah += kuota * (29000 / 3)
                         elif "STARTER" in nama_up or "PRO" in nama_up: estimasi_rupiah += kuota * (89000 / 10)
                         elif "EKSEKUTIF" in nama_up: estimasi_rupiah += kuota * (299000 / 30)
                         elif "VIP" in nama_up: estimasi_rupiah += kuota * (599000 / 65)
                         elif "ENTERPRISE" in nama_up: estimasi_rupiah += kuota * (1199000 / 150)
-                        elif "AIO 10" in nama_up or "AIO 30" in nama_up or "AIO 100" in nama_up: pass # Akan dihitung dari bank_menit
+                        elif "AIO 10" in nama_up or "AIO 30" in nama_up or "AIO 100" in nama_up: pass
                         elif "ECERAN" in nama_up or "REFILL" in nama_up: estimasi_rupiah += kuota * (25500 / 5)
                 
-                # Hitung Nilai Aset AIO dari Bank Menit
                 bank_menit_user = u_data.get('bank_menit', 0)
                 if bank_menit_user > 0:
-                    estimasi_rupiah += bank_menit_user * 270 # Rata-rata estimasi Rp 270 per menit
+                    estimasi_rupiah += bank_menit_user * 270 
                     
-                # Membuat format list bullet point untuk paket menggunakan HTML
                 if paket_teks:
                     paket_html = "<ul style='margin-top: 5px; margin-bottom: 5px; padding-left: 20px;'>"
                     for pt in paket_teks:
@@ -5285,7 +5303,6 @@ if st.session_state.user_role == "admin":
                 else:
                     paket_html = "<div style='margin-top: 5px; margin-bottom: 5px; margin-left: 5px;'>- Belum ada / Habis</div>"
                 
-                # Indikator Bank Menit AIO (Format Jam & Menit)
                 if bank_menit_user > 0:
                     jam_admin = bank_menit_user // 60
                     menit_admin = bank_menit_user % 60
@@ -5295,7 +5312,6 @@ if st.session_state.user_role == "admin":
                         waktu_admin_str = f"{jam_admin} Jam"
                     else:
                         waktu_admin_str = f"{bank_menit_user} Menit"
-                        
                     paket_html += f"<div style='margin-left: 5px; margin-bottom: 10px; color:#e74c3c; font-weight: bold;'>⏱️ Waktu AIO: {waktu_admin_str}</div>"
                 else:
                     paket_html += "<div style='margin-bottom: 10px;'></div>"
@@ -5303,32 +5319,32 @@ if st.session_state.user_role == "admin":
                 str_rupiah = f"Rp {int(estimasi_rupiah):,}".replace(",", ".")
                 str_spending = f"Rp {int(total_spending):,}".replace(",", ".")
                 
-                # Membagi kolom menjadi 4 agar muat 3 tombol (Lihat Arsip, Edit, Hapus)
-                col_info, col_btn_arsip, col_btn_edit, col_btn_hapus = st.columns([3.5, 1, 1, 1])
-                with col_info:
-                    st.markdown(f"👤 **{user_id}** &nbsp;|&nbsp; Role: `{role}`<br>"
-                                f"<div style='font-size: 14px; color: #555; margin-top: 6px;'>"
-                                f"📅 <b>Terdaftar:</b> {tgl_daftar}<br>"
-                                f"📦 <b>Paket Aktif:</b>{paket_html}"
-                                f"💼 <b>Est. Sisa Aset:</b> {str_rupiah}<br>"
-                                f"💰 <b>Total Spending:</b> <span style='color:#27ae60; font-weight:bold;'>{str_spending}</span>"
-                                f"</div>", 
-                                unsafe_allow_html=True)
-                with col_btn_arsip:
-                    # Tombol Lihat Arsip Universal
-                    if st.button("Lihat Arsip", key=f"arsip_usr_{user_id}", type="secondary", use_container_width=True):
-                        dialog_lihat_arsip(user_id)
-                with col_btn_edit:
-                    if st.button("Edit", key=f"edit_usr_{user_id}", type="secondary", use_container_width=True):
-                        dialog_edit_dompet(user_id, saldo, bank_menit_user, u_data.get('tanggal_expired', 'Selamanya'), inventori)
-                with col_btn_hapus:
-                    is_self = (user_id == st.session_state.current_user)
-                    if not is_self:
-                        if st.button("Hapus", key=f"del_usr_{user_id}", type="secondary", use_container_width=True):
-                            dialog_hapus_user(user_id)
-                    else:
-                        st.caption("*(Admin)*")
-                st.write("---")
+                # BUNGKUS DENGAN EXPANDER AGAR RINGKAS
+                with st.expander(f"👤 {user_id}  (Terdaftar: {tgl_daftar[:11]})"):
+                    col_info, col_aksi = st.columns([3, 2])
+                    
+                    with col_info:
+                        st.markdown(f"**Role:** `{role}`<br>"
+                                    f"<div style='font-size: 14px; color: #555; margin-top: 10px;'>"
+                                    f"📅 <b>Waktu Daftar:</b> {tgl_daftar}<br>"
+                                    f"📦 <b>Paket Aktif:</b>{paket_html}"
+                                    f"💼 <b>Est. Sisa Aset:</b> {str_rupiah}<br>"
+                                    f"💰 <b>Total Spending:</b> <span style='color:#27ae60; font-weight:bold;'>{str_spending}</span>"
+                                    f"</div>", 
+                                    unsafe_allow_html=True)
+                                    
+                    with col_aksi:
+                        if st.button("📂 Lihat Arsip", key=f"arsip_usr_{user_id}", use_container_width=True):
+                            dialog_lihat_arsip(user_id)
+                        if st.button("✏️ Edit Dompet", key=f"edit_usr_{user_id}", use_container_width=True):
+                            dialog_edit_dompet(user_id, saldo, bank_menit_user, u_data.get('tanggal_expired', 'Selamanya'), inventori)
+                            
+                        is_self = (user_id == st.session_state.current_user)
+                        if not is_self:
+                            if st.button("🗑️ Hapus Akun", key=f"del_usr_{user_id}", type="tertiary", use_container_width=True):
+                                dialog_hapus_user(user_id)
+                        else:
+                            st.caption("*(Akun Anda Sendiri)*")
                     
 st.markdown("<hr>", unsafe_allow_html=True) 
 st.markdown("""
@@ -5340,3 +5356,4 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
+
