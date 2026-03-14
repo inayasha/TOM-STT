@@ -2262,20 +2262,46 @@ if sys_config.get("is_popup_active", False):
         # CETAK HTML & CSS KE LAYAR UTAMA (VERSI ANTI-BOCOR)
         st.markdown(f"""
 <style>
-#custom-promo-modal {{ display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); z-index: 9999999; justify-content: center; align-items: center; padding: 20px; }}
-.promo-container {{ background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); max-width: 380px; width: 100%; position: relative; display: flex; flex-direction: column; max-height: 85vh; border: 1px solid #eee; }}
-.promo-scroll-content {{ padding: 35px 20px 20px 20px; overflow-y: auto; flex: 1; text-align: center; font-family: 'Plus Jakarta Sans', sans-serif; }}
-.promo-scroll-content::-webkit-scrollbar {{ width: 5px; }}
-.promo-scroll-content::-webkit-scrollbar-track {{ background: transparent; }}
-.promo-scroll-content::-webkit-scrollbar-thumb {{ background: #ccc; border-radius: 10px; }}
-.promo-img {{ width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); cursor: zoom-in; }}
-.promo-text {{ font-size: 15px; color: #444; margin-bottom: 20px; line-height: 1.6; text-align: left; padding: 0 5px; }}
-.promo-btn-main {{ display: block; background-color: #000; color: #fff !important; padding: 14px 20px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; margin-bottom: 10px; transition: 0.2s; border: 1px solid #000; }}
-.promo-btn-main:hover {{ background-color: #333; transform: translateY(-2px); }}
-.promo-btn-close {{ display: block; background-color: transparent; color: #e74c3c; border: 1px solid #e74c3c; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s; }}
-.promo-btn-close:hover {{ background-color: #fdeced; }}
-.promo-btn-close-x {{ position: absolute; top: 12px; right: 18px; background: transparent; border: none; font-size: 26px; font-weight: bold; color: #bbb; cursor: pointer; transition: 0.2s; line-height: 1; padding: 0; z-index: 10; }}
-.promo-btn-close-x:hover {{ color: #e74c3c; }}
+#custom-promo-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); z-index: 9999999; justify-content: center; align-items: center; padding: 20px; }
+.promo-container { background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); max-width: 380px; width: 100%; position: relative; display: flex; flex-direction: column; max-height: 85vh; border: 1px solid #eee; }
+.promo-scroll-content { padding: 35px 20px 20px 20px; overflow-y: auto; flex: 1; text-align: center; font-family: 'Plus Jakarta Sans', sans-serif; }
+.promo-scroll-content::-webkit-scrollbar { width: 5px; }
+.promo-scroll-content::-webkit-scrollbar-track { background: transparent; }
+.promo-scroll-content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+.promo-img { width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); cursor: zoom-in; }
+.promo-text { font-size: 15px; color: #444; margin-bottom: 20px; line-height: 1.6; text-align: left; padding: 0 5px; }
+.promo-btn-main { display: block; background-color: #000; color: #fff !important; padding: 14px 20px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; margin-bottom: 10px; transition: 0.2s; border: 1px solid #000; }
+.promo-btn-main:hover { background-color: #333; transform: translateY(-2px); }
+.promo-btn-close { display: block; background-color: transparent; color: #e74c3c; border: 1px solid #e74c3c; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s; }
+.promo-btn-close:hover { background-color: #fdeced; }
+
+/* 🚀 FIX: TOMBOL [X] DENGAN LINGKARAN & SHADOW (STICKY) */
+.promo-btn-close-x { 
+    position: absolute; 
+    top: 10px; 
+    right: 10px; 
+    background-color: #ffffff; /* Membentuk lingkaran putih */
+    width: 32px; 
+    height: 32px; 
+    border-radius: 50%; /* Membuat lingkaran sempurna */
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1); /* Shadow di belakangnya */
+    border: none; 
+    font-size: 20px; 
+    font-weight: bold; 
+    color: #666; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    z-index: 20; 
+    padding-bottom: 2px;
+}
+.promo-btn-close-x:hover { 
+    background-color: #f9f9f9; 
+    color: #e74c3c; 
+    transform: scale(1.1); /* Efek sedikit membesar saat disentuh */
+}
 </style>
 <div id="custom-promo-modal">
 <div class="promo-container">
