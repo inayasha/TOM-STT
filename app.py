@@ -2274,8 +2274,8 @@ if sys_config.get("is_popup_active", False):
 .promo-btn-main:hover {{ background-color: #333; transform: translateY(-2px); }}
 .promo-btn-close {{ display: block; background-color: transparent; color: #e74c3c; border: 1px solid #e74c3c; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s; }}
 .promo-btn-close:hover {{ background-color: #fdeced; }}
-.promo-btn-close-x {{ position: absolute; top: 12px; right: 18px; background: transparent; border: none; font-size: 26px; font-weight: bold; color: #bbb; cursor: pointer; transition: 0.2s; line-height: 1; padding: 0; z-index: 10; }}
-.promo-btn-close-x:hover {{ color: #e74c3c; }}
+.promo-btn-close-x {{ position: absolute; top: 10px; right: 10px; background-color: #ffffff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border: none; font-size: 20px; font-weight: bold; color: #666; cursor: pointer; transition: 0.2s; z-index: 20; padding-bottom: 2px; }}
+.promo-btn-close-x:hover {{ background-color: #f9f9f9; color: #e74c3c; transform: scale(1.1); }}
 </style>
 <div id="custom-promo-modal">
 <div class="promo-container">
@@ -2753,7 +2753,7 @@ def proses_transkrip_audio(audio_to_process, source_name, lang_code):
                 final_audio_path = compressed_path
                 
             elif ext in ['.opus', '.ogg']:
-                status_box.caption(f"🔄 Menyesuaikan format audio ke MP3...")
+                status_box.caption(f"Menyesuaikan format audio ke MP3...")
                 converted_path = os.path.join(tempfile.gettempdir(), f"converted_{uuid.uuid4().hex[:6]}.mp3")
                 cmd = [ffmpeg_cmd, "-y", "-i", input_path, "-vn", "-b:a", "128k", converted_path]
                 subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -3498,7 +3498,7 @@ Namun, jika Anda ingin menggunakan FAST TRACK untuk upload file teks (.txt) seca
             if getattr(st.session_state, 'is_text_upload', False) or durasi_kotor == 0:
                 st.info(f"📊 **Analisis File (.txt):** Dokumen manual Anda memiliki **{jumlah_kata:,} Kata**. (Beban teks ini setara dengan **± {durasi_teks} Menit** pemrosesan AI).")
             else:
-                st.info(f"📊 **Analisis Transkrip Audio:** Teks Anda memiliki **{jumlah_kata:,} Kata** (Setara dengan **± {durasi_teks} Menit** pemrosesan AI).\n\n*💡 **Mengapa nilainya berbeda dengan durasi kotor audio Anda ({durasi_kotor} Menit)?** Karena angka **± {durasi_teks} Menit** tersebut hanyalah estimasi **waktu bicara bersih tanpa jeda keheningan**. Ini justru menguntungkan Anda pada perhitungan tagihan AI!*")
+                st.info(f"📊 **Analisis Transkrip Audio:** Teks Anda memiliki **{jumlah_kata:,} Kata** (Setara dengan **± {durasi_teks} Menit** pemrosesan AI).\n\n*💡 **Mengapa nilainya berbeda dengan durasi kotor audio Anda ({durasi_kotor} Menit)?** Karena angka **± {durasi_teks} Menit** tersebut hanyalah estimasi **waktu bicara bersih tanpa jeda keheningan**. Lihatlah bagaimana adil dan cerdasnya algoritma TOM'STT AI.*")
             st.write("")
             
             # --- 🛡️ FIX 1: BLOKIR DOKUMEN JIKA MELEBIHI LIMIT KARAKTER ---
