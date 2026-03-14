@@ -4647,6 +4647,8 @@ if st.session_state.user_role == "admin":
                     st.toast("Hak Akses berhasil diperbarui!", icon="✅")
                     st.rerun()
         
+        st.markdown("---") # 🚀 TAMBAHAN GARIS PEMISAH DI SINI
+        
         # --- 🚧 MODE PEMELIHARAAN (FEATURE FLAGS) ---
         st.markdown("#### 🚧 Mode Pemeliharaan Sistem")
         st.caption("Matikan sakelar ini untuk menutup akses penjualan atau fitur secara halus tanpa membuat aplikasi error.")
