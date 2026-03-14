@@ -2248,71 +2248,34 @@ if sys_config.get("is_popup_active", False):
     
     # Cegah render jika admin belum memasukkan gambar
     if img_url:
-        # 1. CETAK HTML & CSS KE LAYAR UTAMA (HARUS RATA KIRI AGAR TIDAK JADI TEXT BLOCK)
+        # 1. CETAK HTML & CSS KE LAYAR UTAMA (VERSI ANTI-BOCOR, TANPA SPASI SAMA SEKALI)
         st.markdown(f"""
 <style>
-#custom-promo-modal {{
-    display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(8px); z-index: 9999999;
-    justify-content: center; align-items: center; padding: 20px;
-}}
-.promo-container {{
-    background: #fff; border-radius: 16px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15); max-width: 380px; width: 100%;
-    position: relative; display: flex; flex-direction: column;
-    max-height: 85vh; border: 1px solid #eee;
-}}
-.promo-scroll-content {{
-    padding: 35px 20px 20px 20px;
-    overflow-y: auto; flex: 1;
-    text-align: center; font-family: 'Plus Jakarta Sans', sans-serif;
-}}
+#custom-promo-modal {{ display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); z-index: 9999999; justify-content: center; align-items: center; padding: 20px; }}
+.promo-container {{ background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); max-width: 380px; width: 100%; position: relative; display: flex; flex-direction: column; max-height: 85vh; border: 1px solid #eee; }}
+.promo-scroll-content {{ padding: 35px 20px 20px 20px; overflow-y: auto; flex: 1; text-align: center; font-family: 'Plus Jakarta Sans', sans-serif; }}
 .promo-scroll-content::-webkit-scrollbar {{ width: 5px; }}
 .promo-scroll-content::-webkit-scrollbar-track {{ background: transparent; }}
 .promo-scroll-content::-webkit-scrollbar-thumb {{ background: #ccc; border-radius: 10px; }}
-
-.promo-img {{
-    width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-}}
-.promo-btn-main {{
-    display: block; background-color: #000; color: #fff !important;
-    padding: 14px 20px; border-radius: 10px; text-decoration: none; font-weight: 800;
-    font-size: 15px; margin-bottom: 10px; transition: 0.2s; border: 1px solid #000;
-}}
+.promo-img {{ width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }}
+.promo-btn-main {{ display: block; background-color: #000; color: #fff !important; padding: 14px 20px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; margin-bottom: 10px; transition: 0.2s; border: 1px solid #000; }}
 .promo-btn-main:hover {{ background-color: #333; transform: translateY(-2px); }}
-.promo-btn-close {{
-    display: block; background-color: transparent; color: #e74c3c;
-    border: 1px solid #e74c3c; padding: 12px 20px; border-radius: 10px;
-    font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s;
-}}
+.promo-btn-close {{ display: block; background-color: transparent; color: #e74c3c; border: 1px solid #e74c3c; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s; }}
 .promo-btn-close:hover {{ background-color: #fdeced; }}
-
-.promo-btn-close-x {{
-    position: absolute; top: 10px; right: 10px; 
-    background: transparent; border: none; font-size: 22px; 
-    color: #7A7A8A; cursor: pointer; transition: 0.2s;
-    width: 32px; height: 32px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    z-index: 10; padding-bottom: 2px;
-}}
-.promo-btn-close-x:hover {{ 
-    background: rgba(151, 160, 175, 0.2); color: #31333F; 
-}}
+.promo-btn-close-x {{ position: absolute; top: 10px; right: 10px; background: transparent; border: none; font-size: 22px; color: #7A7A8A; cursor: pointer; transition: 0.2s; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; padding-bottom: 2px; }}
+.promo-btn-close-x:hover {{ background: rgba(151, 160, 175, 0.2); color: #31333F; }}
 </style>
-
 <div id="custom-promo-modal">
-    <div class="promo-container">
-        <button id="btn-tutup-x" class="promo-btn-close-x">&times;</button>
-        
-        <div class="promo-scroll-content">
-            <a href="{target_url}" target="_blank">
-                <img src="{img_url}" class="promo-img" alt="Promo TOM'STT AI">
-            </a>
-            <a href="{target_url}" target="_blank" class="promo-btn-main">Lihat Detail</a>
-            <button id="btn-tutup-promo" class="promo-btn-close">Tutup</button>
-        </div>
-    </div>
+<div class="promo-container">
+<button id="btn-tutup-x" class="promo-btn-close-x">&times;</button>
+<div class="promo-scroll-content">
+<a href="{target_url}" target="_blank">
+<img src="{img_url}" class="promo-img" alt="Promo TOM'STT AI">
+</a>
+<a href="{target_url}" target="_blank" class="promo-btn-main">Lihat Detail</a>
+<button id="btn-tutup-promo" class="promo-btn-close">Tutup</button>
+</div>
+</div>
 </div>
 """, unsafe_allow_html=True)
         
