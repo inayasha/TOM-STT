@@ -2248,7 +2248,7 @@ if sys_config.get("is_popup_active", False):
     
     # Cegah render jika admin belum memasukkan gambar
     if img_url:
-        # 1. CETAK HTML & CSS KE LAYAR UTAMA (VERSI ANTI-BOCOR & DESAIN X ASLI)
+        # 1. CETAK HTML & CSS KE LAYAR UTAMA (VERSI KLIK GAMBAR FULL-SIZE)
         st.markdown(f"""
 <style>
 #custom-promo-modal {{ display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); z-index: 9999999; justify-content: center; align-items: center; padding: 20px; }}
@@ -2257,7 +2257,7 @@ if sys_config.get("is_popup_active", False):
 .promo-scroll-content::-webkit-scrollbar {{ width: 5px; }}
 .promo-scroll-content::-webkit-scrollbar-track {{ background: transparent; }}
 .promo-scroll-content::-webkit-scrollbar-thumb {{ background: #ccc; border-radius: 10px; }}
-.promo-img {{ width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }}
+.promo-img {{ width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); cursor: zoom-in; }}
 .promo-btn-main {{ display: block; background-color: #000; color: #fff !important; padding: 14px 20px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; margin-bottom: 10px; transition: 0.2s; border: 1px solid #000; }}
 .promo-btn-main:hover {{ background-color: #333; transform: translateY(-2px); }}
 .promo-btn-close {{ display: block; background-color: transparent; color: #e74c3c; border: 1px solid #e74c3c; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s; }}
@@ -2269,7 +2269,7 @@ if sys_config.get("is_popup_active", False):
 <div class="promo-container">
 <button id="btn-tutup-x" class="promo-btn-close-x">&times;</button>
 <div class="promo-scroll-content">
-<a href="{target_url}" target="_blank">
+<a href="{img_url}" target="_blank" title="Klik untuk memperbesar gambar">
 <img src="{img_url}" class="promo-img" alt="Promo TOM'STT AI">
 </a>
 <a href="{target_url}" target="_blank" class="promo-btn-main">Lihat Detail</a>
