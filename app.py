@@ -2248,7 +2248,7 @@ if sys_config.get("is_popup_active", False):
     
     # Cegah render jika admin belum memasukkan gambar
     if img_url:
-        # 1. CETAK HTML & CSS KE LAYAR UTAMA (VERSI ANTI-BOCOR, TANPA SPASI SAMA SEKALI)
+        # 1. CETAK HTML & CSS KE LAYAR UTAMA (VERSI ANTI-BOCOR & DESAIN X ASLI)
         st.markdown(f"""
 <style>
 #custom-promo-modal {{ display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); z-index: 9999999; justify-content: center; align-items: center; padding: 20px; }}
@@ -2262,8 +2262,8 @@ if sys_config.get("is_popup_active", False):
 .promo-btn-main:hover {{ background-color: #333; transform: translateY(-2px); }}
 .promo-btn-close {{ display: block; background-color: transparent; color: #e74c3c; border: 1px solid #e74c3c; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s; }}
 .promo-btn-close:hover {{ background-color: #fdeced; }}
-.promo-btn-close-x {{ position: absolute; top: 10px; right: 10px; background: transparent; border: none; font-size: 22px; color: #7A7A8A; cursor: pointer; transition: 0.2s; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; padding-bottom: 2px; }}
-.promo-btn-close-x:hover {{ background: rgba(151, 160, 175, 0.2); color: #31333F; }}
+.promo-btn-close-x {{ position: absolute; top: 12px; right: 18px; background: transparent; border: none; font-size: 26px; font-weight: bold; color: #bbb; cursor: pointer; transition: 0.2s; line-height: 1; padding: 0; z-index: 10; }}
+.promo-btn-close-x:hover {{ color: #e74c3c; }}
 </style>
 <div id="custom-promo-modal">
 <div class="promo-container">
