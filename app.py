@@ -2261,48 +2261,54 @@ if sys_config.get("is_popup_active", False):
         
         # CETAK HTML & CSS KE LAYAR UTAMA (VERSI ANTI-BOCOR)
         st.markdown(f"""
-<style>
-#custom-promo-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); z-index: 9999999; justify-content: center; align-items: center; padding: 20px; }
-.promo-container { background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); max-width: 380px; width: 100%; position: relative; display: flex; flex-direction: column; max-height: 85vh; border: 1px solid #eee; }
-.promo-scroll-content { padding: 35px 20px 20px 20px; overflow-y: auto; flex: 1; text-align: center; font-family: 'Plus Jakarta Sans', sans-serif; }
-.promo-scroll-content::-webkit-scrollbar { width: 5px; }
-.promo-scroll-content::-webkit-scrollbar-track { background: transparent; }
-.promo-scroll-content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
-.promo-img { width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); cursor: zoom-in; }
-.promo-text { font-size: 15px; color: #444; margin-bottom: 20px; line-height: 1.6; text-align: left; padding: 0 5px; }
-.promo-btn-main { display: block; background-color: #000; color: #fff !important; padding: 14px 20px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; margin-bottom: 10px; transition: 0.2s; border: 1px solid #000; }
-.promo-btn-main:hover { background-color: #333; transform: translateY(-2px); }
-.promo-btn-close { display: block; background-color: transparent; color: #e74c3c; border: 1px solid #e74c3c; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s; }
-.promo-btn-close:hover { background-color: #fdeced; }
+# --- 🖼️ UI & TRIGGER POP-UP PROMO (VERSI PERBAIKAN SINTAKS) ---
+sys_config = get_system_config()
+if sys_config.get("is_popup_active", False):
+    versi_saat_ini = sys_config.get("popup_version", 1)
+    img_url = sys_config.get("popup_image_url", "")
+    popup_text = sys_config.get("popup_text", "")
+    target_url = sys_config.get("popup_target_url", "")
+    
+    # 1. Pastikan Variabel Didefinisikan Dulu (Mencegah NameError)
+    if img_url or popup_text:
+        # Rakit komponen HTML satu per satu
+        html_img = f'<a href="{img_url}" target="_blank" title="Klik untuk memperbesar gambar"><img src="{img_url}" class="promo-img" alt="Promo TOM\'STT AI"></a>' if img_url else ""
+        
+        aman_teks = popup_text.replace('\n', '<br>')
+        html_teks = f'<div class="promo-text">{aman_teks}</div>' if popup_text else ""
+        
+        html_btn = f'<a href="{target_url}" target="_blank" class="promo-btn-main">Lihat Detail</a>' if target_url else ""
 
-/* 🚀 FIX: TOMBOL [X] DENGAN LINGKARAN & SHADOW (STICKY) */
-.promo-btn-close-x { 
-    position: absolute; 
-    top: 10px; 
-    right: 10px; 
-    background-color: #ffffff; /* Membentuk lingkaran putih */
-    width: 32px; 
-    height: 32px; 
-    border-radius: 50%; /* Membuat lingkaran sempurna */
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1); /* Shadow di belakangnya */
-    border: none; 
-    font-size: 20px; 
-    font-weight: bold; 
-    color: #666; 
-    cursor: pointer; 
-    transition: 0.2s; 
-    z-index: 20; 
-    padding-bottom: 2px;
-}
-.promo-btn-close-x:hover { 
-    background-color: #f9f9f9; 
-    color: #e74c3c; 
-    transform: scale(1.1); /* Efek sedikit membesar saat disentuh */
-}
+        # 2. Cetak ke Layar (Gunakan f""" hanya jika variabel sudah siap)
+        st.markdown(f"""
+<style>
+#custom-promo-modal {{ display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); z-index: 9999999; justify-content: center; align-items: center; padding: 20px; }}
+.promo-container {{ background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); max-width: 380px; width: 100%; position: relative; display: flex; flex-direction: column; max-height: 85vh; border: 1px solid #eee; }}
+.promo-scroll-content {{ padding: 35px 20px 20px 20px; overflow-y: auto; flex: 1; text-align: center; font-family: 'Plus Jakarta Sans', sans-serif; }}
+.promo-scroll-content::-webkit-scrollbar {{ width: 5px; }}
+.promo-scroll-content::-webkit-scrollbar-track {{ background: transparent; }}
+.promo-scroll-content::-webkit-scrollbar-thumb {{ background: #ccc; border-radius: 10px; }}
+.promo-img {{ width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); cursor: zoom-in; }}
+.promo-text {{ font-size: 15px; color: #444; margin-bottom: 20px; line-height: 1.6; text-align: left; padding: 0 5px; }}
+.promo-btn-main {{ display: block; background-color: #000; color: #fff !important; padding: 14px 20px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; margin-bottom: 10px; transition: 0.2s; border: 1px solid #000; }}
+.promo-btn-main:hover {{ background-color: #333; transform: translateY(-2px); }}
+.promo-btn-close {{ display: block; background-color: transparent; color: #e74c3c; border: 1px solid #e74c3c; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s; }}
+.promo-btn-close:hover {{ background-color: #fdeced; }}
+.promo-btn-close-x {{ position: absolute; top: 10px; right: 10px; background-color: #ffffff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border: none; font-size: 20px; font-weight: bold; color: #666; cursor: pointer; transition: 0.2s; z-index: 20; padding-bottom: 2px; }}
+.promo-btn-close-x:hover {{ background-color: #f9f9f9; color: #e74c3c; transform: scale(1.1); }}
 </style>
+<div id="custom-promo-modal">
+<div class="promo-container">
+<button id="btn-tutup-x" class="promo-btn-close-x">&times;</button>
+<div class="promo-scroll-content">
+{html_img}
+{html_teks}
+{html_btn}
+<button id="btn-tutup-promo" class="promo-btn-close">Tutup</button>
+</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
 <div id="custom-promo-modal">
 <div class="promo-container">
 <button id="btn-tutup-x" class="promo-btn-close-x">&times;</button>
