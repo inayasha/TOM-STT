@@ -4486,18 +4486,24 @@ if st.session_state.user_role == "admin":
                 new_popup_url = st.text_input("URL Target (Untuk Tombol 'Lihat Detail')", value=sys_config.get("popup_target_url", ""), placeholder="https://...")
                 
                 current_img_url = sys_config.get("popup_image_url", "")
+                hapus_gambar = False # 🚀 Default tidak dihapus
+                
                 if current_img_url:
                     st.caption(f"🔗 Gambar yang sedang aktif: {current_img_url}")
+                    # 🚀 FITUR HAPUS GAMBAR
+                    hapus_gambar = st.checkbox("🗑️ Hapus Gambar Saat Ini (Kosongkan Gambar)")
                 
                 curr_version = sys_config.get("popup_version", 1)
                 
                 st.write("")
-                
-                # KUNCI PERBAIKAN: Hanya ada 1 Tombol Submit di dalam form ini
                 if st.form_submit_button("💾 Upload & Simpan Pop-Up", use_container_width=True, key="btn_save_popup_final"):
                     final_img_url = current_img_url
                     
-                    # LOGIKA UPLOAD CLOUDINARY
+                    # 🚀 EKSEKUSI HAPUS GAMBAR
+                    if hapus_gambar:
+                        final_img_url = "" # Kosongkan URL agar gambar hilang dari Pop-Up
+                    
+                    # LOGIKA UPLOAD CLOUDINARY (Jika ada file baru, ini akan menimpa URL yang kosong tadi)
                     if uploaded_promo is not None:
                         import time
                         import hashlib
@@ -4535,7 +4541,7 @@ if st.session_state.user_role == "admin":
                     db.collection('settings').document('system_config').set({
                         "is_popup_active": toggle_popup,
                         "popup_image_url": final_img_url,
-                        "popup_text": new_popup_text, # 🚀 SIMPAN TEKS KE FIREBASE
+                        "popup_text": new_popup_text, 
                         "popup_target_url": new_popup_url,
                         "popup_version": curr_version + 1 
                     }, merge=True)
