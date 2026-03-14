@@ -4479,9 +4479,14 @@ if st.session_state.user_role == "admin":
         import hashlib
         import requests
         
-        cloud_name = "tomstt"
-        api_key = "974711872256172"
-        api_secret = "wNSQZs01GamY0coQ_Nf2OMi1qvA"
+        # 🚀 BACA DARI SECRETS STREAMLIT (ANTI-BOCOR)
+        try:
+            cloud_name = st.secrets["cloudinary"]["cloud_name"]
+            api_key = st.secrets["cloudinary"]["api_key"]
+            api_secret = st.secrets["cloudinary"]["api_secret"]
+        except KeyError:
+            st.error("⚠️ Kredensial Cloudinary belum di-set di Streamlit Secrets.")
+            st.stop()
         
         history_gambar = sys_config.get("popup_history", [])
         current_img_url = sys_config.get("popup_image_url", "")
