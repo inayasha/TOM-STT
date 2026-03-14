@@ -4469,49 +4469,49 @@ if st.session_state.user_role == "admin":
         st.markdown("---")
         
         # --- 🖼️ KELOLA POP-UP PROMO (MODAL) ---
-        st.markdown("#### 🖼️ Pop-Up Promo (Layar Penuh)")
-        st.caption("Munculkan pop-up gambar interaktif (seperti promo/info) yang hanya tayang 1x per sesi pengguna.")
+        st.markdown("#### 🖼️ Pop-Up Promo & Media Library")
+        st.caption("Kelola konten pop-up dan histori gambar yang pernah Anda unggah.")
         
-        with st.expander("🖼️ Atur Konten Pop-Up Promo", expanded=False):
+        # Inisialisasi Kredensial & Data Saat Ini
+        import time
+        import hashlib
+        import requests
+        
+        cloud_name = "tomstt"
+        api_key = "974711872256172"
+        api_secret = "wNSQZs01GamY0coQ_Nf2OMi1qvA"
+        
+        history_gambar = sys_config.get("popup_history", [])
+        current_img_url = sys_config.get("popup_image_url", "")
+        curr_version = sys_config.get("popup_version", 1)
+
+        # ==========================================
+        # BAGIAN 1: FORM ATUR KONTEN & UPLOAD BARU
+        # ==========================================
+        with st.expander("📝 Atur Konten & Upload Baru", expanded=False):
             with st.form("form_popup_promo"):
                 toggle_popup = st.toggle("🚀 Aktifkan Pop-Up Promo", value=sys_config.get("is_popup_active", False))
                 
                 st.info("💡 Isi kombinasi Gambar dan Teks sesuka Anda. Kosongkan jika tidak ingin ditampilkan.")
                 
-                uploaded_promo = st.file_uploader("Upload Gambar Promo (JPG/PNG)", type=["jpg", "jpeg", "png"])
-                
-                # 🚀 TAMBAHAN INPUT TEKS
+                uploaded_promo = st.file_uploader("Upload Gambar Baru (JPG/PNG)", type=["jpg", "jpeg", "png"])
                 new_popup_text = st.text_area("Teks Keterangan (Opsional)", value=sys_config.get("popup_text", ""), placeholder="Ketik informasi detail, syarat promo, dll...", height=120)
-                
                 new_popup_url = st.text_input("URL Target (Untuk Tombol 'Lihat Detail')", value=sys_config.get("popup_target_url", ""), placeholder="https://...")
                 
-                current_img_url = sys_config.get("popup_image_url", "")
-                hapus_gambar = False # 🚀 Default tidak dihapus
-                
+                hapus_gambar = False 
                 if current_img_url:
-                    st.caption(f"🔗 Gambar yang sedang aktif: {current_img_url}")
-                    # 🚀 FITUR HAPUS GAMBAR
-                    hapus_gambar = st.checkbox("🗑️ Hapus Gambar Saat Ini (Kosongkan Gambar)")
-                
-                curr_version = sys_config.get("popup_version", 1)
+                    st.caption(f"🔗 Gambar tayang saat ini: {current_img_url}")
+                    hapus_gambar = st.checkbox("🗑️ Copot Gambar dari Tayangan (Hanya copot, tidak hapus dari histori)")
                 
                 st.write("")
-                if st.form_submit_button("💾 Upload & Simpan Pop-Up", use_container_width=True, key="btn_save_popup_final"):
+                if st.form_submit_button("💾 Simpan Pengaturan", use_container_width=True, key="btn_save_popup_final"):
                     final_img_url = current_img_url
                     
-                    # 🚀 EKSEKUSI HAPUS GAMBAR
                     if hapus_gambar:
-                        final_img_url = "" # Kosongkan URL agar gambar hilang dari Pop-Up
+                        final_img_url = "" 
                     
-                    # LOGIKA UPLOAD CLOUDINARY (Jika ada file baru, ini akan menimpa URL yang kosong tadi)
+                    # LOGIKA UPLOAD CLOUDINARY
                     if uploaded_promo is not None:
-                        import time
-                        import hashlib
-                        import requests
-                        
-                        cloud_name = "tomstt"
-                        api_key = "974711872256172"
-                        api_secret = "wNSQZs01GamY0coQ_Nf2OMi1qvA"
                         timestamp = str(int(time.time()))
                         folder_name = "TOMSTT_POPUP" 
                         
@@ -4520,17 +4520,16 @@ if st.session_state.user_role == "admin":
                         
                         url_cloud = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
                         files = {'file': (uploaded_promo.name, uploaded_promo.getvalue(), uploaded_promo.type)}
-                        data = {
-                            'api_key': api_key,
-                            'timestamp': timestamp,
-                            'folder': folder_name,
-                            'signature': signature
-                        }
+                        data = {'api_key': api_key, 'timestamp': timestamp, 'folder': folder_name, 'signature': signature}
                         
                         try:
                             res = requests.post(url_cloud, files=files, data=data).json()
-                            if 'secure_url' in res:
+                            if 'secure_url' in res and 'public_id' in res:
                                 final_img_url = res['secure_url']
+                                pub_id = res['public_id']
+                                
+                                # 🚀 MASUKKAN KE DALAM ARRAY HISTORI FIREBASE
+                                history_gambar.insert(0, {"url": final_img_url, "public_id": pub_id})
                                 st.success("✅ Gambar berhasil diupload ke Cloudinary!")
                             else:
                                 st.error("❌ Gagal mengupload gambar ke Cloudinary.")
@@ -4543,12 +4542,70 @@ if st.session_state.user_role == "admin":
                         "popup_image_url": final_img_url,
                         "popup_text": new_popup_text, 
                         "popup_target_url": new_popup_url,
+                        "popup_history": history_gambar, # 🚀 SIMPAN HISTORI BARU
                         "popup_version": curr_version + 1 
                     }, merge=True)
                     
                     get_system_config.clear()
-                    st.toast("Pop-Up Promo berhasil diperbarui!", icon="✅")
+                    st.toast("Pengaturan Pop-Up diperbarui!", icon="✅")
                     st.rerun()
+
+        # ==========================================
+        # BAGIAN 2: MEDIA LIBRARY (GALERI HISTORI)
+        # ==========================================
+        with st.expander("📂 Galeri & Histori Gambar", expanded=False):
+            if not history_gambar:
+                st.info("Belum ada histori gambar yang tersimpan. Upload gambar baru untuk mulai membuat galeri.")
+            else:
+                st.caption("Pilih gambar lama untuk ditayangkan kembali, atau hapus gambar secara permanen dari server.")
+                
+                # Buat layout grid (3 kolom)
+                cols = st.columns(3)
+                for idx, item in enumerate(history_gambar):
+                    with cols[idx % 3]:
+                        st.markdown(f'<div style="border:1px solid #eee; padding:10px; border-radius:10px; margin-bottom:15px;">', unsafe_allow_html=True)
+                        st.image(item["url"], use_container_width=True)
+                        
+                        # Jika gambar ini yang sedang tayang
+                        if item["url"] == current_img_url:
+                            st.success("✅ Sedang Tayang")
+                        else:
+                            # Tombol Gunakan Kembali
+                            if st.button("✨ Gunakan", key=f"use_img_{idx}", use_container_width=True):
+                                db.collection('settings').document('system_config').set({
+                                    "popup_image_url": item["url"],
+                                    "popup_version": curr_version + 1
+                                }, merge=True)
+                                get_system_config.clear()
+                                st.rerun()
+                                
+                        # Tombol Hapus Permanen
+                        if st.button("🗑️ Hapus Permanen", key=f"del_img_{idx}", use_container_width=True, type="secondary"):
+                            # 1. Eksekusi Hapus via Cloudinary API
+                            pub_id = item["public_id"]
+                            timestamp = str(int(time.time()))
+                            sign_str = f"public_id={pub_id}&timestamp={timestamp}{api_secret}"
+                            signature = hashlib.sha1(sign_str.encode('utf-8')).hexdigest()
+                            
+                            del_url = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/destroy"
+                            requests.post(del_url, data={'public_id': pub_id, 'api_key': api_key, 'timestamp': timestamp, 'signature': signature})
+                            
+                            # 2. Hapus dari array histori Python
+                            history_gambar.pop(idx)
+                            
+                            # 3. Update Firestore
+                            update_data = {"popup_history": history_gambar}
+                            # Jika gambar yang dihapus sedang tayang, copot juga tayangannya
+                            if item["url"] == current_img_url:
+                                update_data["popup_image_url"] = ""
+                                update_data["popup_version"] = curr_version + 1
+                                
+                            db.collection('settings').document('system_config').set(update_data, merge=True)
+                            get_system_config.clear()
+                            st.toast("Gambar berhasil dihapus permanen!", icon="🗑️")
+                            st.rerun()
+                            
+                        st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("---")
         
