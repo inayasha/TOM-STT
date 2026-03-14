@@ -2239,16 +2239,27 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- 🖼️ UI & TRIGGER POP-UP PROMO (HTML/JS FLOAT FIX) ---
+# --- 🖼️ UI & TRIGGER POP-UP PROMO (DINAMIS GAMBAR & TEKS) ---
 sys_config = get_system_config()
 if sys_config.get("is_popup_active", False):
     versi_saat_ini = sys_config.get("popup_version", 1)
     img_url = sys_config.get("popup_image_url", "")
-    target_url = sys_config.get("popup_target_url", "#")
+    popup_text = sys_config.get("popup_text", "")
+    target_url = sys_config.get("popup_target_url", "")
     
-    # Cegah render jika admin belum memasukkan gambar
-    if img_url:
-        # 1. CETAK HTML & CSS KE LAYAR UTAMA (VERSI KLIK GAMBAR FULL-SIZE)
+    # 🚀 MUNCULKAN JIKA MINIMAL ADA GAMBAR *ATAU* ADA TEKS
+    if img_url or popup_text:
+        
+        # 🚀 LOGIKA PEMBENTUKAN BLOK HTML SECARA DINAMIS (Merakit komponen yang ada isinya saja)
+        html_img = f'<a href="{img_url}" target="_blank" title="Klik untuk memperbesar gambar"><img src="{img_url}" class="promo-img" alt="Promo TOM\'STT AI"></a>' if img_url else ""
+        
+        # Ubah enter (\n) dari text area menjadi <br> agar rapi di HTML
+        aman_teks = popup_text.replace('\n', '<br>')
+        html_teks = f'<div class="promo-text">{aman_teks}</div>' if popup_text else ""
+        
+        html_btn = f'<a href="{target_url}" target="_blank" class="promo-btn-main">Lihat Detail</a>' if target_url else ""
+        
+        # CETAK HTML & CSS KE LAYAR UTAMA (VERSI ANTI-BOCOR)
         st.markdown(f"""
 <style>
 #custom-promo-modal {{ display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); z-index: 9999999; justify-content: center; align-items: center; padding: 20px; }}
@@ -2258,6 +2269,7 @@ if sys_config.get("is_popup_active", False):
 .promo-scroll-content::-webkit-scrollbar-track {{ background: transparent; }}
 .promo-scroll-content::-webkit-scrollbar-thumb {{ background: #ccc; border-radius: 10px; }}
 .promo-img {{ width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); cursor: zoom-in; }}
+.promo-text {{ font-size: 15px; color: #444; margin-bottom: 20px; line-height: 1.6; text-align: left; padding: 0 5px; }}
 .promo-btn-main {{ display: block; background-color: #000; color: #fff !important; padding: 14px 20px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; margin-bottom: 10px; transition: 0.2s; border: 1px solid #000; }}
 .promo-btn-main:hover {{ background-color: #333; transform: translateY(-2px); }}
 .promo-btn-close {{ display: block; background-color: transparent; color: #e74c3c; border: 1px solid #e74c3c; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; font-size: 15px; transition: 0.2s; }}
@@ -2269,17 +2281,16 @@ if sys_config.get("is_popup_active", False):
 <div class="promo-container">
 <button id="btn-tutup-x" class="promo-btn-close-x">&times;</button>
 <div class="promo-scroll-content">
-<a href="{img_url}" target="_blank" title="Klik untuk memperbesar gambar">
-<img src="{img_url}" class="promo-img" alt="Promo TOM'STT AI">
-</a>
-<a href="{target_url}" target="_blank" class="promo-btn-main">Lihat Detail</a>
+{html_img}
+{html_teks}
+{html_btn}
 <button id="btn-tutup-promo" class="promo-btn-close">Tutup</button>
 </div>
 </div>
 </div>
 """, unsafe_allow_html=True)
         
-        # 2. INJEKSI JAVASCRIPT VIA COMPONENTS
+        # INJEKSI JAVASCRIPT VIA COMPONENTS
         components.html(f"""
         <script>
             const parentDoc = window.parent.document;
@@ -4465,10 +4476,69 @@ if st.session_state.user_role == "admin":
             with st.form("form_popup_promo"):
                 toggle_popup = st.toggle("🚀 Aktifkan Pop-Up Promo", value=sys_config.get("is_popup_active", False))
                 
-                st.info("💡 Upload gambar dari komputer Anda, sistem otomatis akan menyimpannya ke Server Cloudinary.")
+                st.info("💡 Isi kombinasi Gambar dan Teks sesuka Anda. Kosongkan jika tidak ingin ditampilkan.")
                 
                 uploaded_promo = st.file_uploader("Upload Gambar Promo (JPG/PNG)", type=["jpg", "jpeg", "png"])
-                new_popup_url = st.text_input("URL Target (Saat gambar/tombol diklik)", value=sys_config.get("popup_target_url", ""), placeholder="https://...")
+                
+                # 🚀 TAMBAHAN INPUT TEKS
+                new_popup_text = st.text_area("Teks Keterangan (Opsional)", value=sys_config.get("popup_text", ""), placeholder="Ketik informasi detail, syarat promo, dll...", height=120)
+                
+                new_popup_url = st.text_input("URL Target (Untuk Tombol 'Lihat Detail')", value=sys_config.get("popup_target_url", ""), placeholder="https://...")
+                
+                current_img_url = sys_config.get("popup_image_url", "")
+                if current_img_url:
+                    st.caption(f"🔗 Gambar yang sedang aktif: {current_img_url}")
+                
+                curr_version = sys_config.get("popup_version", 1)
+                
+                st.write("")
+                if st.form_submit_button("💾 Upload & Simpan Pop-Up", use_container_width=True):
+                    final_img_url = current_img_url
+                    
+                    if uploaded_promo is not None:
+                        import time
+                        import hashlib
+                        import requests
+                        
+                        cloud_name = "tomstt"
+                        api_key = "974711872256172"
+                        api_secret = "wNSQZs01GamY0coQ_Nf2OMi1qvA"
+                        timestamp = str(int(time.time()))
+                        folder_name = "TOMSTT_POPUP" 
+                        
+                        sign_str = f"folder={folder_name}&timestamp={timestamp}{api_secret}"
+                        signature = hashlib.sha1(sign_str.encode('utf-8')).hexdigest()
+                        
+                        url_cloud = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
+                        files = {'file': (uploaded_promo.name, uploaded_promo.getvalue(), uploaded_promo.type)}
+                        data = {
+                            'api_key': api_key,
+                            'timestamp': timestamp,
+                            'folder': folder_name,
+                            'signature': signature
+                        }
+                        
+                        try:
+                            res = requests.post(url_cloud, files=files, data=data).json()
+                            if 'secure_url' in res:
+                                final_img_url = res['secure_url']
+                                st.success("✅ Gambar berhasil diupload ke Cloudinary!")
+                            else:
+                                st.error("❌ Gagal mengupload gambar ke Cloudinary.")
+                        except Exception as e:
+                            st.error(f"Error Koneksi Cloudinary: {e}")
+
+                    db.collection('settings').document('system_config').set({
+                        "is_popup_active": toggle_popup,
+                        "popup_image_url": final_img_url,
+                        "popup_text": new_popup_text, # 🚀 SIMPAN TEKS KE FIREBASE
+                        "popup_target_url": new_popup_url,
+                        "popup_version": curr_version + 1 
+                    }, merge=True)
+                    
+                    get_system_config.clear()
+                    st.toast("Pop-Up Promo berhasil diperbarui!", icon="✅")
+                    st.rerun()
                 
                 current_img_url = sys_config.get("popup_image_url", "")
                 if current_img_url:
