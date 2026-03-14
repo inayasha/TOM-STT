@@ -5231,11 +5231,17 @@ if st.session_state.user_role == "admin":
             def clear_search():
                 st.session_state.search_user_email = ""
                 
-            col_search, col_clear, col_sort = st.columns([4, 1, 3])
+            # KUNCI PERBAIKAN: Gunakan 2 kolom utama agar seimbang di laptop (50:50)
+            col_search, col_sort = st.columns(2)
+            
             with col_search:
-                search_q = st.text_input("Cari Email User:", key="search_user_email", placeholder="Ketik email...", label_visibility="collapsed").strip().lower()
-            with col_clear:
-                st.button("✖️ Clear", on_click=clear_search, use_container_width=True)
+                # Mengembalikan label agar sejajar secara visual
+                search_q = st.text_input("Cari Email User:", key="search_user_email", placeholder="Ketik alamat email...").strip().lower()
+                
+                # TOMBOL CLEAR PINTAR: Hanya muncul jika form tidak kosong
+                if search_q != "":
+                    st.button("✖️ Hapus Pencarian", on_click=clear_search, type="secondary")
+                    
             with col_sort:
                 sort_opt = st.selectbox("Urutkan berdasarkan:", [
                     "Terbaru (Tanggal Daftar)", 
@@ -5246,7 +5252,7 @@ if st.session_state.user_role == "admin":
                     "Arsip Terbaru",
                     "Abjad (A-Z)", 
                     "Abjad (Z-A)"
-                ], label_visibility="collapsed")
+                ])
                 
             # 1. Eksekusi Filter Pencarian Email
             filtered_users = []
@@ -5427,3 +5433,4 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
+
