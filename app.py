@@ -727,7 +727,12 @@ def get_system_config():
         "ann_points": ["", "", "", "", ""],
         "ann_btn_text": "",
         "ann_btn_url": "",
-        "ann_timestamp": ""
+        "ann_timestamp": "",
+        # --- TAMBAHAN BLUEPRINT POP-UP ---
+        "is_popup_active": False,
+        "popup_image_url": "",
+        "popup_target_url": "",
+        "popup_version": 1
     }
 
     try:
@@ -2233,6 +2238,44 @@ st.markdown(
     "<div class='main-header'>🎙️ TOM'<font color='#e74c3c'>STT</font> AI</div>", 
     unsafe_allow_html=True
 )
+
+# --- 🖼️ UI & TRIGGER POP-UP PROMO ---
+@st.dialog("📢 Informasi Spesial", width="small")
+def show_popup_promo_dialog(img_url, target_url):
+    # CSS Khusus untuk menghilangkan padding agar gambar terlihat penuh dan elegan
+    st.markdown("""
+        <style>
+        div[role="dialog"] div[data-testid="stMarkdownContainer"] { margin-bottom: 0px !important; }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # 1. Tampilkan Gambar (Jika di-klik bisa menuju link target)
+    if img_url:
+        if target_url:
+            st.markdown(f'<a href="{target_url}" target="_blank"><img src="{img_url}" width="100%" style="border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></a>', unsafe_allow_html=True)
+        else:
+            st.image(img_url, use_container_width=True)
+            
+    # 2. Tampilkan Tombol Interaktif
+    if target_url:
+        st.link_button("👉 Buka Penawaran", target_url, type="primary", use_container_width=True)
+        
+    # 3. Tombol Tutup
+    if st.button("Tutup", use_container_width=True):
+        st.rerun()
+
+# Logika Pemicu (Hanya muncul jika aktif & belum pernah dilihat di sesi ini)
+sys_config = get_system_config()
+if sys_config.get("is_popup_active", False):
+    # Buat kunci ingatan unik berdasarkan versi popup terbaru
+    versi_saat_ini = sys_config.get("popup_version", 1)
+    kunci_memori = f"sudah_lihat_popup_v{versi_saat_ini}"
+    
+    if not st.session_state.get(kunci_memori, False):
+        # 1. Tandai langsung ke otak Streamlit bahwa user ini sudah melihatnya (Anti-Loop)
+        st.session_state[kunci_memori] = True
+        # 2. Munculkan Layar Pop-Up
+        show_popup_promo_dialog(sys_config.get("popup_image_url", ""), sys_config.get("popup_target_url", ""))
 
 # --- 📢 PAPAN PENGUMUMAN DINAMIS ---
 sys_config = get_system_config()
@@ -4384,7 +4427,38 @@ if st.session_state.user_role == "admin":
                     
         st.markdown("---")
         
+        # --- 🖼️ KELOLA POP-UP PROMO (MODAL) ---
+        st.markdown("#### 🖼️ Pop-Up Promo (Layar Penuh)")
+        st.caption("Munculkan pop-up gambar interaktif (seperti promo/info) yang hanya tayang 1x per sesi pengguna.")
+        
+        with st.expander("🖼️ Atur Konten Pop-Up Promo", expanded=False):
+            with st.form("form_popup_promo"):
+                toggle_popup = st.toggle("🚀 Aktifkan Pop-Up Promo", value=sys_config.get("is_popup_active", False))
+                
+                st.info("💡 **Tips:** Upload gambar promo Anda ke **Cloudinary** atau **Imgur**, lalu paste link-nya di sini.")
+                new_popup_img = st.text_input("URL Gambar Promo (Cloudinary/Imgur)", value=sys_config.get("popup_image_url", ""), placeholder="https://res.cloudinary.com/...")
+                new_popup_url = st.text_input("URL Target (Saat gambar/tombol diklik)", value=sys_config.get("popup_target_url", ""), placeholder="https://...")
+                
+                # Hidden logic: Naikkan versi agar user yang sudah pernah menutup pop-up lama, akan melihat pop-up yang baru ini
+                curr_version = sys_config.get("popup_version", 1)
+                
+                st.write("")
+                if st.form_submit_button("💾 Simpan Pop-Up Promo", use_container_width=True):
+                    db.collection('settings').document('system_config').set({
+                        "is_popup_active": toggle_popup,
+                        "popup_image_url": new_popup_img,
+                        "popup_target_url": new_popup_url,
+                        "popup_version": curr_version + 1 
+                    }, merge=True)
+                    get_system_config.clear()
+                    st.toast("Pop-Up Promo berhasil diperbarui!", icon="✅")
+                    st.rerun()
+
+        st.markdown("---")
+        
         # --- 🗂️ PENGATURAN HAK AKSES ARSIP & UPLOAD TEKS ---
+
+
         st.write("")
         st.markdown("#### 🗂️ Hak Akses Fitur Premium (Arsip & Upload Teks)")
         st.caption("Tentukan paket mana saja yang diizinkan untuk mengakses fitur eksklusif di bawah ini.")
@@ -5112,4 +5186,3 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
