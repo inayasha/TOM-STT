@@ -4492,9 +4492,12 @@ if st.session_state.user_role == "admin":
                 curr_version = sys_config.get("popup_version", 1)
                 
                 st.write("")
-                if st.form_submit_button("💾 Upload & Simpan Pop-Up", use_container_width=True):
+                
+                # KUNCI PERBAIKAN: Hanya ada 1 Tombol Submit di dalam form ini
+                if st.form_submit_button("💾 Upload & Simpan Pop-Up", use_container_width=True, key="btn_save_popup_final"):
                     final_img_url = current_img_url
                     
+                    # LOGIKA UPLOAD CLOUDINARY
                     if uploaded_promo is not None:
                         import time
                         import hashlib
@@ -4528,6 +4531,7 @@ if st.session_state.user_role == "admin":
                         except Exception as e:
                             st.error(f"Error Koneksi Cloudinary: {e}")
 
+                    # Simpan data ke Firestore
                     db.collection('settings').document('system_config').set({
                         "is_popup_active": toggle_popup,
                         "popup_image_url": final_img_url,
@@ -4539,71 +4543,10 @@ if st.session_state.user_role == "admin":
                     get_system_config.clear()
                     st.toast("Pop-Up Promo berhasil diperbarui!", icon="✅")
                     st.rerun()
-                
-                current_img_url = sys_config.get("popup_image_url", "")
-                if current_img_url:
-                    st.caption(f"🔗 Gambar yang sedang aktif: {current_img_url}")
-                
-                # Hidden logic: Naikkan versi
-                curr_version = sys_config.get("popup_version", 1)
-                
-                st.write("")
-                if st.form_submit_button("💾 Upload & Simpan Pop-Up", use_container_width=True):
-                    final_img_url = current_img_url
-                    
-                    # LOGIKA UPLOAD CLOUDINARY
-                    if uploaded_promo is not None:
-                        import time
-                        import hashlib
-                        import requests
-                        
-                        cloud_name = "tomstt"
-                        api_key = "974711872256172"
-                        api_secret = "wNSQZs01GamY0coQ_Nf2OMi1qvA"
-                        timestamp = str(int(time.time()))
-                        folder_name = "TOMSTT_POPUP" # 🚀 NAMA FOLDER TARGET
-                        
-                        # Keamanan: Buat Signature SHA-1 (Syarat Wajib Cloudinary)
-                        # PERHATIAN: Parameter wajib urut abjad (f - folder, lalu t - timestamp)
-                        sign_str = f"folder={folder_name}&timestamp={timestamp}{api_secret}"
-                        signature = hashlib.sha1(sign_str.encode('utf-8')).hexdigest()
-                        
-                        url_cloud = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
-                        files = {'file': (uploaded_promo.name, uploaded_promo.getvalue(), uploaded_promo.type)}
-                        data = {
-                            'api_key': api_key,
-                            'timestamp': timestamp,
-                            'folder': folder_name,
-                            'signature': signature
-                        }
-                        
-                        try:
-                            res = requests.post(url_cloud, files=files, data=data).json()
-                            if 'secure_url' in res:
-                                final_img_url = res['secure_url']
-                                st.success("✅ Gambar berhasil diupload ke Cloudinary!")
-                            else:
-                                st.error("❌ Gagal mengupload gambar ke Cloudinary.")
-                        except Exception as e:
-                            st.error(f"Error Koneksi Cloudinary: {e}")
-
-                    # Simpan data ke Firestore
-                    db.collection('settings').document('system_config').set({
-                        "is_popup_active": toggle_popup,
-                        "popup_image_url": final_img_url,
-                        "popup_target_url": new_popup_url,
-                        "popup_version": curr_version + 1 
-                    }, merge=True)
-                    
-                    get_system_config.clear()
-                    st.toast("Pop-Up Promo berhasil diperbarui!", icon="✅")
-                    st.rerun()
 
         st.markdown("---")
         
         # --- 🗂️ PENGATURAN HAK AKSES ARSIP & UPLOAD TEKS ---
-
-
         st.write("")
         st.markdown("#### 🗂️ Hak Akses Fitur Premium (Arsip & Upload Teks)")
         st.caption("Tentukan paket mana saja yang diizinkan untuk mengakses fitur eksklusif di bawah ini.")
