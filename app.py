@@ -5236,12 +5236,9 @@ if st.session_state.user_role == "admin":
             with col_search:
                 search_q = st.text_input("Cari Email User:", key="search_user_email", placeholder="Ketik alamat email...").strip().lower()
                 
-                # TOMBOL CLEAR PINTAR (Dibuat Rata Tengah dengan Sub-Kolom)
+                # TOMBOL CLEAR PINTAR (Sama panjang dengan field pencarian)
                 if search_q != "":
-                    # Membagi ruang menjadi 3: Kiri (1), Tengah (2), Kanan (1)
-                    col_spc1, col_btn, col_spc2 = st.columns([1, 2, 1])
-                    with col_btn:
-                        st.button("✖️ Hapus Pencarian", on_click=clear_search, type="secondary", use_container_width=True)
+                    st.button("✖️ Hapus Pencarian", on_click=clear_search, type="secondary", use_container_width=True)
                     
             with col_sort:
                 sort_opt = st.selectbox("Urutkan berdasarkan:", [
