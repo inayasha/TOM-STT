@@ -3075,11 +3075,12 @@ with tab_rekam:
         # ==========================================
         # 🚀 PENGATURAN BAHASA GLOBAL (Berlaku untuk semua mode)
         # ==========================================
-        lang_choice_mic = st.selectbox("Pilih Bahasa Audio yang Diucapkan", ("Indonesia", "Inggris"), key="lang_mic_global")
-        lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
-        
+
         # ---> KOTAK INFORMASI DITAMBAHKAN DI SINI <---
         st.info("💡 **Tips Hasil Transkripsi Maksimal**\n\nDemi kenyamanan Anda, gunakanlah **Laptop atau PC** dengan koneksi internet yang stabil saat merekam. \n\n*Catatan:* Perekaman menggunakan *Smartphone* (HP) tidak disarankan untuk durasi panjang, karena sistem HP seringkali mematikan mikrofon secara sepihak saat layar meredup atau ada panggilan/notifikasi masuk.")
+ 
+        lang_choice_mic = st.selectbox("Pilih Bahasa Audio yang Diucapkan", ("Indonesia", "Inggris"), key="lang_mic_global")
+        lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
         
         st.write("")
         st.markdown("##### 🎙️ Pengaturan Perekaman")
@@ -3087,7 +3088,7 @@ with tab_rekam:
         # 🚀 PERUBAHAN NAMA MODE MENJADI LEBIH PROFESIONAL
         opsi_rekam = st.radio(
             "Pilih Mode Perekaman:", 
-            ["🎙️ Rekam Audio Lengkap (Bukan real time)", "⚡ Transkripsi real time"], 
+            ["🎙️ Rekam Audio Utuh", "⚡ Transkripsi Real Time"], 
             horizontal=True,
             label_visibility="collapsed"
         )
@@ -3238,7 +3239,7 @@ with tab_rekam:
                 </button>
                 
                 <div id="status">Status: 📴 Siap mendengarkan...</div>
-                <div id="transcript">Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...</div>
+                <div id="transcript">admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...</div>
 
                 <script>
                     const parentDoc = window.parent.document;
