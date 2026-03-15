@@ -3097,7 +3097,7 @@ with tab_rekam:
         if opsi_rekam == "🎙️ Rekam Audio Utuh":
             st.info("💡 **Mode Rekam Audio Utuh:** Sistem akan merekam seluruh percakapan Anda dari awal hingga akhir, kemudian diproses menjadi teks. Cocok untuk rapat berdurasi panjang.")
 
-        st.markdown("---")
+            st.markdown("---")
             
             audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
             if audio_mic: audio_to_process, source_name = audio_mic, "rekaman_mic.wav"
