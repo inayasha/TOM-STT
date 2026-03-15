@@ -3104,7 +3104,7 @@ with tab_rekam:
             if submit_rekam:
                 proses_transkrip_audio(audio_to_process, source_name, lang_code)
                 
-            elif opsi_rekam == "⚡ Dikte Real-Time (Cepat & Gratis)":
+        elif opsi_rekam == "⚡ Dikte Real-Time (Cepat & Gratis)":
             st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo. Setelah selesai, klik tombol Lanjut.")
             
             # --- WADAH TERSEMBUNYI UNTUK MENANGKAP TEKS DARI JAVASCRIPT ---
