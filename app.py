@@ -3175,7 +3175,7 @@ with tab_rekam:
             """, unsafe_allow_html=True)
 
             # ==========================================
-            # 3. INJEKSI HTML & JS (TEMA TERMINAL & AUTO-UNLOCK)
+            # 3. INJEKSI HTML & JS (TEMA TERMINAL & RADAR PERANGKAT)
             # ==========================================
             html_code = f"""
             <!DOCTYPE html>
@@ -3183,6 +3183,8 @@ with tab_rekam:
             <head>
                 <style>
                     body {{ font-family: 'Plus Jakarta Sans', sans-serif; padding: 0; background: transparent; margin: 0; }}
+                    
+                    /* STYLE UNTUK LAPTOP (TERMINAL) */
                     #transcript {{ 
                         width: 100%; height: 220px; padding: 15px; border-radius: 8px; border: 1px solid #333; 
                         font-family: 'Courier New', Courier, monospace; font-size: 15.5px; font-weight: 600; 
@@ -3214,242 +3216,242 @@ with tab_rekam:
                     button:disabled {{ opacity: 0.5; cursor: not-allowed; }}
                     svg {{ width: 18px; height: 18px; fill: currentColor; }}
                     #status {{ font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; }}
+                    
+                    /* STYLE UNTUK WARNING KHUSUS MOBILE */
+                    #mobile-warning {{
+                        display: none; padding: 25px; background-color: #fff3cd; border-radius: 12px; 
+                        border: 2px solid #ffeeba; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                    }}
+                    #mobile-warning h3 {{ color: #856404; margin-top: 0; font-size: 18px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }}
+                    #mobile-warning p {{ color: #856404; font-weight: 500; font-size: 14.5px; line-height: 1.6; margin: 0; }}
+                    
+                    #desktop-ui {{ display: none; }}
                 </style>
             </head>
             <body oncontextmenu="return false;" oncopy="return false;" oncut="return false;" onselectstart="return false;">
                 
-                <div class="btn-group">
-                    <button id="startBtn" class="action-btn">
-                        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.39-.9.88 0 2.76-2.24 5-5.01 5s-5.01-2.24-5.01-5c0-.49-.41-.88-.9-.88s-.9.39-.9.88c0 3.24 2.63 5.88 5.81 6.3V21h-2v2h6v-2h-2v-2.72c3.18-.42 5.81-3.06 5.81-6.3 0-.49-.41-.88-.9-.88z"/></svg>
-                        Record Audio
-                    </button>
-                    <button id="stopBtn" class="action-btn" disabled>
-                        <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                        Pause
-                    </button>
-                    <button id="submitBtn" class="action-btn">
-                        <svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
-                        Stop & Finish
-                    </button>
+                <div id="mobile-warning">
+                    <h3><svg style="width: 24px; height: 24px;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> FITUR KHUSUS LAPTOP / PC</h3>
+                    <p>
+                        Mohon maaf, fitur <b>Dikte Real-Time</b> saat ini hanya dapat diakses secara maksimal melalui browser Laptop atau Komputer (PC).<br><br>
+                        <i style="opacity: 0.9; font-size: 13.5px;">Sistem operasi pada Smartphone (Android/iOS) memiliki batasan akses mikrofon yang sering menyebabkan teks langsung (live) menjadi berulang atau terputus secara sepihak.</i><br><br>
+                        💡 <b>Solusi:</b> Silakan gunakan mode <b>"🎙️ Rekam Audio Utuh"</b> di atas untuk hasil yang 100% aman dan akurat di HP Anda.
+                    </p>
                 </div>
-                
-                <button id="resetBtn">
-                    <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                        Record New Audio
-                </button>
-                
-                <div id="status">Status: 📴 Siap mendengarkan...</div>
-                <div id="transcript">admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...</div>
+
+                <div id="desktop-ui">
+                    <div class="btn-group">
+                        <button id="startBtn" class="action-btn">
+                            <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.39-.9.88 0 2.76-2.24 5-5.01 5s-5.01-2.24-5.01-5c0-.49-.41-.88-.9-.88s-.9.39-.9.88c0 3.24 2.63 5.88 5.81 6.3V21h-2v2h6v-2h-2v-2.72c3.18-.42 5.81-3.06 5.81-6.3 0-.49-.41-.88-.9-.88z"/></svg>
+                            Record Audio
+                        </button>
+                        <button id="stopBtn" class="action-btn" disabled>
+                            <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                            Pause
+                        </button>
+                        <button id="submitBtn" class="action-btn">
+                            <svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+                            Stop & Finish
+                        </button>
+                    </div>
+                    
+                    <button id="resetBtn">
+                        <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                            Record New Audio
+                    </button>
+                    
+                    <div id="status">Status: 📴 Siap mendengarkan...</div>
+                    <div id="transcript">admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...</div>
+                </div>
 
                 <script>
                     const parentDoc = window.parent.document;
-                    let isAILocked = true; 
                     
-                    const statusText = document.getElementById('status');
+                    // 🚀 RADAR PENDETEKSI PERANGKAT (KTP BROWSER)
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                     
-                    // 🚀 DETEKSI BRANKAS CADANGAN: Jika ada isinya, Buka Kunci AI!
-                    setTimeout(() => {{
-                        const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
-                        if (hiddenTextarea && hiddenTextarea.value.trim() !== "") {{
-                            isAILocked = false;
-                            statusText.innerText = "Status: 📥 Draf dari Brankas Cadangan berhasil dimuat. Silakan lanjut ke AI.";
-                            statusText.style.borderLeftColor = "#f39c12";
-                            statusText.style.color = "#d35400";
-                        }}
-                    }}, 1500);
-                    
-                    function enforceAILock() {{
-                        const buttons = Array.from(parentDoc.querySelectorAll('button'));
-                        const aiBtn = buttons.find(btn => btn.textContent.includes('Lanjut ke Analisis AI'));
-                        if (aiBtn) {{
-                            if (isAILocked) {{
-                                aiBtn.disabled = true; aiBtn.style.opacity = '0.4';
-                                aiBtn.style.cursor = 'not-allowed'; aiBtn.style.pointerEvents = 'none';
-                            }} else {{
-                                aiBtn.disabled = false; aiBtn.style.opacity = '1';
-                                aiBtn.style.cursor = 'pointer'; aiBtn.style.pointerEvents = 'auto';
-                            }}
-                        }}
-                    }}
-                    setInterval(enforceAILock, 500);
-
-                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                    
-                    if (!SpeechRecognition) {{
-                        statusText.innerText = "⚠️ Browser Anda tidak mendukung fitur ini.";
-                    }} else {{
-                        const recognition = new SpeechRecognition();
-                        recognition.continuous = true;       
-                        recognition.interimResults = true;   
-                        recognition.lang = '{lang_code}';     
-
-                        const startBtn = document.getElementById('startBtn');
-                        const stopBtn = document.getElementById('stopBtn');
-                        const submitBtn = document.getElementById('submitBtn');
-                        const resetBtn = document.getElementById('resetBtn');
-                        const transcriptBox = document.getElementById('transcript');
-
-                        // ==========================================
-                        // 🧠 ARSITEKTUR MEMORI 2 LAPIS (ANTI-HILANG & ANTI-LOOPING)
-                        // ==========================================
-                        let permanentMemory = ''; // Lapis 1: Aman dari restart
-                        let currentSessionMemory = ''; // Lapis 2: Dibuat ulang tiap kalimat
+                    if (isMobile) {{
+                        // ==============================================
+                        // 📱 JIKA DI HP/TABLET: TAMPILKAN WARNING & SEMBUNYIKAN UI BAWAH
+                        // ==============================================
+                        document.getElementById('mobile-warning').style.display = 'block';
                         
-                        let isManuallyStopped = false; 
-                        let restartTimer = null; // 🛡️ PENJAGA TIMER AUTO-RESTART
-
-                        recognition.onstart = function() {{
-                            statusText.innerText = "Status: 🎙️ Sedang merekam... (Silakan bicara)";
-                            statusText.style.borderLeftColor = "#e74c3c";
-                            startBtn.disabled = true; stopBtn.disabled = false;
+                        // Menembus dinding iframe untuk menyembunyikan kotak & tombol Streamlit
+                        setInterval(() => {{
+                            // 1. Sembunyikan Info Petunjuk Streamlit
+                            const alerts = Array.from(parentDoc.querySelectorAll('div[data-testid="stAlert"]'));
+                            const petunjukAlert = alerts.find(el => el.innerText.includes('Setelah klik Stop & Finish'));
+                            if(petunjukAlert) petunjukAlert.style.display = 'none';
                             
-                            // KUNCI TEKS SEBELUMNYA KE MEMORI PERMANEN SAAT RESTART
-                            if (currentSessionMemory.trim() !== '') {{
-                                permanentMemory += currentSessionMemory + ' ';
-                                currentSessionMemory = ''; 
+                            // 2. Sembunyikan Kotak Teks Konfirmasi
+                            const textAreas = Array.from(parentDoc.querySelectorAll('div[data-testid="stTextArea"]'));
+                            const confirmBox = textAreas.find(el => el.innerHTML.includes('📝 Konfirmasi Hasil Transkripsi'));
+                            if(confirmBox) confirmBox.style.display = 'none';
+                            
+                            // 3. Sembunyikan Tombol Lanjut ke Analisis AI
+                            const buttons = Array.from(parentDoc.querySelectorAll('button'));
+                            const aiBtn = buttons.find(btn => btn.innerText.includes('Lanjut ke Analisis AI'));
+                            if(aiBtn) aiBtn.style.display = 'none';
+                            
+                            // 4. Sembunyikan garis Markdown (---)
+                            const hrTags = Array.from(parentDoc.querySelectorAll('hr'));
+                            if(hrTags.length > 0) hrTags[hrTags.length - 1].style.display = 'none';
+                        }}, 300); // Trigger super cepat tiap 0.3 detik agar tidak bocor
+                        
+                    }} else {{
+                        // ==============================================
+                        // 💻 JIKA DI LAPTOP/PC: JALANKAN LOGIKA STT SUPER CEPAT (ORIGINAL)
+                        // ==============================================
+                        document.getElementById('desktop-ui').style.display = 'block';
+                        
+                        let isAILocked = true; 
+                        const statusText = document.getElementById('status');
+                        
+                        // Deteksi Brankas Cadangan
+                        setTimeout(() => {{
+                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
+                            if (hiddenTextarea && hiddenTextarea.value.trim() !== "") {{
+                                isAILocked = false;
+                                statusText.innerText = "Status: 📥 Draf dari Brankas Cadangan berhasil dimuat. Silakan lanjut ke AI.";
+                                statusText.style.borderLeftColor = "#f39c12";
+                                statusText.style.color = "#d35400";
                             }}
-                            if (permanentMemory === '') transcriptBox.innerText = '';
-                        }};
-
-                        recognition.onresult = function(event) {{
-                            currentSessionMemory = ''; // Sapu bersih HANYA memori sesi ini
-                            let interimTranscript = '';
-                            let localLastText = ''; // Penjaga duplikat kata beruntun
-                            
-                            for (let i = 0; i < event.results.length; ++i) {{
-                                let currentText = event.results[i][0].transcript.trim();
-                                if (currentText === '') continue;
-
-                                if (event.results[i].isFinal) {{
-                                    // Cegah duplikat ganda bawaan bug Android
-                                    if (currentText !== localLastText) {{
-                                        currentText = currentText.charAt(0).toUpperCase() + currentText.slice(1);
-                                        currentSessionMemory += currentText + '. ';
-                                        localLastText = currentText; 
-                                    }}
+                        }}, 1500);
+                        
+                        function enforceAILock() {{
+                            const buttons = Array.from(parentDoc.querySelectorAll('button'));
+                            const aiBtn = buttons.find(btn => btn.textContent.includes('Lanjut ke Analisis AI'));
+                            if (aiBtn) {{
+                                if (isAILocked) {{
+                                    aiBtn.disabled = true; aiBtn.style.opacity = '0.4';
+                                    aiBtn.style.cursor = 'not-allowed'; aiBtn.style.pointerEvents = 'none';
                                 }} else {{
-                                    interimTranscript += currentText + ' ';
+                                    aiBtn.disabled = false; aiBtn.style.opacity = '1';
+                                    aiBtn.style.cursor = 'pointer'; aiBtn.style.pointerEvents = 'auto';
                                 }}
                             }}
-                            
-                            // GABUNGKAN SEMUA LAPISAN MEMORI KE LAYAR
-                            transcriptBox.innerText = permanentMemory + currentSessionMemory + interimTranscript;
-                            transcriptBox.scrollTop = transcriptBox.scrollHeight; 
-                        }};
+                        }}
+                        setInterval(enforceAILock, 500);
 
-                        recognition.onerror = function(event) {{
-                            if (event.error === 'no-speech') return;
-                            console.log("Mic Error: ", event.error); // Biarkan error ditelan agar HP tidak panik
-                        }};
+                        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                        
+                        if (!SpeechRecognition) {{
+                            statusText.innerText = "⚠️ Browser Anda tidak mendukung fitur ini.";
+                        }} else {{
+                            const recognition = new SpeechRecognition();
+                            recognition.continuous = true;       
+                            recognition.interimResults = true;   
+                            recognition.lang = '{lang_code}';     
 
-                        recognition.onend = function() {{
-                            // 🚀 LOGIKA AUTO-RESTART KHUSUS HP/LAPTOP JIKA MATI SEPIHAK
-                            if (!isManuallyStopped && startBtn.disabled === true) {{
-                                clearTimeout(restartTimer); // Bersihkan sisa timer lama
-                                restartTimer = setTimeout(() => {{
-                                    try {{ recognition.start(); }} catch(e) {{}}
-                                }}, 250); // Nyalakan paksa dalam 0.25 detik!
-                            }} 
-                            // Jika murni di-stop oleh user (State Pause)
-                            else if (startBtn.disabled === true && submitBtn.disabled === false) {{
-                                statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Record Audio untuk lanjut.";
+                            const startBtn = document.getElementById('startBtn');
+                            const stopBtn = document.getElementById('stopBtn');
+                            const submitBtn = document.getElementById('submitBtn');
+                            const resetBtn = document.getElementById('resetBtn');
+                            const transcriptBox = document.getElementById('transcript');
+
+                            let finalTranscript = '';
+
+                            recognition.onstart = function() {{
+                                statusText.innerText = "Status: 🎙️ Sedang merekam... (Silakan bicara)";
+                                statusText.style.borderLeftColor = "#e74c3c";
+                                startBtn.disabled = true; stopBtn.disabled = false;
+                                if (finalTranscript === '') transcriptBox.innerText = '';
+                            }};
+
+                            recognition.onresult = function(event) {{
+                                let interimTranscript = '';
+                                for (let i = event.resultIndex; i < event.results.length; ++i) {{
+                                    if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + '. ';
+                                    else interimTranscript += event.results[i][0].transcript;
+                                }}
+                                transcriptBox.innerText = finalTranscript + interimTranscript;
+                                transcriptBox.scrollTop = transcriptBox.scrollHeight; 
+                            }};
+
+                            recognition.onerror = function(event) {{
+                                if (event.error === 'no-speech') return;
+                                statusText.innerText = "Status: ⚠️ Rekaman terhenti otomatis (" + event.error + ")";
                                 startBtn.disabled = false; stopBtn.disabled = true;
-                            }}
-                        }};
+                            }};
 
-                        // ==========================================
-                        // KONTROL TOMBOL & SAKLAR PEMBUNUH TIMER
-                        // ==========================================
-                        
-                        startBtn.onclick = () => {{ 
-                            isManuallyStopped = false; 
-                            clearTimeout(restartTimer); 
-                            try {{ recognition.start(); }} catch(e) {{}} 
-                        }};
-                        
-                        stopBtn.onclick = () => {{ 
-                            isManuallyStopped = true; // Matikan izin restart
-                            clearTimeout(restartTimer); // Bunuh timer yang sedang berjalan!
-                            recognition.stop(); 
-                        }};
-                        
-                        // SAAT USER KLIK STOP & FINISH
-                        submitBtn.onclick = () => {{
-                            isManuallyStopped = true; // 🚀 MATIKAN IZIN RESTART
-                            clearTimeout(restartTimer); // 🚀 BUNUH TIMER SECARA TOTAL!
-                            recognition.stop(); 
+                            recognition.onend = function() {{
+                                if (startBtn.disabled === true && submitBtn.disabled === false) {{
+                                    statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Record Audio untuk lanjut.";
+                                    startBtn.disabled = false; stopBtn.disabled = true;
+                                }}
+                            }};
+
+                            startBtn.onclick = () => {{ recognition.start(); }};
+                            stopBtn.onclick = () => {{ recognition.stop(); }};
                             
-                            // Kunci teks terakhir sebelum dikirim
-                            const fullText = (permanentMemory + currentSessionMemory).trim(); 
+                            submitBtn.onclick = () => {{
+                                recognition.stop(); 
+                                const fullText = transcriptBox.innerText; 
+                                
+                                if (!fullText.trim() || fullText.includes("admin@tomstt")) {{
+                                    statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam.";
+                                    return;
+                                }}
+                                
+                                statusText.innerText = "Status: ⏳ Menyinkronkan data...";
+                                const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
+                                
+                                if (hiddenTextarea) {{
+                                    const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
+                                    if(wrapper) wrapper.style.pointerEvents = 'auto';
+                                    
+                                    hiddenTextarea.focus(); 
+                                    let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+                                    nativeInputValueSetter.call(hiddenTextarea, fullText);
+                                    
+                                    hiddenTextarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                    hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                    hiddenTextarea.blur(); 
+                                    
+                                    if(wrapper) wrapper.style.pointerEvents = 'none';
+                                    
+                                    statusText.innerText = "Status: ✅ Sukses! Silakan klik tombol biru '🧠 Lanjut ke Analisis AI' di bawah.";
+                                    statusText.style.borderLeftColor = "#27ae60";
+                                    statusText.style.color = "#27ae60";
+                                    submitBtn.disabled = true; startBtn.disabled = true; stopBtn.disabled = true;
+                                    
+                                    isAILocked = false;
+                                    enforceAILock();
+                                }} else {{
+                                    statusText.innerText = "Status: ❌ Gagal menemukan kotak konfirmasi.";
+                                }}
+                            }};
                             
-                            if (!fullText || fullText.includes("admin@tomstt")) {{
-                                statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam.";
-                                return;
-                            }}
-                            
-                            statusText.innerText = "Status: ⏳ Menyinkronkan data...";
-                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
-                            
-                            if (hiddenTextarea) {{
-                                const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
-                                if(wrapper) wrapper.style.pointerEvents = 'auto';
+                            resetBtn.onclick = () => {{
+                                recognition.stop();
                                 
-                                hiddenTextarea.focus(); 
-                                let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-                                nativeInputValueSetter.call(hiddenTextarea, fullText);
+                                finalTranscript = '';
+                                transcriptBox.innerText = 'admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...';
+                                statusText.innerText = "Status: 📴 Perekaman di-reset. Siap mendengarkan kembali.";
+                                statusText.style.borderLeftColor = "#3498db";
+                                statusText.style.color = "#555";
                                 
-                                hiddenTextarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                                hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                                hiddenTextarea.blur(); 
+                                startBtn.disabled = false; stopBtn.disabled = true; submitBtn.disabled = false;
                                 
-                                if(wrapper) wrapper.style.pointerEvents = 'none';
-                                
-                                statusText.innerText = "Status: ✅ Sukses! Silakan klik tombol biru '🧠 Lanjut ke Analisis AI' di bawah.";
-                                statusText.style.borderLeftColor = "#27ae60";
-                                statusText.style.color = "#27ae60";
-                                submitBtn.disabled = true; startBtn.disabled = true; stopBtn.disabled = true;
-                                
-                                isAILocked = false;
-                                enforceAILock();
-                            }} else {{
-                                statusText.innerText = "Status: ❌ Gagal menemukan kotak konfirmasi.";
-                            }}
-                        }};
-                        
-                        // SAAT USER KLIK RECORD NEW AUDIO
-                        resetBtn.onclick = () => {{
-                            isManuallyStopped = true; 
-                            clearTimeout(restartTimer); // 🚀 BUNUH TIMER SECARA TOTAL!
-                            recognition.stop();
-                            
-                            permanentMemory = ''; // Sapu bersih memori abadi
-                            currentSessionMemory = ''; // Sapu bersih memori sesi
-                            
-                            transcriptBox.innerText = 'admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...';
-                            statusText.innerText = "Status: 📴 Perekaman di-reset. Siap mendengarkan kembali.";
-                            statusText.style.borderLeftColor = "#3498db";
-                            statusText.style.color = "#555";
-                            
-                            startBtn.disabled = false; stopBtn.disabled = true; submitBtn.disabled = false;
-                            
-                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
-                            if (hiddenTextarea) {{
-                                const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
-                                if(wrapper) wrapper.style.pointerEvents = 'auto';
-                                
-                                let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-                                nativeInputValueSetter.call(hiddenTextarea, ""); 
-                                
-                                hiddenTextarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                                hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                                hiddenTextarea.blur(); 
-                                
-                                if(wrapper) wrapper.style.pointerEvents = 'none';
-                                
-                                isAILocked = true;
-                                enforceAILock();
-                            }}
-                        }};
+                                const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
+                                if (hiddenTextarea) {{
+                                    const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
+                                    if(wrapper) wrapper.style.pointerEvents = 'auto';
+                                    
+                                    let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+                                    nativeInputValueSetter.call(hiddenTextarea, ""); 
+                                    
+                                    hiddenTextarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                    hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                    hiddenTextarea.blur(); 
+                                    
+                                    if(wrapper) wrapper.style.pointerEvents = 'none';
+                                    
+                                    isAILocked = true;
+                                    enforceAILock();
+                                }}
+                            }};
+                        }}
                     }}
                 </script>
             </body>
