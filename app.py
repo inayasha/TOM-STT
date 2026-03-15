@@ -3076,9 +3076,6 @@ with tab_rekam:
         # 🚀 PENGATURAN BAHASA GLOBAL (Berlaku untuk semua mode)
         # ==========================================
 
-        # ---> KOTAK INFORMASI DITAMBAHKAN DI SINI <---
-        st.info("💡 **Tips untuk Hasil Transkripsi Maksimal**\n\nGunakan **Laptop atau PC** dengan koneksi internet yang stabil saat merekam. Perekaman audio menggunakan *Smartphone* (HP) sangat tidak disarankan, karena sistem HP seringkali mematikan mikrofon secara sepihak saat ada panggilan/notifikasi masuk.")
- 
         lang_choice_mic = st.selectbox("Pilih Bahasa Audio yang Diucapkan", ("Indonesia", "Inggris"), key="lang_mic_global")
         lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
         
@@ -3233,9 +3230,9 @@ with tab_rekam:
                 <div id="mobile-warning">
                     <h3><svg style="width: 24px; height: 24px;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> FITUR KHUSUS LAPTOP / PC</h3>
                     <p>
-                        Mohon maaf, fitur <b>Dikte Real-Time</b> saat ini hanya dapat diakses secara maksimal melalui browser Laptop atau Komputer (PC).<br><br>
-                        <i style="opacity: 0.9; font-size: 13.5px;">Sistem operasi pada Smartphone (Android/iOS) memiliki batasan akses mikrofon yang sering menyebabkan teks langsung (live) menjadi berulang atau terputus secara sepihak.</i><br><br>
-                        💡 <b>Solusi:</b> Silakan gunakan mode <b>"🎙️ Rekam Audio Utuh"</b> di atas untuk hasil yang 100% aman dan akurat di HP Anda.
+                        Fitur <b>Dikte Real-Time</b> saat ini hanya dapat diakses secara maksimal melalui browser Laptop atau Komputer (PC).<br><br>
+                        <i style="opacity: 0.9; font-size: 13.5px;">Sistem operasi pada Smartphone (Android/iOS) memiliki batasan akses mikrofon yang sering menyebabkan error.</i><br><br>
+                        💡 Silakan gunakan mode <b>"🎙️ Rekam Audio Utuh"</b> di atas untuk hasil yang 100% aman dan akurat di HP Anda.
                     </p>
                 </div>
 
