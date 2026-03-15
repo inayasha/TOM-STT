@@ -3072,26 +3072,154 @@ with tab_rekam:
     elif not st.session_state.logged_in:
         st.markdown('<div style="text-align: center; padding: 20px; background-color: #fdeced; border-radius: 10px; border: 1px solid #f5c6cb; margin-bottom: 20px;"><h3 style="color: #e74c3c; margin-top: 0;">🔒 Akses Terkunci!</h3><p style="color: #e74c3c; font-weight: 500;">Silahkan masuk (login) atau daftar terlebih dahulu di tab <b>🔒 Akun</b> untuk menggunakan fitur rekam suara langsung.</p></div>', unsafe_allow_html=True)
     else:
-        audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
-        if audio_mic: audio_to_process, source_name = audio_mic, "rekaman_mic.wav"
+        # 🚀 FITUR BARU: PILIHAN MODE PEREKAMAN
+        opsi_rekam = st.radio(
+            "Pilih Mode Perekaman:", 
+            ["🎙️ Akurasi Tinggi (Groq Whisper)", "⚡ Dikte Real-Time (Cepat & Gratis)"], 
+            horizontal=True
+        )
         
-        st.write("") 
-        submit_rekam = False
-        c1, c2, c3 = st.columns([1, 4, 1]) 
-        with c2:
-            lang_choice_mic = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_mic")
+        st.markdown("---")
+        
+        if opsi_rekam == "🎙️ Akurasi Tinggi (Groq Whisper)":
+            st.info("💡 **Mode Akurasi Tinggi:** Merekam suara utuh terlebih dahulu, lalu diproses sekaligus oleh AI (Akurasi level tinggi, cocok untuk rapat resmi).")
+            
+            audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
+            if audio_mic: audio_to_process, source_name = audio_mic, "rekaman_mic.wav"
+            
             st.write("") 
-            if audio_mic:
-                show_mobile_warning()
-                if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_mic"):
-                    submit_rekam = True
-                    lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
-            else:
-                st.markdown('<div class="custom-info-box">👆 Silahkan Rekam terlebih dahulu.</div>', unsafe_allow_html=True)
+            submit_rekam = False
+            c1, c2, c3 = st.columns([1, 4, 1]) 
+            with c2:
+                lang_choice_mic = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_mic")
+                st.write("") 
+                if audio_mic:
+                    show_mobile_warning()
+                    if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_mic"):
+                        submit_rekam = True
+                        lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
+                else:
+                    st.markdown('<div class="custom-info-box">👆 Silahkan Rekam terlebih dahulu.</div>', unsafe_allow_html=True)
+                    
+            if submit_rekam:
+                proses_transkrip_audio(audio_to_process, source_name, lang_code)
                 
-        # Eksekusi dilakukan di dalam `with tab_rekam:` agar UI terkunci di Tab 2
-        if submit_rekam:
-            proses_transkrip_audio(audio_to_process, source_name, lang_code)
+        elif opsi_rekam == "⚡ Dikte Real-Time (Cepat & Gratis)":
+            st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo. Setelah selesai, klik Copy dan proses teksnya di menu **🧠 Analisis AI**.")
+            
+            # 🚀 INJEKSI JAVASCRIPT & HTML UNTUK WEB SPEECH API
+            html_code = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 0; background: transparent; margin: 0; }
+                    textarea { width: 100%; height: 250px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; font-size: 15px; resize: none; margin-bottom: 10px; box-sizing: border-box; line-height: 1.6; color: #333; }
+                    textarea:focus { border-color: #e74c3c; outline: none; box-shadow: 0 0 5px rgba(231, 76, 60, 0.3); }
+                    .btn-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+                    button { flex: 1; padding: 14px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; color: white; transition: 0.2s; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; }
+                    #startBtn { background-color: #e74c3c; } 
+                    #startBtn:hover { background-color: #c0392b; transform: translateY(-2px); }
+                    #stopBtn { background-color: #95a5a6; } 
+                    #stopBtn:hover:not(:disabled) { background-color: #7f8c8d; transform: translateY(-2px); }
+                    #copyBtn { background-color: #27ae60; } 
+                    #copyBtn:hover { background-color: #219653; transform: translateY(-2px); }
+                    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+                    #status { font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; transition: all 0.3s; }
+                </style>
+            </head>
+            <body>
+                <div class="btn-group">
+                    <button id="startBtn">🔴 Mulai Bicara</button>
+                    <button id="stopBtn" disabled>⏹️ Berhenti</button>
+                    <button id="copyBtn">📋 Copy Teks</button>
+                </div>
+                <div id="status">Status: 📴 Siap mendengarkan...</div>
+                <textarea id="transcript" placeholder="Izinkan akses mikrofon di browser Anda (saat diminta), lalu mulailah berbicara. Teks akan muncul di sini secara real-time..."></textarea>
+
+                <script>
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    
+                    if (!SpeechRecognition) {
+                        document.getElementById('status').innerText = "⚠️ Browser Anda tidak mendukung fitur ini. Gunakan Google Chrome, Edge, atau Safari terbaru.";
+                        document.getElementById('status').style.borderLeftColor = "#f39c12";
+                    } else {
+                        const recognition = new SpeechRecognition();
+                        recognition.continuous = true;       
+                        recognition.interimResults = true;   
+                        recognition.lang = 'id-ID';          
+
+                        const startBtn = document.getElementById('startBtn');
+                        const stopBtn = document.getElementById('stopBtn');
+                        const copyBtn = document.getElementById('copyBtn');
+                        const transcriptBox = document.getElementById('transcript');
+                        const statusText = document.getElementById('status');
+
+                        let finalTranscript = '';
+
+                        recognition.onstart = function() {
+                            statusText.innerText = "Status: 🎙️ Sedang merekam... (Silakan bicara)";
+                            statusText.style.borderLeftColor = "#e74c3c";
+                            statusText.style.color = "#e74c3c";
+                            startBtn.disabled = true;
+                            stopBtn.disabled = false;
+                        };
+
+                        recognition.onresult = function(event) {
+                            let interimTranscript = '';
+                            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                                if (event.results[i].isFinal) {
+                                    finalTranscript += event.results[i][0].transcript + '. ';
+                                } else {
+                                    interimTranscript += event.results[i][0].transcript;
+                                }
+                            }
+                            transcriptBox.value = finalTranscript + interimTranscript;
+                            transcriptBox.scrollTop = transcriptBox.scrollHeight; // Auto-scroll ke bawah
+                        };
+
+                        recognition.onerror = function(event) {
+                            statusText.innerText = "Status: ⚠️ Error - " + event.error;
+                            statusText.style.borderLeftColor = "#f39c12";
+                            statusText.style.color = "#d35400";
+                            startBtn.disabled = false;
+                            stopBtn.disabled = true;
+                        };
+
+                        recognition.onend = function() {
+                            statusText.innerText = "Status: ⏹️ Perekaman dihentikan.";
+                            statusText.style.borderLeftColor = "#95a5a6";
+                            statusText.style.color = "#555";
+                            startBtn.disabled = false;
+                            stopBtn.disabled = true;
+                        };
+
+                        startBtn.onclick = () => { recognition.start(); };
+                        stopBtn.onclick = () => { recognition.stop(); };
+                        
+                        copyBtn.onclick = () => {
+                            transcriptBox.select();
+                            document.execCommand('copy');
+                            let oldText = statusText.innerText;
+                            let oldColor = statusText.style.color;
+                            
+                            statusText.innerText = "Status: ✅ Teks berhasil di-copy! Silakan paste ke Tab 'Analisis AI' -> Upload File .txt.";
+                            statusText.style.borderLeftColor = "#27ae60";
+                            statusText.style.color = "#27ae60";
+                            
+                            setTimeout(() => {
+                                statusText.innerText = "Status: ⏹️ Perekaman dihentikan.";
+                                statusText.style.borderLeftColor = "#95a5a6";
+                                statusText.style.color = "#555";
+                            }, 4000);
+                        };
+                    }
+                </script>
+            </body>
+            </html>
+            """
+            import streamlit.components.v1 as components
+            components.html(html_code, height=450)
 
 # ==========================================
 # TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
@@ -5432,3 +5560,4 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
+
