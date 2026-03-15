@@ -3108,25 +3108,14 @@ with tab_rekam:
             st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo.")
             
             # ==========================================
-            # KUNCI PERBAIKAN 1: CSS "KACA ANTI PELURU"
-            # Mengunci Text Area Python agar kebal dari klik & copy
+            # 1. WADAH CATCHER GAIB
+            # (Dilempar ke luar layar oleh JS, wajib ada sebagai jembatan ke Python)
             # ==========================================
-            st.markdown("""
-            <style>
-            textarea[aria-label="Wadah Sinkronisasi Teks"] {
-                -webkit-user-select: none !important;
-                -moz-user-select: none !important;
-                -ms-user-select: none !important;
-                user-select: none !important;
-                pointer-events: none !important; /* Membuatnya TIDAK BISA DIKLIK SAMA SEKALI */
-                background-color: #f1f3f5 !important;
-                color: #495057 !important;
-                border: 2px dashed #ced4da !important;
-            }
-            </style>
-            """, unsafe_allow_html=True)
+            st.text_area("Catcher Realtime", key="realtime_catcher", label_visibility="collapsed")
             
-            # 🚀 INJEKSI JAVASCRIPT & HTML (Kotak Rekam Atas)
+            # ==========================================
+            # 2. INJEKSI HTML & JAVASCRIPT (KOTAK REKAM ANTI-COPY)
+            # ==========================================
             html_code = """
             <!DOCTYPE html>
             <html>
@@ -3137,13 +3126,14 @@ with tab_rekam:
                         width: 100%; height: 200px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; 
                         font-size: 15px; margin-bottom: 10px; box-sizing: border-box; line-height: 1.6; 
                         color: #333; background-color: #F8F9FA; overflow-y: auto; 
+                        /* SHIELD: ANTI COPY ABSOLUT */
                         -webkit-user-select: none !important; user-select: none !important; cursor: default !important;
                     }
                     .btn-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
                     button { flex: 1; padding: 14px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; color: white; transition: 0.2s; font-size: 14px; }
                     #startBtn { background-color: #e74c3c; } 
                     #stopBtn { background-color: #95a5a6; } 
-                    #submitBtn { background-color: #2980b9; } /* Berubah menjadi Biru */
+                    #submitBtn { background-color: #2980b9; } 
                     button:disabled { opacity: 0.5; cursor: not-allowed; }
                     #status { font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; }
                 </style>
@@ -3159,6 +3149,20 @@ with tab_rekam:
 
                 <script>
                     const parentDoc = window.parent.document;
+                    
+                    // MANTRA GAIB: Lempar Catcher Streamlit ke luar layar (tapi biarkan tetap hidup)
+                    setTimeout(() => {
+                        const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Catcher Realtime"]');
+                        if(hiddenTextarea) {
+                            const taWrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
+                            if(taWrapper) {
+                                taWrapper.style.position = 'absolute';
+                                taWrapper.style.top = '-9999px';
+                                taWrapper.style.left = '-9999px';
+                            }
+                        }
+                    }, 100);
+
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     
                     if (!SpeechRecognition) {
@@ -3210,26 +3214,33 @@ with tab_rekam:
                         startBtn.onclick = () => { recognition.start(); };
                         stopBtn.onclick = () => { recognition.stop(); };
                         
-                        // KUNCI PERBAIKAN: Hanya transfer teks, tidak mengklik otomatis
+                        // KUNCI PERBAIKAN: Memaksa Streamlit sadar ada teks baru masuk
                         submitBtn.onclick = () => {
                             recognition.stop(); 
                             const fullText = transcriptBox.innerText; 
+                            
                             if (!fullText.trim() || fullText.includes("Izinkan akses mikrofon")) {
                                 statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam.";
                                 return;
                             }
                             
-                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Wadah Sinkronisasi Teks"]');
+                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Catcher Realtime"]');
                             if (hiddenTextarea) {
+                                // 1. Tembus sistem React
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
                                 nativeInputValueSetter.call(hiddenTextarea, fullText);
+                                
+                                // 2. Beri tahu React UI berubah
                                 hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                                 
-                                statusText.innerText = "Status: ✅ Teks berhasil ditransfer! Silakan gulir ke bawah & klik tombol Hijau.";
+                                // 3. HACK TERPENTING: Simulasikan Blur (klik di luar) agar Streamlit mengirim data ke Python!
+                                hiddenTextarea.dispatchEvent(new Event('blur', { bubbles: true }));
+                                
+                                statusText.innerText = "Status: ✅ Teks berhasil ditransfer! Silakan klik tombol Hijau di bawah.";
                                 statusText.style.borderLeftColor = "#27ae60";
                                 submitBtn.disabled = true; startBtn.disabled = true;
                             } else {
-                                statusText.innerText = "Status: ❌ Sistem penerima gagal ditemukan.";
+                                statusText.innerText = "Status: ❌ Sistem sinkronisasi gagal ditemukan.";
                             }
                         };
                     }
@@ -3240,19 +3251,19 @@ with tab_rekam:
             components.html(html_code, height=360)
 
             # ==========================================
-            # KUNCI PERBAIKAN 2: WADAH PYTHON YANG TERLIHAT & TOMBOL MANUAL
+            # 3. TOMBOL EKSEKUSI MANUAL PYTHON
             # ==========================================
-            st.markdown("### 📥 Konfirmasi Hasil Rekaman")
-            
-            # Wadah ini akan terkunci otomatis oleh CSS di atas
-            realtime_input = st.text_area("Wadah Sinkronisasi Teks", placeholder="Teks akan otomatis masuk ke sini setelah Anda menekan tombol '⬇️ Selesai & Transfer Teks' di atas...", label_visibility="collapsed", height=150)
+            st.markdown("### 📥 Langkah Terakhir")
+            st.info("Setelah selesai mendikte, klik tombol biru **'⬇️ Selesai & Transfer Teks'** di atas, lalu klik tombol hijau di bawah ini untuk lanjut ke AI.")
             
             submit_realtime = st.button("🚀 Simpan & Lanjut Analisis AI", type="primary", use_container_width=True)
             
-            # Logika eksekusi yang 100% aman dari "Stuck"
+            # Validasi akhir mengambil dari Memori Inti (Session State)
             if submit_realtime:
-                if realtime_input and realtime_input.strip() != "":
-                    st.session_state.transcript = realtime_input
+                final_text = st.session_state.get("realtime_catcher", "")
+                
+                if final_text and final_text.strip() != "":
+                    st.session_state.transcript = final_text
                     st.session_state.filename = "Dikte_RealTime"
                     st.session_state.is_text_upload = True 
                     
@@ -3275,7 +3286,7 @@ with tab_rekam:
                         }, 500);
                     </script>""", height=0)
                 else:
-                    st.error("⚠️ Teks kosong! Silakan rekam suara dan klik '⬇️ Selesai & Transfer Teks' terlebih dahulu.")
+                    st.error("⚠️ Teks belum masuk ke sistem! Pastikan Anda sudah mengklik tombol biru '⬇️ Selesai & Transfer Teks' sebelum mengklik tombol hijau ini.")
 
 # ==========================================
 # TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
