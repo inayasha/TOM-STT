@@ -3312,7 +3312,7 @@ with tab_rekam:
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                             if (hiddenTextarea && hiddenTextarea.value.trim() !== "") {{
                                 isAILocked = false;
-                                statusText.innerText = "Status: 📥 Draf dari Brankas Cadangan berhasil dimuat. Silakan lanjut ke AI.";
+                                statusText.innerText = "Status: 📥 Draft sebelumnya berhasil dimuat. Silakan lanjut ke AI.";
                                 statusText.style.borderLeftColor = "#f39c12";
                                 statusText.style.color = "#d35400";
                             }}
@@ -6001,7 +6001,7 @@ st.markdown("""
     Kontak Support:<br>
     📧 Email: <a href="mailto:tom.stt.official@gmail.com" style="color: #cccccc; text-decoration: none;">tom.stt.official@gmail.com</a> &nbsp;|&nbsp; 
     📞 Telp/WA: <a href="https://wa.me/6281297971551" style="color: #cccccc; text-decoration: none;">+62 812 9797 1551</a><br>
-    📍 Alamat: Jakarta - Indonesia<br><br>
+    📍 Jakarta - Indonesia<br><br>
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
