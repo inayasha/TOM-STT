@@ -3075,6 +3075,10 @@ with tab_rekam:
         # ==========================================
         # 🚀 PENGATURAN BAHASA GLOBAL (Berlaku untuk semua mode)
         # ==========================================
+
+        # ---> TAMBAHKAN KOTAK INFORMASI DI SINI <---
+        st.info("💡 **Tips Hasil Transkripsi Maksimal**\n\nDemi kenyamanan Anda, gunakanlah **Laptop atau PC** dengan koneksi internet yang stabil saat merekam. \n\n*Catatan:* Perekaman menggunakan *Smartphone* (HP) tidak disarankan untuk durasi panjang, karena sistem HP seringkali mematikan mikrofon secara sepihak saat layar meredup atau ada panggilan/notifikasi masuk.")
+ 
         lang_choice_mic = st.selectbox("Pilih Bahasa Audio yang Diucapkan", ("Indonesia", "Inggris"), key="lang_mic_global")
         lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
         
@@ -5894,3 +5898,4 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
+
