@@ -3293,61 +3293,61 @@ with tab_rekam:
                         let lastFinalText = ''; // 🛡️ PENJAGA 1: Memori teks terakhir (Anti-Duplikat)
                         let isManuallyStopped = false; // 🛡️ PENJAGA 2: Deteksi klik user (Auto-Restart)
 
-                        recognition.onstart = function() {
+                        recognition.onstart = function() {{
                             statusText.innerText = "Status: 🎙️ Sedang merekam... (Silakan bicara)";
                             statusText.style.borderLeftColor = "#e74c3c";
                             startBtn.disabled = true; stopBtn.disabled = false;
                             if (finalTranscript === '') transcriptBox.innerText = '';
-                        };
+                        }};
 
-                        recognition.onresult = function(event) {
+                        recognition.onresult = function(event) {{
                             let interimTranscript = '';
-                            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                            for (let i = event.resultIndex; i < event.results.length; ++i) {{
                                 let currentText = event.results[i][0].transcript.trim();
                                 
-                                if (event.results[i].isFinal) {
+                                if (event.results[i].isFinal) {{
                                     // 🚀 LOGIKA ANTI-DUPLIKAT (Hanya tambah jika teksnya beda dengan yang barusan)
-                                    if (currentText !== '' && currentText !== lastFinalText) {
+                                    if (currentText !== '' && currentText !== lastFinalText) {{
                                         // Pastikan huruf pertama kapital jika ini awal kalimat
-                                        if (finalTranscript === '' || finalTranscript.endsWith('. ')) {
+                                        if (finalTranscript === '' || finalTranscript.endsWith('. ')) {{
                                             currentText = currentText.charAt(0).toUpperCase() + currentText.slice(1);
-                                        }
+                                        }}
                                         finalTranscript += currentText + '. ';
                                         lastFinalText = currentText; // Catat di memori penjaga
-                                    }
-                                } else {
+                                    }}
+                                }} else {{
                                     interimTranscript += currentText + ' ';
-                                }
-                            }
+                                }}
+                            }}
                             transcriptBox.innerText = finalTranscript + interimTranscript;
                             transcriptBox.scrollTop = transcriptBox.scrollHeight; 
-                        };
+                        }};
 
-                        recognition.onerror = function(event) {
+                        recognition.onerror = function(event) {{
                             // Abaikan error "no-speech" (hening) agar tidak panik
                             if (event.error === 'no-speech') return; 
                             // Untuk error lain, biarkan saja agar nanti di-restart oleh onend
                             console.log("Mic Error: ", event.error);
-                        };
+                        }};
 
-                        recognition.onend = function() {
+                        recognition.onend = function() {{
                             // 🚀 LOGIKA AUTO-RESTART KHUSUS HP (Jika mati sendiri padahal user tidak klik Stop/Pause)
-                            if (!isManuallyStopped && startBtn.disabled === true) {
+                            if (!isManuallyStopped && startBtn.disabled === true) {{
                                 // Nyalakan lagi secara diam-diam dalam 250 milidetik
-                                setTimeout(() => {
-                                    try { recognition.start(); } catch(e) {}
-                                }, 250);
-                            } 
+                                setTimeout(() => {{
+                                    try {{ recognition.start(); }} catch(e) {{}}
+                                }}, 250);
+                            }} 
                             // Jika memang di-stop manual oleh user (State Pause)
-                            else if (startBtn.disabled === true && submitBtn.disabled === false) {
+                            else if (startBtn.disabled === true && submitBtn.disabled === false) {{
                                 statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Record Audio untuk lanjut.";
                                 startBtn.disabled = false; stopBtn.disabled = true;
-                            }
-                        };
+                            }}
+                        }};
 
                         // KONTROL TOMBOL: Beri tahu sistem kapan user menekan tombol secara sadar
-                        startBtn.onclick = () => { isManuallyStopped = false; recognition.start(); };
-                        stopBtn.onclick = () => { isManuallyStopped = true; recognition.stop(); };
+                        startBtn.onclick = () => {{ isManuallyStopped = false; recognition.start(); }};
+                        stopBtn.onclick = () => {{ isManuallyStopped = true; recognition.stop(); }};
                         
                         // SAAT USER KLIK STOP & FINISH
                         submitBtn.onclick = () => {{
