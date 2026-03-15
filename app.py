@@ -3105,128 +3105,64 @@ with tab_rekam:
                 proses_transkrip_audio(audio_to_process, source_name, lang_code)
                 
         elif opsi_rekam == "⚡ Dikte Real-Time (Cepat & Gratis)":
-            st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo. Setelah selesai, klik tombol **Selesai & Lanjut AI**.")
+            st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo.")
             
-            # --- WADAH TERSEMBUNYI (Dilempar ke luar layar oleh JS) ---
-            # Hapus label_visibility="collapsed" agar Streamlit tidak bingung
-            realtime_input = st.text_area("Catcher Realtime", key="realtime_catcher")
-            submit_realtime = st.button("Trigger Realtime", key="btn_trigger_realtime")
+            # ==========================================
+            # KUNCI PERBAIKAN 1: CSS "KACA ANTI PELURU"
+            # Mengunci Text Area Python agar kebal dari klik & copy
+            # ==========================================
+            st.markdown("""
+            <style>
+            textarea[aria-label="Wadah Sinkronisasi Teks"] {
+                -webkit-user-select: none !important;
+                -moz-user-select: none !important;
+                -ms-user-select: none !important;
+                user-select: none !important;
+                pointer-events: none !important; /* Membuatnya TIDAK BISA DIKLIK SAMA SEKALI */
+                background-color: #f1f3f5 !important;
+                color: #495057 !important;
+                border: 2px dashed #ced4da !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
             
-            # --- LOGIKA PENERIMA TEKS OTOMATIS ---
-            if submit_realtime and realtime_input:
-                # 1. Simpan ke Memori Streamlit
-                st.session_state.transcript = realtime_input
-                st.session_state.filename = "Dikte_RealTime"
-                st.session_state.is_text_upload = True 
-                
-                # 2. Simpan ke Draft Firestore
-                if st.session_state.logged_in:
-                    db.collection('users').document(st.session_state.current_user).update({
-                        "draft_transcript": st.session_state.transcript,
-                        "draft_filename": st.session_state.filename,
-                        "draft_ai_result": "",
-                        "draft_ai_prefix": "",
-                        "is_text_upload": True
-                    })
-                
-                # 3. Pindah tab ke Analisis AI secara Instan
-                st.success("✅ Dikte selesai! Mengalihkan ke menu Analisis AI...")
-                components.html("""<script>
-                    const parentDoc = window.parent.document;
-                    const tabs = Array.from(parentDoc.querySelectorAll('button[data-baseweb="tab"]'));
-                    const targetTab = tabs.find(tab => tab.innerText.includes('Analisis AI'));
-                    if(targetTab) { 
-                        targetTab.click(); 
-                        parentDoc.defaultView.scrollTo({top: 0, behavior: 'smooth'}); 
-                    }
-                </script>""", height=0)
-
-            # 🚀 INJEKSI JAVASCRIPT & HTML 
+            # 🚀 INJEKSI JAVASCRIPT & HTML (Kotak Rekam Atas)
             html_code = """
             <!DOCTYPE html>
             <html>
             <head>
                 <style>
                     body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 0; background: transparent; margin: 0; }
-                    
-                    /* SHIELD: PERTAHANAN ANTI-COPY ABSOLUT */
                     #transcript { 
-                        width: 100%; height: 250px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; 
+                        width: 100%; height: 200px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; 
                         font-size: 15px; margin-bottom: 10px; box-sizing: border-box; line-height: 1.6; 
-                        color: #333; background-color: #F8F9FA;
-                        overflow-y: auto; 
-                        -webkit-touch-callout: none !important;
-                        -webkit-user-select: none !important;
-                        -moz-user-select: none !important;
-                        -ms-user-select: none !important;
-                        user-select: none !important;
-                        cursor: default !important;
+                        color: #333; background-color: #F8F9FA; overflow-y: auto; 
+                        -webkit-user-select: none !important; user-select: none !important; cursor: default !important;
                     }
-                    
                     .btn-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-                    button { flex: 1; padding: 14px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; color: white; transition: 0.2s; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; }
-                    
+                    button { flex: 1; padding: 14px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; color: white; transition: 0.2s; font-size: 14px; }
                     #startBtn { background-color: #e74c3c; } 
-                    #startBtn:hover { background-color: #c0392b; transform: translateY(-2px); }
                     #stopBtn { background-color: #95a5a6; } 
-                    #stopBtn:hover:not(:disabled) { background-color: #7f8c8d; transform: translateY(-2px); }
-                    #submitBtn { background-color: #27ae60; } 
-                    #submitBtn:hover { background-color: #219653; transform: translateY(-2px); }
-                    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
-                    
-                    #status { font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; transition: all 0.3s; }
+                    #submitBtn { background-color: #2980b9; } /* Berubah menjadi Biru */
+                    button:disabled { opacity: 0.5; cursor: not-allowed; }
+                    #status { font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; }
                 </style>
             </head>
             <body oncontextmenu="return false;" oncopy="return false;" oncut="return false;" onselectstart="return false;">
                 <div class="btn-group">
                     <button id="startBtn">🔴 Mulai Bicara</button>
                     <button id="stopBtn" disabled>⏸️ Jeda</button>
-                    <button id="submitBtn">✨ Selesai & Lanjut AI</button>
+                    <button id="submitBtn">⬇️ Selesai & Transfer Teks</button>
                 </div>
                 <div id="status">Status: 📴 Siap mendengarkan...</div>
-                
-                <div id="transcript">Izinkan akses mikrofon saat diminta, lalu mulailah berbicara. Teks akan muncul di sini secara real-time...</div>
+                <div id="transcript">Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...</div>
 
                 <script>
                     const parentDoc = window.parent.document;
-
-                    // ========================================================
-                    // 1. MANTRA GAIB: LEMPAR ELEMEN KE LUAR LAYAR (-9999px)
-                    // (Elemen tetap hidup dan bisa dipencet, tapi tak terlihat)
-                    // ========================================================
-                    setTimeout(() => {
-                        const hiddenTextarea = parentDoc.querySelector('textarea[aria-label*="Catcher Realtime"]');
-                        if(hiddenTextarea) {
-                            const taWrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
-                            if(taWrapper) {
-                                taWrapper.style.position = 'absolute';
-                                taWrapper.style.left = '-9999px';
-                                taWrapper.style.height = '0px';
-                                taWrapper.style.opacity = '0';
-                            }
-                        }
-                        
-                        const buttons = Array.from(parentDoc.querySelectorAll('button'));
-                        const hiddenBtn = buttons.find(btn => btn.innerText.includes('Trigger Realtime'));
-                        if(hiddenBtn) {
-                            const btnWrapper = hiddenBtn.closest('div[data-testid="stButton"]');
-                            if(btnWrapper) {
-                                btnWrapper.style.position = 'absolute';
-                                btnWrapper.style.left = '-9999px';
-                                btnWrapper.style.height = '0px';
-                                btnWrapper.style.opacity = '0';
-                            }
-                        }
-                    }, 100);
-
-                    // ========================================================
-                    // 2. LOGIKA SPEECH RECOGNITION
-                    // ========================================================
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     
                     if (!SpeechRecognition) {
-                        document.getElementById('status').innerText = "⚠️ Browser Anda tidak mendukung fitur ini. Gunakan Google Chrome atau Edge.";
-                        document.getElementById('status').style.borderLeftColor = "#f39c12";
+                        document.getElementById('status').innerText = "⚠️ Browser Anda tidak mendukung fitur ini.";
                     } else {
                         const recognition = new SpeechRecognition();
                         recognition.continuous = true;       
@@ -3244,23 +3180,15 @@ with tab_rekam:
                         recognition.onstart = function() {
                             statusText.innerText = "Status: 🎙️ Sedang merekam... (Silakan bicara)";
                             statusText.style.borderLeftColor = "#e74c3c";
-                            statusText.style.color = "#e74c3c";
-                            startBtn.disabled = true;
-                            stopBtn.disabled = false;
-                            
-                            if (finalTranscript === '') {
-                                transcriptBox.innerText = '';
-                            }
+                            startBtn.disabled = true; stopBtn.disabled = false;
+                            if (finalTranscript === '') transcriptBox.innerText = '';
                         };
 
                         recognition.onresult = function(event) {
                             let interimTranscript = '';
                             for (let i = event.resultIndex; i < event.results.length; ++i) {
-                                if (event.results[i].isFinal) {
-                                    finalTranscript += event.results[i][0].transcript + '. ';
-                                } else {
-                                    interimTranscript += event.results[i][0].transcript;
-                                }
+                                if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + '. ';
+                                else interimTranscript += event.results[i][0].transcript;
                             }
                             transcriptBox.innerText = finalTranscript + interimTranscript;
                             transcriptBox.scrollTop = transcriptBox.scrollHeight; 
@@ -3269,63 +3197,39 @@ with tab_rekam:
                         recognition.onerror = function(event) {
                             if (event.error === 'no-speech') return;
                             statusText.innerText = "Status: ⚠️ Rekaman terhenti otomatis (" + event.error + ")";
-                            statusText.style.borderLeftColor = "#f39c12";
-                            statusText.style.color = "#d35400";
-                            startBtn.disabled = false;
-                            stopBtn.disabled = true;
+                            startBtn.disabled = false; stopBtn.disabled = true;
                         };
 
                         recognition.onend = function() {
                             if (startBtn.disabled === true && submitBtn.disabled === false) {
                                 statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Mulai Bicara untuk lanjut.";
-                                statusText.style.borderLeftColor = "#95a5a6";
-                                statusText.style.color = "#555";
-                                startBtn.disabled = false;
-                                stopBtn.disabled = true;
+                                startBtn.disabled = false; stopBtn.disabled = true;
                             }
                         };
 
                         startBtn.onclick = () => { recognition.start(); };
                         stopBtn.onclick = () => { recognition.stop(); };
                         
+                        // KUNCI PERBAIKAN: Hanya transfer teks, tidak mengklik otomatis
                         submitBtn.onclick = () => {
                             recognition.stop(); 
-                            
                             const fullText = transcriptBox.innerText; 
                             if (!fullText.trim() || fullText.includes("Izinkan akses mikrofon")) {
-                                statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam untuk diproses.";
-                                statusText.style.color = "#d35400";
+                                statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam.";
                                 return;
                             }
                             
-                            statusText.innerText = "Status: ⏳ Menyimpan teks dan menyiapkan Mesin AI...";
-                            statusText.style.borderLeftColor = "#27ae60";
-                            statusText.style.color = "#27ae60";
-                            submitBtn.disabled = true;
-                            startBtn.disabled = true;
-                            
-                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label*="Catcher Realtime"]');
-                            
+                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Wadah Sinkronisasi Teks"]');
                             if (hiddenTextarea) {
-                                // Trik injeksi nilai
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
                                 nativeInputValueSetter.call(hiddenTextarea, fullText);
-                                
-                                // Panggil event agar Streamlit tersadar ada teks baru
                                 hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                                 
-                                // Jeda 0.5 detik agar Streamlit punya waktu mencerna teks sebelum diklik!
-                                setTimeout(() => {
-                                    const hiddenBtn = Array.from(parentDoc.querySelectorAll('button')).find(btn => btn.innerText.includes('Trigger Realtime'));
-                                    if (hiddenBtn) {
-                                        hiddenBtn.click();
-                                        statusText.innerText = "Status: 🚀 Berhasil! Silakan tunggu perpindahan Tab...";
-                                    } else {
-                                        statusText.innerText = "Status: ❌ Tombol sistem gagal ditemukan.";
-                                    }
-                                }, 500);
+                                statusText.innerText = "Status: ✅ Teks berhasil ditransfer! Silakan gulir ke bawah & klik tombol Hijau.";
+                                statusText.style.borderLeftColor = "#27ae60";
+                                submitBtn.disabled = true; startBtn.disabled = true;
                             } else {
-                                statusText.innerText = "Status: ❌ Sistem penerima gagal ditemukan. Refresh halaman.";
+                                statusText.innerText = "Status: ❌ Sistem penerima gagal ditemukan.";
                             }
                         };
                     }
@@ -3333,7 +3237,45 @@ with tab_rekam:
             </body>
             </html>
             """
-            components.html(html_code, height=400)
+            components.html(html_code, height=360)
+
+            # ==========================================
+            # KUNCI PERBAIKAN 2: WADAH PYTHON YANG TERLIHAT & TOMBOL MANUAL
+            # ==========================================
+            st.markdown("### 📥 Konfirmasi Hasil Rekaman")
+            
+            # Wadah ini akan terkunci otomatis oleh CSS di atas
+            realtime_input = st.text_area("Wadah Sinkronisasi Teks", placeholder="Teks akan otomatis masuk ke sini setelah Anda menekan tombol '⬇️ Selesai & Transfer Teks' di atas...", label_visibility="collapsed", height=150)
+            
+            submit_realtime = st.button("🚀 Simpan & Lanjut Analisis AI", type="primary", use_container_width=True)
+            
+            # Logika eksekusi yang 100% aman dari "Stuck"
+            if submit_realtime:
+                if realtime_input and realtime_input.strip() != "":
+                    st.session_state.transcript = realtime_input
+                    st.session_state.filename = "Dikte_RealTime"
+                    st.session_state.is_text_upload = True 
+                    
+                    if st.session_state.logged_in:
+                        db.collection('users').document(st.session_state.current_user).update({
+                            "draft_transcript": st.session_state.transcript,
+                            "draft_filename": st.session_state.filename,
+                            "draft_ai_result": "",
+                            "draft_ai_prefix": "",
+                            "is_text_upload": True
+                        })
+                    
+                    st.success("✅ Menyimpan data... Memindahkan ke menu Analisis AI...")
+                    components.html("""<script>
+                        setTimeout(function() {
+                            const parentDoc = window.parent.document;
+                            const tabs = Array.from(parentDoc.querySelectorAll('button[data-baseweb="tab"]'));
+                            const targetTab = tabs.find(tab => tab.textContent.includes('Analisis AI'));
+                            if(targetTab) { targetTab.click(); parentDoc.defaultView.scrollTo({top: 0, behavior: 'smooth'}); }
+                        }, 500);
+                    </script>""", height=0)
+                else:
+                    st.error("⚠️ Teks kosong! Silakan rekam suara dan klik '⬇️ Selesai & Transfer Teks' terlebih dahulu.")
 
 # ==========================================
 # TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
