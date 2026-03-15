@@ -3119,7 +3119,7 @@ with tab_rekam:
                 proses_transkrip_audio(audio_to_process, source_name, lang_code)
             
         elif opsi_rekam == "⚡ Transkripsi Real Time":
-            st.info("💡 **Mode Transkripsi Real Time:** Teks akan muncul seketika (kata demi kata) di layar saat Anda berbicara.")
+            st.info("💡 **Mode Transkripsi Real Time:** Teks akan muncul seketika (kata demi kata) di layar saat Anda berbicara. Pastikan jendela ini tetap terbuka dan berada di depan (on top) dan tidak di minimize agar proses transkripsi berjalan lancar.")
             
             # ==========================================
             # 1. 🛡️ SISTEM PEMULIHAN & CALLBACK BRANKAS (TANPA TOMBOL GAIB!)
@@ -3349,15 +3349,16 @@ with tab_rekam:
                             const resetBtn = document.getElementById('resetBtn');
                             const transcriptBox = document.getElementById('transcript');
 
-                            // 🚀 BRANKAS LAPIS PERTAMA: LOCAL STORAGE (ANTI BROWSER CRASH)
+                            // 🚀 BRANKAS LAPIS PERTAMA: LOCAL STORAGE
                             const storageKey = 'tomstt_live_backup';
                             let finalTranscript = '';
+                            let isManuallyStopped = false; // 🛡️ SAKLAR ANTI-MATI LAPTOP
+                            let restartTimer = null; // 🛡️ PENJAGA TIMER
                             
                             try {{ 
                                 finalTranscript = localStorage.getItem(storageKey) || ''; 
-                            }} catch(e) {{}} // Bypass aman untuk browser Incognito Mode
+                            }} catch(e) {{}} 
                             
-                            // Jika ada teks tersisa di browser (akibat Crash/Refresh tiba-tiba)
                             if (finalTranscript.trim() !== '') {{
                                 transcriptBox.innerText = finalTranscript;
                                 statusText.innerText = "Status: 📥 Memulihkan ketikan dari memori browser...";
@@ -3376,7 +3377,7 @@ with tab_rekam:
                                 for (let i = event.resultIndex; i < event.results.length; ++i) {{
                                     if (event.results[i].isFinal) {{
                                         finalTranscript += event.results[i][0].transcript + '. ';
-                                        // 💾 AUTO-SAVE KE HARDDISK BROWSER TIAP KALIMAT FINAL!
+                                        // 💾 AUTO-SAVE KE HARDDISK BROWSER
                                         try {{ localStorage.setItem(storageKey, finalTranscript); }} catch(e) {{}}
                                     }} else {{
                                         interimTranscript += event.results[i][0].transcript;
@@ -3387,23 +3388,42 @@ with tab_rekam:
                             }};
 
                             recognition.onerror = function(event) {{
-                                if (event.error === 'no-speech') return;
-                                statusText.innerText = "Status: ⚠️ Rekaman terhenti otomatis (" + event.error + ")";
-                                startBtn.disabled = false; stopBtn.disabled = true;
+                                if (event.error === 'no-speech') return; // Abaikan error hening
+                                // Sembunyikan error dari UI agar user tidak panik, biarkan Auto-Restart bekerja
+                                console.log("Mic Error Desktop: ", event.error);
                             }};
 
                             recognition.onend = function() {{
-                                if (startBtn.disabled === true && submitBtn.disabled === false) {{
+                                // 🚀 LOGIKA AUTO-RESTART KHUSUS LAPTOP (ANTI KEHENINGAN)
+                                if (!isManuallyStopped && startBtn.disabled === true) {{
+                                    clearTimeout(restartTimer);
+                                    restartTimer = setTimeout(() => {{
+                                        try {{ recognition.start(); }} catch(e) {{}}
+                                    }}, 250);
+                                }} 
+                                else if (startBtn.disabled === true && submitBtn.disabled === false) {{
                                     statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Record Audio untuk lanjut.";
                                     startBtn.disabled = false; stopBtn.disabled = true;
                                 }}
                             }};
 
-                            startBtn.onclick = () => {{ recognition.start(); }};
-                            stopBtn.onclick = () => {{ recognition.stop(); }};
+                            startBtn.onclick = () => {{ 
+                                isManuallyStopped = false; 
+                                clearTimeout(restartTimer);
+                                try {{ recognition.start(); }} catch(e) {{}} 
+                            }};
+                            
+                            stopBtn.onclick = () => {{ 
+                                isManuallyStopped = true; 
+                                clearTimeout(restartTimer);
+                                recognition.stop(); 
+                            }};
                             
                             submitBtn.onclick = () => {{
+                                isManuallyStopped = true; 
+                                clearTimeout(restartTimer);
                                 recognition.stop(); 
+                                
                                 const fullText = transcriptBox.innerText; 
                                 
                                 if (!fullText.trim() || fullText.includes("Izinkan akses mikrofon saat diminta")) {{
@@ -3428,7 +3448,7 @@ with tab_rekam:
                                     
                                     if(wrapper) wrapper.style.pointerEvents = 'none';
                                     
-                                    // 🗑️ BERSIHKAN BRANKAS LAPIS PERTAMA (KARENA SUDAH AMAN PINDAH KE LAPIS DUA/FIREBASE)
+                                    // 🗑️ BERSIHKAN BRANKAS LAPIS PERTAMA
                                     try {{ localStorage.removeItem(storageKey); }} catch(e) {{}}
                                     
                                     statusText.innerText = "Status: ✅ Sukses! Silakan klik tombol biru '🧠 Lanjut ke Analisis AI' di bawah.";
@@ -3444,10 +3464,11 @@ with tab_rekam:
                             }};
                             
                             resetBtn.onclick = () => {{
+                                isManuallyStopped = true; 
+                                clearTimeout(restartTimer);
                                 recognition.stop();
                                 
                                 finalTranscript = '';
-                                // 🗑️ BERSIHKAN BRANKAS LAPIS PERTAMA KARENA USER MINTA RESET
                                 try {{ localStorage.removeItem(storageKey); }} catch(e) {{}}
                                 
                                 transcriptBox.innerText = 'Izinkan akses mikrofon saat diminta.';
