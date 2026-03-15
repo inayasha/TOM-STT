@@ -3307,7 +3307,7 @@ with tab_rekam:
                         let isAILocked = true; 
                         const statusText = document.getElementById('status');
                         
-                        // Deteksi Brankas Cadangan
+                        // Deteksi Brankas Cadangan Lapis 2 (Firebase)
                         setTimeout(() => {{
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                             if (hiddenTextarea && hiddenTextarea.value.trim() !== "") {{
@@ -3349,7 +3349,20 @@ with tab_rekam:
                             const resetBtn = document.getElementById('resetBtn');
                             const transcriptBox = document.getElementById('transcript');
 
+                            // 🚀 BRANKAS LAPIS PERTAMA: LOCAL STORAGE (ANTI BROWSER CRASH)
+                            const storageKey = 'tomstt_live_backup';
                             let finalTranscript = '';
+                            
+                            try {{ 
+                                finalTranscript = localStorage.getItem(storageKey) || ''; 
+                            }} catch(e) {{}} // Bypass aman untuk browser Incognito Mode
+                            
+                            // Jika ada teks tersisa di browser (akibat Crash/Refresh tiba-tiba)
+                            if (finalTranscript.trim() !== '') {{
+                                transcriptBox.innerText = finalTranscript;
+                                statusText.innerText = "Status: 📥 Memulihkan ketikan dari memori browser...";
+                                statusText.style.borderLeftColor = "#f39c12";
+                            }}
 
                             recognition.onstart = function() {{
                                 statusText.innerText = "Status: 🎙️ Sedang merekam...";
@@ -3361,8 +3374,13 @@ with tab_rekam:
                             recognition.onresult = function(event) {{
                                 let interimTranscript = '';
                                 for (let i = event.resultIndex; i < event.results.length; ++i) {{
-                                    if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + '. ';
-                                    else interimTranscript += event.results[i][0].transcript;
+                                    if (event.results[i].isFinal) {{
+                                        finalTranscript += event.results[i][0].transcript + '. ';
+                                        // 💾 AUTO-SAVE KE HARDDISK BROWSER TIAP KALIMAT FINAL!
+                                        try {{ localStorage.setItem(storageKey, finalTranscript); }} catch(e) {{}}
+                                    }} else {{
+                                        interimTranscript += event.results[i][0].transcript;
+                                    }}
                                 }}
                                 transcriptBox.innerText = finalTranscript + interimTranscript;
                                 transcriptBox.scrollTop = transcriptBox.scrollHeight; 
@@ -3388,7 +3406,6 @@ with tab_rekam:
                                 recognition.stop(); 
                                 const fullText = transcriptBox.innerText; 
                                 
-                                // Ganti kata kunci pengecekan agar tombol menolak jika user belum bicara apa-apa
                                 if (!fullText.trim() || fullText.includes("Izinkan akses mikrofon saat diminta")) {{
                                     statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam.";
                                     return;
@@ -3411,6 +3428,9 @@ with tab_rekam:
                                     
                                     if(wrapper) wrapper.style.pointerEvents = 'none';
                                     
+                                    // 🗑️ BERSIHKAN BRANKAS LAPIS PERTAMA (KARENA SUDAH AMAN PINDAH KE LAPIS DUA/FIREBASE)
+                                    try {{ localStorage.removeItem(storageKey); }} catch(e) {{}}
+                                    
                                     statusText.innerText = "Status: ✅ Sukses! Silakan klik tombol biru '🧠 Lanjut ke Analisis AI' di bawah.";
                                     statusText.style.borderLeftColor = "#27ae60";
                                     statusText.style.color = "#27ae60";
@@ -3427,6 +3447,9 @@ with tab_rekam:
                                 recognition.stop();
                                 
                                 finalTranscript = '';
+                                // 🗑️ BERSIHKAN BRANKAS LAPIS PERTAMA KARENA USER MINTA RESET
+                                try {{ localStorage.removeItem(storageKey); }} catch(e) {{}}
+                                
                                 transcriptBox.innerText = 'Izinkan akses mikrofon saat diminta.';
                                 statusText.innerText = "Status: 📴 Perekaman di-reset. Siap mendengarkan kembali.";
                                 statusText.style.borderLeftColor = "#3498db";
