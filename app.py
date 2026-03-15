@@ -3107,15 +3107,7 @@ with tab_rekam:
         elif opsi_rekam == "⚡ Dikte Real-Time (Cepat & Gratis)":
             st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo.")
             
-            # ==========================================
-            # 1. WADAH CATCHER GAIB
-            # (Dilempar ke luar layar oleh JS, wajib ada sebagai jembatan ke Python)
-            # ==========================================
-            st.text_area("Catcher Realtime", key="realtime_catcher", label_visibility="collapsed")
-            
-            # ==========================================
-            # 2. INJEKSI HTML & JAVASCRIPT (KOTAK REKAM ANTI-COPY)
-            # ==========================================
+            # 🚀 1. INJEKSI JAVASCRIPT & HTML (KOTAK REKAM UTAMA)
             html_code = """
             <!DOCTYPE html>
             <html>
@@ -3123,17 +3115,17 @@ with tab_rekam:
                 <style>
                     body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 0; background: transparent; margin: 0; }
                     #transcript { 
-                        width: 100%; height: 200px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; 
+                        width: 100%; height: 220px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; 
                         font-size: 15px; margin-bottom: 10px; box-sizing: border-box; line-height: 1.6; 
                         color: #333; background-color: #F8F9FA; overflow-y: auto; 
-                        /* SHIELD: ANTI COPY ABSOLUT */
+                        /* SHIELD ANTI-COPY */
                         -webkit-user-select: none !important; user-select: none !important; cursor: default !important;
                     }
                     .btn-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
                     button { flex: 1; padding: 14px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; color: white; transition: 0.2s; font-size: 14px; }
                     #startBtn { background-color: #e74c3c; } 
                     #stopBtn { background-color: #95a5a6; } 
-                    #submitBtn { background-color: #2980b9; } 
+                    #submitBtn { background-color: #27ae60; } 
                     button:disabled { opacity: 0.5; cursor: not-allowed; }
                     #status { font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; }
                 </style>
@@ -3142,27 +3134,13 @@ with tab_rekam:
                 <div class="btn-group">
                     <button id="startBtn">🔴 Mulai Bicara</button>
                     <button id="stopBtn" disabled>⏸️ Jeda</button>
-                    <button id="submitBtn">⬇️ Selesai & Transfer Teks</button>
+                    <button id="submitBtn">✨ Selesai & Lanjut AI</button>
                 </div>
                 <div id="status">Status: 📴 Siap mendengarkan...</div>
-                <div id="transcript">Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...</div>
+                <div id="transcript">Izinkan akses mikrofon saat diminta, lalu mulailah berbicara. Teks akan muncul di sini secara real-time...</div>
 
                 <script>
                     const parentDoc = window.parent.document;
-                    
-                    // MANTRA GAIB: Lempar Catcher Streamlit ke luar layar (tapi biarkan tetap hidup)
-                    setTimeout(() => {
-                        const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Catcher Realtime"]');
-                        if(hiddenTextarea) {
-                            const taWrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
-                            if(taWrapper) {
-                                taWrapper.style.position = 'absolute';
-                                taWrapper.style.top = '-9999px';
-                                taWrapper.style.left = '-9999px';
-                            }
-                        }
-                    }, 100);
-
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     
                     if (!SpeechRecognition) {
@@ -3214,7 +3192,7 @@ with tab_rekam:
                         startBtn.onclick = () => { recognition.start(); };
                         stopBtn.onclick = () => { recognition.stop(); };
                         
-                        // KUNCI PERBAIKAN: Memaksa Streamlit sadar ada teks baru masuk
+                        // LOGIKA INJEKSI YANG TERBUKTI SUKSES & LANCAR
                         submitBtn.onclick = () => {
                             recognition.stop(); 
                             const fullText = transcriptBox.innerText; 
@@ -3224,23 +3202,29 @@ with tab_rekam:
                                 return;
                             }
                             
-                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Catcher Realtime"]');
+                            statusText.innerText = "Status: ⏳ Mentransfer teks ke Draf Editor...";
+                            statusText.style.borderLeftColor = "#27ae60";
+                            submitBtn.disabled = true; startBtn.disabled = true;
+                            
+                            // Cari TextBox Streamlit berdasarkan Aria-Label
+                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Wadah Teks"]');
+                            
                             if (hiddenTextarea) {
-                                // 1. Tembus sistem React
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
                                 nativeInputValueSetter.call(hiddenTextarea, fullText);
-                                
-                                // 2. Beri tahu React UI berubah
                                 hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                                 
-                                // 3. HACK TERPENTING: Simulasikan Blur (klik di luar) agar Streamlit mengirim data ke Python!
-                                hiddenTextarea.dispatchEvent(new Event('blur', { bubbles: true }));
-                                
-                                statusText.innerText = "Status: ✅ Teks berhasil ditransfer! Silakan klik tombol Hijau di bawah.";
-                                statusText.style.borderLeftColor = "#27ae60";
-                                submitBtn.disabled = true; startBtn.disabled = true;
+                                // Jeda 0.5 detik, lalu otomatis klik tombol Python
+                                setTimeout(() => {
+                                    const buttons = Array.from(parentDoc.querySelectorAll('button'));
+                                    const pythonBtn = buttons.find(btn => btn.textContent.includes('Simpan & Lanjut AI'));
+                                    if (pythonBtn) {
+                                        pythonBtn.click();
+                                        statusText.innerText = "Status: 🚀 Berhasil! Menyiapkan AI...";
+                                    }
+                                }, 500);
                             } else {
-                                statusText.innerText = "Status: ❌ Sistem sinkronisasi gagal ditemukan.";
+                                statusText.innerText = "Status: ❌ Gagal menemukan Draf Editor.";
                             }
                         };
                     }
@@ -3248,22 +3232,27 @@ with tab_rekam:
             </body>
             </html>
             """
-            components.html(html_code, height=360)
+            components.html(html_code, height=380)
 
             # ==========================================
-            # 3. TOMBOL EKSEKUSI MANUAL PYTHON
+            # 2. WADAH PYTHON (Narasi: Draf Editor yang Terlihat)
             # ==========================================
-            st.markdown("### 📥 Langkah Terakhir")
-            st.info("Setelah selesai mendikte, klik tombol biru **'⬇️ Selesai & Transfer Teks'** di atas, lalu klik tombol hijau di bawah ini untuk lanjut ke AI.")
+            st.markdown("---")
+            st.markdown("### 📝 Draf Hasil Transkripsi")
+            st.info("💡 Sistem akan **menyalin teks secara otomatis** ke kotak ini dan memprosesnya saat Anda klik tombol 'Selesai' di atas. Anda juga dapat mengedit *typo* secara manual sebelum dilanjutkan.")
             
-            submit_realtime = st.button("🚀 Simpan & Lanjut Analisis AI", type="primary", use_container_width=True)
+            # Text area terlihat jelas dan bisa diedit user (Fallback yang sangat aman)
+            realtime_input = st.text_area("Wadah Teks", label_visibility="collapsed", key="realtime_catcher", height=150)
             
-            # Validasi akhir mengambil dari Memori Inti (Session State)
+            # Tombol Streamlit untuk mengeksekusi perpindahan tab
+            submit_realtime = st.button("🚀 Simpan & Lanjut AI", key="btn_trigger_realtime", type="primary", use_container_width=True)
+            
+            # ==========================================
+            # 3. LOGIKA PEMROSESAN & PINDAH TAB
+            # ==========================================
             if submit_realtime:
-                final_text = st.session_state.get("realtime_catcher", "")
-                
-                if final_text and final_text.strip() != "":
-                    st.session_state.transcript = final_text
+                if realtime_input and realtime_input.strip() != "":
+                    st.session_state.transcript = realtime_input
                     st.session_state.filename = "Dikte_RealTime"
                     st.session_state.is_text_upload = True 
                     
@@ -3276,7 +3265,7 @@ with tab_rekam:
                             "is_text_upload": True
                         })
                     
-                    st.success("✅ Menyimpan data... Memindahkan ke menu Analisis AI...")
+                    st.success("✅ Menyimpan data... Mengalihkan ke menu Analisis AI...")
                     components.html("""<script>
                         setTimeout(function() {
                             const parentDoc = window.parent.document;
@@ -3286,7 +3275,7 @@ with tab_rekam:
                         }, 500);
                     </script>""", height=0)
                 else:
-                    st.error("⚠️ Teks belum masuk ke sistem! Pastikan Anda sudah mengklik tombol biru '⬇️ Selesai & Transfer Teks' sebelum mengklik tombol hijau ini.")
+                    st.error("⚠️ Teks kosong! Silakan rekam suara terlebih dahulu.")
 
 # ==========================================
 # TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
