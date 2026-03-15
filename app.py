@@ -3108,23 +3108,33 @@ with tab_rekam:
             st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo.")
             
             # ==========================================
-            # 1. CSS VISUAL UNTUK KOTAK STREAMLIT
+            # 1. CSS VISUAL UNTUK KOTAK STREAMLIT (ANTI-SELECT MUTLAK)
             # ==========================================
             st.markdown("""
             <style>
+            /* Memblokir seleksi pada wrapper induk text area */
+            div[data-testid="stTextArea"]:has(textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]) {
+                pointer-events: none !important;
+                -webkit-user-select: none !important;
+                user-select: none !important;
+            }
+            
+            /* Visual Kotak Konfirmasi (Abu-abu terang) */
             textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"] {
                 -webkit-user-select: none !important;
                 -moz-user-select: none !important;
                 -ms-user-select: none !important;
                 user-select: none !important;
-                background-color: #f1f3f5 !important;
+                pointer-events: none !important; 
+                background-color: #e9ecef !important;
                 color: #495057 !important;
+                border: 2px dashed #ced4da !important;
             }
             </style>
             """, unsafe_allow_html=True)
 
             # ==========================================
-            # 2. INJEKSI HTML & JS (KOTAK REKAM UTAMA)
+            # 2. INJEKSI HTML & JS (TEMA TERMINAL LINUX & ICON MODERN)
             # ==========================================
             html_code = """
             <!DOCTYPE html>
@@ -3132,36 +3142,77 @@ with tab_rekam:
             <head>
                 <style>
                     body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 0; background: transparent; margin: 0; }
+                    
+                    /* TEMA TERMINAL LINUX KLASIK */
                     #transcript { 
-                        width: 100%; height: 220px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; 
-                        
-                        /* Font Klasik Hanya di Kotak Rekam Atas */
-                        font-family: 'Courier New', Courier, monospace; 
-                        font-size: 16px; font-weight: 600; 
-                        
+                        width: 100%; height: 220px; padding: 15px; border-radius: 8px; border: 1px solid #333; 
+                        font-family: 'Courier New', Courier, monospace; font-size: 15.5px; font-weight: 600; 
                         margin-bottom: 10px; box-sizing: border-box; line-height: 1.6; 
-                        color: #2c3e50; background-color: #F8F9FA; overflow-y: auto; 
-                        /* SHIELD: ANTI-COPY */
+                        
+                        /* WARNA GELAP & TEKS HIJAU HACKER */
+                        background-color: #0c0c0c; color: #00FF41; 
+                        box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.1);
+                        overflow-y: auto; 
+                        
+                        /* SHIELD: ANTI-COPY & SELECT */
                         -webkit-user-select: none !important; user-select: none !important; cursor: default !important;
                     }
-                    .btn-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-                    button { flex: 1; padding: 14px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; color: white; transition: 0.2s; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif;}
-                    #startBtn { background-color: #e74c3c; } 
-                    #stopBtn { background-color: #95a5a6; } 
-                    #submitBtn { background-color: #2980b9; } 
+                    
+                    /* DESAIN TOMBOL MODERN */
+                    .btn-group { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+                    
+                    .action-btn { 
+                        flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; 
+                        font-weight: 600; color: white; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif;
+                        display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
+                    }
+                    #startBtn { background-color: #ef4444; } 
+                    #startBtn:hover:not(:disabled) { background-color: #dc2626; }
+                    #stopBtn { background-color: #f59e0b; } 
+                    #stopBtn:hover:not(:disabled) { background-color: #d97706; }
+                    #submitBtn { background-color: #10b981; } 
+                    #submitBtn:hover:not(:disabled) { background-color: #059669; }
+                    
+                    /* TOMBOL RECORD NEW AUDIO (Lebar Penuh) */
+                    #resetBtn { 
+                        width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; 
+                        font-weight: 700; color: #374151; background-color: #e5e7eb; font-size: 14px;
+                        display: flex; align-items: center; justify-content: center; gap: 8px; 
+                        margin-bottom: 15px; transition: 0.2s; font-family: 'Plus Jakarta Sans', sans-serif;
+                    }
+                    #resetBtn:hover:not(:disabled) { background-color: #d1d5db; }
+                    
                     button:disabled { opacity: 0.5; cursor: not-allowed; }
+                    svg { width: 18px; height: 18px; fill: currentColor; }
+                    
                     #status { font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; }
                 </style>
             </head>
             <body oncontextmenu="return false;" oncopy="return false;" oncut="return false;" onselectstart="return false;">
+                
                 <div class="btn-group">
-                    <button id="startBtn">🔴 Record Audio</button>
-                    <button id="stopBtn" disabled>⏸️ Pause</button>
-                    <button id="submitBtn">⏹️ Stop & Finish</button>
+                    <button id="startBtn" class="action-btn">
+                        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.39-.9.88 0 2.76-2.24 5-5.01 5s-5.01-2.24-5.01-5c0-.49-.41-.88-.9-.88s-.9.39-.9.88c0 3.24 2.63 5.88 5.81 6.3V21h-2v2h6v-2h-2v-2.72c3.18-.42 5.81-3.06 5.81-6.3 0-.49-.41-.88-.9-.88z"/></svg>
+                        Record Audio
+                    </button>
+                    <button id="stopBtn" class="action-btn" disabled>
+                        <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        Pause
+                    </button>
+                    <button id="submitBtn" class="action-btn">
+                        <svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+                        Stop & Finish
+                    </button>
                 </div>
+                
+                <button id="resetBtn">
+                    <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    Record New Audio
+                </button>
+                
                 <div id="status">Status: 📴 Siap mendengarkan...</div>
                 
-                <div id="transcript">Izinkan akses mikrofon saat diminta, lalu mulailah berbicara. Teks akan muncul di sini secara real-time...</div>
+                <div id="transcript">admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...</div>
 
                 <script>
                     const parentDoc = window.parent.document;
@@ -3178,6 +3229,7 @@ with tab_rekam:
                         const startBtn = document.getElementById('startBtn');
                         const stopBtn = document.getElementById('stopBtn');
                         const submitBtn = document.getElementById('submitBtn');
+                        const resetBtn = document.getElementById('resetBtn');
                         const transcriptBox = document.getElementById('transcript');
                         const statusText = document.getElementById('status');
 
@@ -3216,28 +3268,25 @@ with tab_rekam:
                         startBtn.onclick = () => { recognition.start(); };
                         stopBtn.onclick = () => { recognition.stop(); };
                         
+                        // Fungsi Transfer Sinkronisasi Teks
                         submitBtn.onclick = () => {
                             recognition.stop(); 
                             const fullText = transcriptBox.innerText; 
                             
-                            if (!fullText.trim() || fullText.includes("Izinkan akses mikrofon")) {
+                            if (!fullText.trim() || fullText.includes("admin@tomstt")) {
                                 statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam.";
                                 return;
                             }
                             
-                            statusText.innerText = "Status: ⏳ Mentransfer teks ke kotak konfirmasi...";
+                            statusText.innerText = "Status: ⏳ Menyinkronkan data...";
                             
-                            // MENCARI TEXT AREA STREAMLIT BERDASARKAN LABEL
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                             
                             if (hiddenTextarea) {
-                                hiddenTextarea.readOnly = true;
-                                hiddenTextarea.oncopy = (e) => e.preventDefault();
-                                hiddenTextarea.oncut = (e) => e.preventDefault();
-                                hiddenTextarea.onpaste = (e) => e.preventDefault();
-                                hiddenTextarea.oncontextmenu = (e) => e.preventDefault();
-                                hiddenTextarea.onselectstart = (e) => e.preventDefault();
-
+                                // Trik menghilangkan pointer-events sementara agar Streamlit merespons input
+                                const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
+                                if(wrapper) wrapper.style.pointerEvents = 'auto';
+                                
                                 hiddenTextarea.focus(); 
                                 
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
@@ -3248,7 +3297,10 @@ with tab_rekam:
                                 
                                 hiddenTextarea.blur(); 
                                 
-                                statusText.innerText = "Status: ✅ Teks berhasil ditransfer! Silakan tekan tombol '🚀 Lanjut ke Analisis AI' di bawah ini.";
+                                // Kembalikan keamanan pointer-events
+                                if(wrapper) wrapper.style.pointerEvents = 'none';
+                                
+                                statusText.innerText = "Status: ✅ Sukses! Lanjut tekan tombol biru '🧠 Lanjut ke Analisis AI' di bawah.";
                                 statusText.style.borderLeftColor = "#27ae60";
                                 statusText.style.color = "#27ae60";
                                 submitBtn.disabled = true; startBtn.disabled = true; stopBtn.disabled = true;
@@ -3256,33 +3308,48 @@ with tab_rekam:
                                 statusText.innerText = "Status: ❌ Gagal menemukan kotak konfirmasi.";
                             }
                         };
+                        
+                        // Menghubungkan tombol HTML "Record New Audio" dengan sistem Python
+                        resetBtn.onclick = () => {
+                            const buttons = Array.from(parentDoc.querySelectorAll('button'));
+                            const pythonResetBtn = buttons.find(btn => btn.textContent.includes('HiddenReset_Dikte'));
+                            if (pythonResetBtn) {
+                                pythonResetBtn.click();
+                            } else {
+                                window.parent.location.reload(); // Fallback jika gagal
+                            }
+                        };
                     }
                 </script>
             </body>
             </html>
             """
-            components.html(html_code, height=380)
+            components.html(html_code, height=450)
 
             # ==========================================
-            # 3. WADAH PYTHON & TOMBOL-TOMBOL BAWAH
+            # 3. TOMBOL RESET GAIB (Ditekan oleh JS)
             # ==========================================
-            st.markdown("---")
-            st.info("💡 **Petunjuk:** Setelah Anda selesai merekam, klik tombol **Stop & Finish** di atas. Teks akan muncul di kotak ini, lalu klik tombol **Lanjut ke Analisis AI**.")
-            
-            # KUNCI BARU: catcher_dikte_live
-            realtime_input = st.text_area("📝 Konfirmasi Hasil Transkripsi", placeholder="Teks akan otomatis ditransfer ke sini...", key="catcher_dikte_live", height=150)
-            
-            # KUNCI BARU: btn_lanjut_ai_dikte
-            submit_realtime = st.button("🚀 Lanjut ke Analisis AI", key="btn_lanjut_ai_dikte", type="primary", use_container_width=True)
-            
-            # KUNCI BARU: btn_reset_dikte
-            if st.button("🔄 Rekam Audio Baru", key="btn_reset_dikte", type="secondary", use_container_width=True):
+            st.markdown("<div style='display: none;'>", unsafe_allow_html=True)
+            if st.button("HiddenReset_Dikte", key="btn_reset_dikte"):
                 if "catcher_dikte_live" in st.session_state:
                     del st.session_state["catcher_dikte_live"]
                 st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            # ==========================================
+            # 4. WADAH PYTHON & TOMBOL LANJUT
+            # ==========================================
+            st.markdown("---")
+            st.info("💡 **Petunjuk:** Setelah klik **Stop & Finish**, teks Anda akan disalin ke kotak di bawah ini. Pastikan teks sudah muncul, lalu klik **Lanjut ke Analisis AI**.")
+            
+            # Wadah teks 100% terkunci dari klik/select oleh CSS di atas
+            realtime_input = st.text_area("📝 Konfirmasi Hasil Transkripsi", placeholder="Teks akan otomatis ditransfer ke sini...", key="catcher_dikte_live", height=150)
+            
+            # Tombol Utama (Teks bisa disesuaikan dengan tab Upload Anda)
+            submit_realtime = st.button("✨ Lanjut ke Analisis AI", key="btn_lanjut_ai_dikte", type="primary", use_container_width=True)
             
             # ==========================================
-            # 4. LOGIKA PEMROSESAN & PINDAH TAB
+            # 5. LOGIKA PEMROSESAN & PINDAH TAB
             # ==========================================
             if submit_realtime:
                 if realtime_input and realtime_input.strip() != "":
