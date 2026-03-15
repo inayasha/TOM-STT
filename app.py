@@ -3268,7 +3268,7 @@ with tab_rekam:
                         startBtn.onclick = () => { recognition.start(); };
                         stopBtn.onclick = () => { recognition.stop(); };
                         
-                        // Fungsi Transfer Sinkronisasi Teks
+                        // FUNGSI TRANSFER TEKS
                         submitBtn.onclick = () => {
                             recognition.stop(); 
                             const fullText = transcriptBox.innerText; 
@@ -3283,7 +3283,7 @@ with tab_rekam:
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                             
                             if (hiddenTextarea) {
-                                // Trik menghilangkan pointer-events sementara agar Streamlit merespons input
+                                // Trik sementara membuka kunci CSS agar Python bisa membaca teks
                                 const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
                                 if(wrapper) wrapper.style.pointerEvents = 'auto';
                                 
@@ -3297,10 +3297,10 @@ with tab_rekam:
                                 
                                 hiddenTextarea.blur(); 
                                 
-                                // Kembalikan keamanan pointer-events
+                                // Kembalikan keamanan
                                 if(wrapper) wrapper.style.pointerEvents = 'none';
                                 
-                                statusText.innerText = "Status: ✅ Sukses! Lanjut tekan tombol biru '🧠 Lanjut ke Analisis AI' di bawah.";
+                                statusText.innerText = "Status: ✅ Sukses! Lanjut tekan tombol '🧠 Lanjut ke Analisis AI' di bawah.";
                                 statusText.style.borderLeftColor = "#27ae60";
                                 statusText.style.color = "#27ae60";
                                 submitBtn.disabled = true; startBtn.disabled = true; stopBtn.disabled = true;
@@ -3309,14 +3309,34 @@ with tab_rekam:
                             }
                         };
                         
-                        // Menghubungkan tombol HTML "Record New Audio" dengan sistem Python
+                        // FUNGSI RESET SUPER BERSIH (TANPA TOMBOL PYTHON)
                         resetBtn.onclick = () => {
-                            const buttons = Array.from(parentDoc.querySelectorAll('button'));
-                            const pythonResetBtn = buttons.find(btn => btn.textContent.includes('HiddenReset_Dikte'));
-                            if (pythonResetBtn) {
-                                pythonResetBtn.click();
-                            } else {
-                                window.parent.location.reload(); // Fallback jika gagal
+                            recognition.stop();
+                            
+                            // 1. Bersihkan UI HTML
+                            finalTranscript = '';
+                            transcriptBox.innerText = 'admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...';
+                            statusText.innerText = "Status: 📴 Perekaman di-reset. Siap mendengarkan kembali.";
+                            statusText.style.borderLeftColor = "#3498db";
+                            statusText.style.color = "#555";
+                            
+                            startBtn.disabled = false; 
+                            stopBtn.disabled = true; 
+                            submitBtn.disabled = false;
+                            
+                            // 2. Bersihkan Kotak Konfirmasi Python
+                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
+                            if (hiddenTextarea) {
+                                const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
+                                if(wrapper) wrapper.style.pointerEvents = 'auto';
+                                
+                                let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+                                nativeInputValueSetter.call(hiddenTextarea, ""); // Kosongkan teks
+                                
+                                hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                                hiddenTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+                                
+                                if(wrapper) wrapper.style.pointerEvents = 'none';
                             }
                         };
                     }
@@ -3327,29 +3347,19 @@ with tab_rekam:
             components.html(html_code, height=450)
 
             # ==========================================
-            # 3. TOMBOL RESET GAIB (Ditekan oleh JS)
-            # ==========================================
-            st.markdown("<div style='display: none;'>", unsafe_allow_html=True)
-            if st.button("HiddenReset_Dikte", key="btn_reset_dikte"):
-                if "catcher_dikte_live" in st.session_state:
-                    del st.session_state["catcher_dikte_live"]
-                st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            # ==========================================
-            # 4. WADAH PYTHON & TOMBOL LANJUT
+            # 3. WADAH PYTHON & TOMBOL LANJUT
             # ==========================================
             st.markdown("---")
-            st.info("💡 **Petunjuk:** Setelah klik **Stop & Finish**, teks Anda akan disalin ke kotak di bawah ini. Pastikan teks sudah muncul, lalu klik **Lanjut ke Analisis AI**.")
+            st.info("💡 **Petunjuk:** Setelah klik **Stop & Finish**, teks Anda akan disalin ke kotak di bawah ini. Pastikan teks sudah muncul, lalu klik **🧠 Lanjut ke Analisis AI**.")
             
             # Wadah teks 100% terkunci dari klik/select oleh CSS di atas
             realtime_input = st.text_area("📝 Konfirmasi Hasil Transkripsi", placeholder="Teks akan otomatis ditransfer ke sini...", key="catcher_dikte_live", height=150)
             
-            # Tombol Utama (Teks bisa disesuaikan dengan tab Upload Anda)
-            submit_realtime = st.button("✨ Lanjut ke Analisis AI", key="btn_lanjut_ai_dikte", type="primary", use_container_width=True)
+            # Tombol Utama (Sudah menggunakan icon 🧠)
+            submit_realtime = st.button("🧠 Lanjut ke Analisis AI", key="btn_lanjut_ai_dikte", type="primary", use_container_width=True)
             
             # ==========================================
-            # 5. LOGIKA PEMROSESAN & PINDAH TAB
+            # 4. LOGIKA PEMROSESAN & PINDAH TAB
             # ==========================================
             if submit_realtime:
                 if realtime_input and realtime_input.strip() != "":
