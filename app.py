@@ -3072,17 +3072,28 @@ with tab_rekam:
     elif not st.session_state.logged_in:
         st.markdown('<div style="text-align: center; padding: 20px; background-color: #fdeced; border-radius: 10px; border: 1px solid #f5c6cb; margin-bottom: 20px;"><h3 style="color: #e74c3c; margin-top: 0;">🔒 Akses Terkunci!</h3><p style="color: #e74c3c; font-weight: 500;">Silahkan masuk (login) atau daftar terlebih dahulu di tab <b>🔒 Akun</b> untuk menggunakan fitur rekam suara langsung.</p></div>', unsafe_allow_html=True)
     else:
-        # 🚀 FITUR BARU: PILIHAN MODE PEREKAMAN
+        # ==========================================
+        # 🚀 PENGATURAN BAHASA GLOBAL (Berlaku untuk semua mode)
+        # ==========================================
+        st.markdown("##### 🌐 Pengaturan Bahasa")
+        lang_choice_mic = st.selectbox("Pilih Bahasa Audio yang Diucapkan", ("Indonesia", "Inggris"), key="lang_mic_global")
+        lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
+        
+        st.write("")
+        st.markdown("##### 🎙️ Pengaturan Perekaman")
+        
+        # 🚀 PERUBAHAN NAMA MODE MENJADI LEBIH PROFESIONAL
         opsi_rekam = st.radio(
             "Pilih Mode Perekaman:", 
-            ["🎙️ Akurasi Tinggi (Groq Whisper)", "⚡ Dikte Real-Time (Cepat & Gratis)"], 
-            horizontal=True
+            ["🎙️ Rekam dahulu bukan real time", "⚡ Transkripsi real time"], 
+            horizontal=True,
+            label_visibility="collapsed"
         )
         
         st.markdown("---")
         
-        if opsi_rekam == "🎙️ Akurasi Tinggi (Groq Whisper)":
-            st.info("💡 **Mode Akurasi Tinggi:** Merekam suara utuh terlebih dahulu, lalu diproses sekaligus oleh AI (Akurasi level tinggi, cocok untuk rapat resmi).")
+        if opsi_rekam == "🎙️ Rekam dahulu bukan real time":
+            st.info("💡 **Mode Rekam Utuh:** Sistem akan merekam seluruh percakapan Anda dari awal hingga akhir, kemudian diproses menjadi teks. Cocok untuk rapat berdurasi panjang.")
             
             audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
             if audio_mic: audio_to_process, source_name = audio_mic, "rekaman_mic.wav"
@@ -3091,35 +3102,30 @@ with tab_rekam:
             submit_rekam = False
             c1, c2, c3 = st.columns([1, 4, 1]) 
             with c2:
-                lang_choice_mic = st.selectbox("Pilih Bahasa Audio", ("Indonesia", "Inggris"), key="lang_mic")
-                st.write("") 
                 if audio_mic:
                     show_mobile_warning()
                     if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_mic"):
                         submit_rekam = True
-                        lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
                 else:
                     st.markdown('<div class="custom-info-box">👆 Silahkan Rekam terlebih dahulu.</div>', unsafe_allow_html=True)
                     
             if submit_rekam:
                 proses_transkrip_audio(audio_to_process, source_name, lang_code)
                 
-        elif opsi_rekam == "⚡ Dikte Real-Time (Cepat & Gratis)":
-            st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo.")
+        elif opsi_rekam == "⚡ Transkripsi real time":
+            st.info("💡 **Mode Transkripsi:** Teks akan muncul seketika (kata demi kata) di layar saat Anda berbicara.")
             
             # ==========================================
             # 1. CSS VISUAL UNTUK KOTAK STREAMLIT (ANTI-SELECT MUTLAK)
             # ==========================================
             st.markdown("""
             <style>
-            /* Memblokir seleksi pada wrapper induk text area */
             div[data-testid="stTextArea"]:has(textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]) {
                 pointer-events: none !important;
                 -webkit-user-select: none !important;
                 user-select: none !important;
             }
             
-            /* Visual Kotak Konfirmasi (Abu-abu terang) */
             textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"] {
                 -webkit-user-select: none !important;
                 -moz-user-select: none !important;
@@ -3134,58 +3140,46 @@ with tab_rekam:
             """, unsafe_allow_html=True)
 
             # ==========================================
-            # 2. INJEKSI HTML & JS (TEMA TERMINAL LINUX & ICON MODERN)
+            # 2. INJEKSI HTML & JS (TEMA TERMINAL LINUX)
             # ==========================================
-            html_code = """
+            # Menginjeksikan parameter bahasa pilihan user langsung ke Javascript!
+            html_code = f"""
             <!DOCTYPE html>
             <html>
             <head>
                 <style>
-                    body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 0; background: transparent; margin: 0; }
-                    
-                    /* TEMA TERMINAL LINUX KLASIK */
-                    #transcript { 
+                    body {{ font-family: 'Plus Jakarta Sans', sans-serif; padding: 0; background: transparent; margin: 0; }}
+                    #transcript {{ 
                         width: 100%; height: 220px; padding: 15px; border-radius: 8px; border: 1px solid #333; 
                         font-family: 'Courier New', Courier, monospace; font-size: 15.5px; font-weight: 600; 
                         margin-bottom: 10px; box-sizing: border-box; line-height: 1.6; 
-                        
-                        /* WARNA GELAP & TEKS HIJAU HACKER */
                         background-color: #0c0c0c; color: #00FF41; 
-                        box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.1);
-                        overflow-y: auto; 
-                        
-                        /* SHIELD: ANTI-COPY & SELECT */
+                        box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.1); overflow-y: auto; 
                         -webkit-user-select: none !important; user-select: none !important; cursor: default !important;
-                    }
-                    
-                    /* DESAIN TOMBOL MODERN */
-                    .btn-group { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-                    
-                    .action-btn { 
+                    }}
+                    .btn-group {{ display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }}
+                    .action-btn {{ 
                         flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; 
                         font-weight: 600; color: white; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif;
                         display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
-                    }
-                    #startBtn { background-color: #ef4444; } 
-                    #startBtn:hover:not(:disabled) { background-color: #dc2626; }
-                    #stopBtn { background-color: #f59e0b; } 
-                    #stopBtn:hover:not(:disabled) { background-color: #d97706; }
-                    #submitBtn { background-color: #10b981; } 
-                    #submitBtn:hover:not(:disabled) { background-color: #059669; }
+                    }}
+                    #startBtn {{ background-color: #ef4444; }} 
+                    #startBtn:hover:not(:disabled) {{ background-color: #dc2626; }}
+                    #stopBtn {{ background-color: #f59e0b; }} 
+                    #stopBtn:hover:not(:disabled) {{ background-color: #d97706; }}
+                    #submitBtn {{ background-color: #10b981; }} 
+                    #submitBtn:hover:not(:disabled) {{ background-color: #059669; }}
                     
-                    /* TOMBOL RECORD NEW AUDIO (Lebar Penuh) */
-                    #resetBtn { 
+                    #resetBtn {{ 
                         width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; 
                         font-weight: 700; color: #374151; background-color: #e5e7eb; font-size: 14px;
                         display: flex; align-items: center; justify-content: center; gap: 8px; 
                         margin-bottom: 15px; transition: 0.2s; font-family: 'Plus Jakarta Sans', sans-serif;
-                    }
-                    #resetBtn:hover:not(:disabled) { background-color: #d1d5db; }
-                    
-                    button:disabled { opacity: 0.5; cursor: not-allowed; }
-                    svg { width: 18px; height: 18px; fill: currentColor; }
-                    
-                    #status { font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; }
+                    }}
+                    #resetBtn:hover:not(:disabled) {{ background-color: #d1d5db; }}
+                    button:disabled {{ opacity: 0.5; cursor: not-allowed; }}
+                    svg {{ width: 18px; height: 18px; fill: currentColor; }}
+                    #status {{ font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; }}
                 </style>
             </head>
             <body oncontextmenu="return false;" oncopy="return false;" oncut="return false;" onselectstart="return false;">
@@ -3218,13 +3212,13 @@ with tab_rekam:
                     const parentDoc = window.parent.document;
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     
-                    if (!SpeechRecognition) {
+                    if (!SpeechRecognition) {{
                         document.getElementById('status').innerText = "⚠️ Browser Anda tidak mendukung fitur ini.";
-                    } else {
+                    }} else {{
                         const recognition = new SpeechRecognition();
                         recognition.continuous = true;       
                         recognition.interimResults = true;   
-                        recognition.lang = 'id-ID';          
+                        recognition.lang = '{lang_code}'; // 🚀 BAHASA DINAMIS DARI PYTHON TADI!          
 
                         const startBtn = document.getElementById('startBtn');
                         const stopBtn = document.getElementById('stopBtn');
@@ -3235,85 +3229,90 @@ with tab_rekam:
 
                         let finalTranscript = '';
 
-                        recognition.onstart = function() {
+                        recognition.onstart = function() {{
                             statusText.innerText = "Status: 🎙️ Sedang merekam... (Silakan bicara)";
                             statusText.style.borderLeftColor = "#e74c3c";
                             startBtn.disabled = true; stopBtn.disabled = false;
                             if (finalTranscript === '') transcriptBox.innerText = '';
-                        };
+                        }};
 
-                        recognition.onresult = function(event) {
+                        recognition.onresult = function(event) {{
                             let interimTranscript = '';
-                            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                            for (let i = event.resultIndex; i < event.results.length; ++i) {{
                                 if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + '. ';
                                 else interimTranscript += event.results[i][0].transcript;
-                            }
+                            }}
                             transcriptBox.innerText = finalTranscript + interimTranscript;
                             transcriptBox.scrollTop = transcriptBox.scrollHeight; 
-                        };
+                        }};
 
-                        recognition.onerror = function(event) {
+                        recognition.onerror = function(event) {{
                             if (event.error === 'no-speech') return;
                             statusText.innerText = "Status: ⚠️ Rekaman terhenti otomatis (" + event.error + ")";
                             startBtn.disabled = false; stopBtn.disabled = true;
-                        };
+                        }};
 
-                        recognition.onend = function() {
-                            if (startBtn.disabled === true && submitBtn.disabled === false) {
+                        recognition.onend = function() {{
+                            if (startBtn.disabled === true && submitBtn.disabled === false) {{
                                 statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Record Audio untuk lanjut.";
                                 startBtn.disabled = false; stopBtn.disabled = true;
-                            }
-                        };
+                            }}
+                        }};
 
-                        startBtn.onclick = () => { recognition.start(); };
-                        stopBtn.onclick = () => { recognition.stop(); };
+                        startBtn.onclick = () => {{ recognition.start(); }};
+                        stopBtn.onclick = () => {{ recognition.stop(); }};
                         
-                        // FUNGSI TRANSFER TEKS
-                        submitBtn.onclick = () => {
+                        // FUNGSI TRANSFER TEKS & TRIGGER MEMBUKA KUNCI TOMBOL AI
+                        submitBtn.onclick = () => {{
                             recognition.stop(); 
                             const fullText = transcriptBox.innerText; 
                             
-                            if (!fullText.trim() || fullText.includes("admin@tomstt")) {
+                            if (!fullText.trim() || fullText.includes("admin@tomstt")) {{
                                 statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam.";
                                 return;
-                            }
+                            }}
                             
                             statusText.innerText = "Status: ⏳ Menyinkronkan data...";
                             
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                             
-                            if (hiddenTextarea) {
-                                // Trik sementara membuka kunci CSS agar Python bisa membaca teks
+                            if (hiddenTextarea) {{
                                 const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
                                 if(wrapper) wrapper.style.pointerEvents = 'auto';
                                 
                                 hiddenTextarea.focus(); 
-                                
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
                                 nativeInputValueSetter.call(hiddenTextarea, fullText);
                                 
-                                hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
-                                hiddenTextarea.dispatchEvent(new Event('change', { bubbles: true }));
-                                
+                                hiddenTextarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
                                 hiddenTextarea.blur(); 
                                 
-                                // Kembalikan keamanan
                                 if(wrapper) wrapper.style.pointerEvents = 'none';
                                 
                                 statusText.innerText = "Status: ✅ Sukses! Lanjut tekan tombol '🧠 Lanjut ke Analisis AI' di bawah.";
                                 statusText.style.borderLeftColor = "#27ae60";
                                 statusText.style.color = "#27ae60";
                                 submitBtn.disabled = true; startBtn.disabled = true; stopBtn.disabled = true;
-                            } else {
+                                
+                                // 🚀 JEDA: Panggil trigger Python gaib agar tombol "Lanjut ke Analisis AI" terbuka kuncinya!
+                                setTimeout(() => {{
+                                    const buttons = Array.from(parentDoc.querySelectorAll('button'));
+                                    const pythonUnlockBtn = buttons.find(btn => btn.textContent.includes('HiddenUnlock_Dikte'));
+                                    if (pythonUnlockBtn) {{
+                                        pythonUnlockBtn.click();
+                                    }}
+                                }}, 400);
+                                
+                            }} else {{
                                 statusText.innerText = "Status: ❌ Gagal menemukan kotak konfirmasi.";
-                            }
-                        };
+                            }}
+                        }};
                         
-                        // FUNGSI RESET SUPER BERSIH (TANPA TOMBOL PYTHON)
-                        resetBtn.onclick = () => {
+                        // FUNGSI RESET & MENGUNCI KEMBALI TOMBOL AI
+                        resetBtn.onclick = () => {{
                             recognition.stop();
                             
-                            // 1. Bersihkan UI HTML
                             finalTranscript = '';
                             transcriptBox.innerText = 'admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...';
                             statusText.innerText = "Status: 📴 Perekaman di-reset. Siap mendengarkan kembali.";
@@ -3324,22 +3323,30 @@ with tab_rekam:
                             stopBtn.disabled = true; 
                             submitBtn.disabled = false;
                             
-                            // 2. Bersihkan Kotak Konfirmasi Python
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
-                            if (hiddenTextarea) {
+                            if (hiddenTextarea) {{
                                 const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
                                 if(wrapper) wrapper.style.pointerEvents = 'auto';
                                 
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-                                nativeInputValueSetter.call(hiddenTextarea, ""); // Kosongkan teks
+                                nativeInputValueSetter.call(hiddenTextarea, ""); 
                                 
-                                hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
-                                hiddenTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+                                hiddenTextarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
                                 
                                 if(wrapper) wrapper.style.pointerEvents = 'none';
-                            }
-                        };
-                    }
+                                
+                                // 🚀 Panggil trigger Python gaib untuk mengunci kembali tombol AI
+                                setTimeout(() => {{
+                                    const buttons = Array.from(parentDoc.querySelectorAll('button'));
+                                    const pythonUnlockBtn = buttons.find(btn => btn.textContent.includes('HiddenUnlock_Dikte'));
+                                    if (pythonUnlockBtn) {{
+                                        pythonUnlockBtn.click();
+                                    }}
+                                }}, 200);
+                            }}
+                        }};
+                    }}
                 </script>
             </body>
             </html>
@@ -3347,21 +3354,37 @@ with tab_rekam:
             components.html(html_code, height=450)
 
             # ==========================================
-            # 3. WADAH PYTHON & TOMBOL LANJUT
+            # 3. TOMBOL GAIB UNTUK RE-RENDER STREAMLIT
+            # ==========================================
+            st.markdown("<div style='display: none;'>", unsafe_allow_html=True)
+            # Tombol ini hanya dipencet oleh JS untuk memaksa Python merefresh layar dan membaca State Teks
+            if st.button("HiddenUnlock_Dikte", key="btn_unlock_dikte"):
+                pass 
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            # ==========================================
+            # 4. WADAH PYTHON & TOMBOL KUNCI
             # ==========================================
             st.markdown("---")
             st.info("💡 **Petunjuk:** Setelah klik **Stop & Finish**, teks Anda akan disalin ke kotak di bawah ini. Pastikan teks sudah muncul, lalu klik **🧠 Lanjut ke Analisis AI**.")
             
+            # Mengambil data langsung dari memori penangkap Streamlit
+            current_text = st.session_state.get("catcher_dikte_live", "")
+            
+            # 🚀 KUNCI LOGIKA: Disable tombol JIKA kotaknya masih kosong
+            is_btn_disabled = not bool(current_text.strip())
+            
             # Wadah teks 100% terkunci dari klik/select oleh CSS di atas
             realtime_input = st.text_area("📝 Konfirmasi Hasil Transkripsi", placeholder="Teks akan otomatis ditransfer ke sini...", key="catcher_dikte_live", height=150)
             
-            # Tombol Utama (Sudah menggunakan icon 🧠)
-            submit_realtime = st.button("🧠 Lanjut ke Analisis AI", key="btn_lanjut_ai_dikte", type="primary", use_container_width=True)
+            # Tombol Utama yang dipasangi Kunci Keamanan
+            submit_realtime = st.button("🧠 Lanjut ke Analisis AI", key="btn_lanjut_ai_dikte", type="primary", use_container_width=True, disabled=is_btn_disabled)
             
             # ==========================================
-            # 4. LOGIKA PEMROSESAN & PINDAH TAB
+            # 5. LOGIKA PEMROSESAN & PINDAH TAB
             # ==========================================
             if submit_realtime:
+                # Double check murni untuk keamanan ekstra
                 if realtime_input and realtime_input.strip() != "":
                     st.session_state.transcript = realtime_input
                     st.session_state.filename = "Dikte_RealTime"
@@ -3386,8 +3409,6 @@ with tab_rekam:
                     import time
                     time.sleep(1) 
                     st.rerun()
-                else:
-                    st.error("⚠️ Teks masih kosong! Pastikan Anda sudah merekam audio dan menekan tombol '⏹️ Stop & Finish' di atas terlebih dahulu.")
 
 # ==========================================
 # TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
