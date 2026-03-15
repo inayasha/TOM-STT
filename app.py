@@ -3107,9 +3107,9 @@ with tab_rekam:
         elif opsi_rekam == "⚡ Dikte Real-Time (Cepat & Gratis)":
             st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo. Setelah selesai, klik tombol **Selesai & Lanjut AI**.")
             
-            # --- WADAH TERSEMBUNYI UNTUK MENANGKAP TEKS DARI JAVASCRIPT ---
-            # (Secara visual akan dilenyapkan oleh script JS di bawah)
-            realtime_input = st.text_area("Catcher Realtime", key="realtime_catcher", label_visibility="collapsed")
+            # --- WADAH TERSEMBUNYI (Dilempar ke luar layar oleh JS) ---
+            # Hapus label_visibility="collapsed" agar Streamlit tidak bingung
+            realtime_input = st.text_area("Catcher Realtime", key="realtime_catcher")
             submit_realtime = st.button("Trigger Realtime", key="btn_trigger_realtime")
             
             # --- LOGIKA PENERIMA TEKS OTOMATIS ---
@@ -3132,15 +3132,16 @@ with tab_rekam:
                 # 3. Pindah tab ke Analisis AI secara Instan
                 st.success("✅ Dikte selesai! Mengalihkan ke menu Analisis AI...")
                 components.html("""<script>
-                    var tabs = window.parent.document.querySelectorAll('button[data-baseweb=\\'tab\\']');
-                    var targetTab = Array.from(tabs).find(tab => tab.innerText.includes('Analisis AI'));
-                    if(targetTab) { targetTab.click(); window.parent.scrollTo({top: 0, behavior: 'smooth'}); }
+                    const parentDoc = window.parent.document;
+                    const tabs = Array.from(parentDoc.querySelectorAll('button[data-baseweb="tab"]'));
+                    const targetTab = tabs.find(tab => tab.innerText.includes('Analisis AI'));
+                    if(targetTab) { 
+                        targetTab.click(); 
+                        parentDoc.defaultView.scrollTo({top: 0, behavior: 'smooth'}); 
+                    }
                 </script>""", height=0)
-                import time
-                time.sleep(1) 
-                st.rerun()
 
-            # 🚀 INJEKSI JAVASCRIPT & HTML (Anti-Copy Absolut & Jembatan ke Python)
+            # 🚀 INJEKSI JAVASCRIPT & HTML 
             html_code = """
             <!DOCTYPE html>
             <html>
@@ -3190,26 +3191,37 @@ with tab_rekam:
                     const parentDoc = window.parent.document;
 
                     // ========================================================
-                    // 1. MANTRA GAIB: MELENYAPKAN CATCHER & TRIGGER STREAMLIT
+                    // 1. MANTRA GAIB: LEMPAR ELEMEN KE LUAR LAYAR (-9999px)
+                    // (Elemen tetap hidup dan bisa dipencet, tapi tak terlihat)
                     // ========================================================
                     setTimeout(() => {
-                        // Hilangkan Textarea
-                        const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Catcher Realtime"]');
+                        const hiddenTextarea = parentDoc.querySelector('textarea[aria-label*="Catcher Realtime"]');
                         if(hiddenTextarea) {
                             const taWrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
-                            if(taWrapper) taWrapper.style.display = 'none';
+                            if(taWrapper) {
+                                taWrapper.style.position = 'absolute';
+                                taWrapper.style.left = '-9999px';
+                                taWrapper.style.height = '0px';
+                                taWrapper.style.opacity = '0';
+                            }
                         }
-                        // Hilangkan Tombol
+                        
                         const buttons = Array.from(parentDoc.querySelectorAll('button'));
                         const hiddenBtn = buttons.find(btn => btn.innerText.includes('Trigger Realtime'));
                         if(hiddenBtn) {
                             const btnWrapper = hiddenBtn.closest('div[data-testid="stButton"]');
-                            if(btnWrapper) btnWrapper.style.display = 'none';
-                            else hiddenBtn.style.display = 'none';
+                            if(btnWrapper) {
+                                btnWrapper.style.position = 'absolute';
+                                btnWrapper.style.left = '-9999px';
+                                btnWrapper.style.height = '0px';
+                                btnWrapper.style.opacity = '0';
+                            }
                         }
-                    }, 100); // Dieksekusi 0.1 detik setelah HTML termuat
-                    // ========================================================
+                    }, 100);
 
+                    // ========================================================
+                    // 2. LOGIKA SPEECH RECOGNITION
+                    // ========================================================
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     
                     if (!SpeechRecognition) {
@@ -3264,11 +3276,13 @@ with tab_rekam:
                         };
 
                         recognition.onend = function() {
-                            statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Mulai Bicara untuk lanjut.";
-                            statusText.style.borderLeftColor = "#95a5a6";
-                            statusText.style.color = "#555";
-                            startBtn.disabled = false;
-                            stopBtn.disabled = true;
+                            if (startBtn.disabled === true && submitBtn.disabled === false) {
+                                statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Mulai Bicara untuk lanjut.";
+                                statusText.style.borderLeftColor = "#95a5a6";
+                                statusText.style.color = "#555";
+                                startBtn.disabled = false;
+                                stopBtn.disabled = true;
+                            }
                         };
 
                         startBtn.onclick = () => { recognition.start(); };
@@ -3290,23 +3304,28 @@ with tab_rekam:
                             submitBtn.disabled = true;
                             startBtn.disabled = true;
                             
-                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Catcher Realtime"]');
+                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label*="Catcher Realtime"]');
                             
                             if (hiddenTextarea) {
+                                // Trik injeksi nilai
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
                                 nativeInputValueSetter.call(hiddenTextarea, fullText);
                                 
-                                let event = new Event('input', { bubbles: true });
-                                hiddenTextarea.dispatchEvent(event);
+                                // Panggil event agar Streamlit tersadar ada teks baru
+                                hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                                 
+                                // Jeda 0.5 detik agar Streamlit punya waktu mencerna teks sebelum diklik!
                                 setTimeout(() => {
                                     const hiddenBtn = Array.from(parentDoc.querySelectorAll('button')).find(btn => btn.innerText.includes('Trigger Realtime'));
                                     if (hiddenBtn) {
                                         hiddenBtn.click();
+                                        statusText.innerText = "Status: 🚀 Berhasil! Silakan tunggu perpindahan Tab...";
+                                    } else {
+                                        statusText.innerText = "Status: ❌ Tombol sistem gagal ditemukan.";
                                     }
-                                }, 300);
+                                }, 500);
                             } else {
-                                statusText.innerText = "Status: ❌ Gagal terhubung. Refresh halaman.";
+                                statusText.innerText = "Status: ❌ Sistem penerima gagal ditemukan. Refresh halaman.";
                             }
                         };
                     }
@@ -3314,7 +3333,7 @@ with tab_rekam:
             </body>
             </html>
             """
-            components.html(html_code, height=380)
+            components.html(html_code, height=400)
 
 # ==========================================
 # TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
