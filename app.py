@@ -3108,7 +3108,7 @@ with tab_rekam:
             st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo.")
             
             # ==========================================
-            # 1. CSS VISUAL UNTUK KOTAK STREAMLIT (Tanpa merusak klik sistem)
+            # 1. CSS VISUAL UNTUK KOTAK STREAMLIT
             # ==========================================
             st.markdown("""
             <style>
@@ -3216,7 +3216,6 @@ with tab_rekam:
                         startBtn.onclick = () => { recognition.start(); };
                         stopBtn.onclick = () => { recognition.stop(); };
                         
-                        // LOGIKA BUG FIX: SINKRONISASI SEMPURNA STREAMLIT & ANTI COPY
                         submitBtn.onclick = () => {
                             recognition.stop(); 
                             const fullText = transcriptBox.innerText; 
@@ -3228,10 +3227,10 @@ with tab_rekam:
                             
                             statusText.innerText = "Status: ⏳ Mentransfer teks ke kotak konfirmasi...";
                             
+                            // MENCARI TEXT AREA STREAMLIT BERDASARKAN LABEL
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                             
                             if (hiddenTextarea) {
-                                // 1. MENGUNCI KOTAK STREAMLIT (ANTI COPY, SELECT, PASTE) DARI JAVASCRIPT
                                 hiddenTextarea.readOnly = true;
                                 hiddenTextarea.oncopy = (e) => e.preventDefault();
                                 hiddenTextarea.oncut = (e) => e.preventDefault();
@@ -3239,7 +3238,6 @@ with tab_rekam:
                                 hiddenTextarea.oncontextmenu = (e) => e.preventDefault();
                                 hiddenTextarea.onselectstart = (e) => e.preventDefault();
 
-                                // 2. MEMAKSA STREAMLIT SADAR (Trik Focus & Blur)
                                 hiddenTextarea.focus(); 
                                 
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
@@ -3248,7 +3246,7 @@ with tab_rekam:
                                 hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                                 hiddenTextarea.dispatchEvent(new Event('change', { bubbles: true }));
                                 
-                                hiddenTextarea.blur(); // Memicu React Streamlit menyimpan data seketika!
+                                hiddenTextarea.blur(); 
                                 
                                 statusText.innerText = "Status: ✅ Teks berhasil ditransfer! Silakan tekan tombol '🚀 Lanjut ke Analisis AI' di bawah ini.";
                                 statusText.style.borderLeftColor = "#27ae60";
@@ -3271,17 +3269,16 @@ with tab_rekam:
             st.markdown("---")
             st.info("💡 **Petunjuk:** Setelah Anda selesai merekam, klik tombol **Stop & Finish** di atas. Teks akan muncul di kotak ini, lalu klik tombol **Lanjut ke Analisis AI**.")
             
-            # Wadah teks (Font standar, Anti-copy diurus oleh Javascript di atas)
-            realtime_input = st.text_area("📝 Konfirmasi Hasil Transkripsi", placeholder="Teks akan otomatis ditransfer ke sini...", key="realtime_catcher", height=150)
+            # KUNCI BARU: catcher_dikte_live
+            realtime_input = st.text_area("📝 Konfirmasi Hasil Transkripsi", placeholder="Teks akan otomatis ditransfer ke sini...", key="catcher_dikte_live", height=150)
             
-            # Tombol Utama (Sepanjang field teks)
-            submit_realtime = st.button("🚀 Lanjut ke Analisis AI", key="btn_trigger_realtime", type="primary", use_container_width=True)
+            # KUNCI BARU: btn_lanjut_ai_dikte
+            submit_realtime = st.button("🚀 Lanjut ke Analisis AI", key="btn_lanjut_ai_dikte", type="primary", use_container_width=True)
             
-            # FITUR BARU: Tombol Rekam Ulang / Reset
-            if st.button("🔄 Rekam Audio Baru", type="secondary", use_container_width=True):
-                # Menghapus memori teks dan me-refresh halaman (Reset total)
-                if "realtime_catcher" in st.session_state:
-                    del st.session_state["realtime_catcher"]
+            # KUNCI BARU: btn_reset_dikte
+            if st.button("🔄 Rekam Audio Baru", key="btn_reset_dikte", type="secondary", use_container_width=True):
+                if "catcher_dikte_live" in st.session_state:
+                    del st.session_state["catcher_dikte_live"]
                 st.rerun()
             
             # ==========================================
@@ -3289,12 +3286,10 @@ with tab_rekam:
             # ==========================================
             if submit_realtime:
                 if realtime_input and realtime_input.strip() != "":
-                    # 1. Simpan ke Memori Streamlit
                     st.session_state.transcript = realtime_input
                     st.session_state.filename = "Dikte_RealTime"
                     st.session_state.is_text_upload = True 
                     
-                    # 2. Simpan ke Draft Firestore
                     if st.session_state.logged_in:
                         db.collection('users').document(st.session_state.current_user).update({
                             "draft_transcript": st.session_state.transcript,
@@ -3304,7 +3299,6 @@ with tab_rekam:
                             "is_text_upload": True
                         })
                     
-                    # 3. Pindah tab ke Analisis AI
                     st.success("✅ Dikte selesai! Mengalihkan ke menu Analisis AI...")
                     components.html("""<script>
                         var tabs = window.parent.document.querySelectorAll('button[data-baseweb=\\'tab\\']');
@@ -3317,50 +3311,6 @@ with tab_rekam:
                     st.rerun()
                 else:
                     st.error("⚠️ Teks masih kosong! Pastikan Anda sudah merekam audio dan menekan tombol '⏹️ Stop & Finish' di atas terlebih dahulu.")
-
-            # ==========================================
-            # 3. WADAH PYTHON (TERLIHAT, TAPI ANTI-COPY)
-            # ==========================================
-            st.markdown("---")
-            # Wadah teks ini menerima injeksi otomatis dari atas
-            realtime_input = st.text_area("📝 Konfirmasi Hasil Transkripsi", placeholder="Teks akan otomatis ditransfer ke sini...", key="realtime_catcher", height=150)
-            
-            # Tombol ini diklik secara otomatis oleh Javascript dari atas
-            submit_realtime = st.button("🚀 Lanjut ke Analisis AI", key="btn_trigger_realtime", type="primary", use_container_width=True)
-            
-            # ==========================================
-            # 4. LOGIKA PEMROSESAN & PINDAH TAB
-            # ==========================================
-            if submit_realtime:
-                if realtime_input and realtime_input.strip() != "":
-                    # 1. Simpan ke Memori Streamlit
-                    st.session_state.transcript = realtime_input
-                    st.session_state.filename = "Dikte_RealTime"
-                    st.session_state.is_text_upload = True 
-                    
-                    # 2. Simpan ke Draft Firestore
-                    if st.session_state.logged_in:
-                        db.collection('users').document(st.session_state.current_user).update({
-                            "draft_transcript": st.session_state.transcript,
-                            "draft_filename": st.session_state.filename,
-                            "draft_ai_result": "",
-                            "draft_ai_prefix": "",
-                            "is_text_upload": True
-                        })
-                    
-                    # 3. Pindah tab ke Analisis AI
-                    st.success("✅ Dikte selesai! Mengalihkan ke menu Analisis AI...")
-                    components.html("""<script>
-                        var tabs = window.parent.document.querySelectorAll('button[data-baseweb=\\'tab\\']');
-                        var targetTab = Array.from(tabs).find(tab => tab.innerText.includes('Analisis AI'));
-                        if(targetTab) { targetTab.click(); window.parent.scrollTo({top: 0, behavior: 'smooth'}); }
-                    </script>""", height=0)
-                    
-                    import time
-                    time.sleep(1) # Jeda untuk reload
-                    st.rerun()
-                else:
-                    st.error("⚠️ Teks kosong! Silakan rekam suara dan klik '✨ Selesai & Lanjut AI' di kotak atas terlebih dahulu.")
 
 # ==========================================
 # TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
