@@ -3104,7 +3104,7 @@ with tab_rekam:
             if submit_rekam:
                 proses_transkrip_audio(audio_to_process, source_name, lang_code)
                 
-elif opsi_rekam == "⚡ Dikte Real-Time (Cepat & Gratis)":
+            elif opsi_rekam == "⚡ Dikte Real-Time (Cepat & Gratis)":
             st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo. Setelah selesai, klik tombol Lanjut.")
             
             # --- WADAH TERSEMBUNYI UNTUK MENANGKAP TEKS DARI JAVASCRIPT ---
@@ -5635,3 +5635,4 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
+
