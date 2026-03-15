@@ -3115,7 +3115,7 @@ with tab_rekam:
             st.info("💡 **Mode Transkripsi:** Teks akan muncul seketika (kata demi kata) di layar saat Anda berbicara.")
             
             # ==========================================
-            # 1. 🛡️ SISTEM PEMULIHAN BRANKAS DARURAT (AUTO-RESTORE)
+            # 1. 🛡️ SISTEM PEMULIHAN & CALLBACK BRANKAS (TANPA TOMBOL GAIB!)
             # ==========================================
             u_info_vault = {}
             if st.session_state.logged_in:
@@ -3125,7 +3125,25 @@ with tab_rekam:
             # Jika ada teks di brankas cadangan, otomatis masukkan ke memori kotak Streamlit
             if unpaid_draft and "catcher_dikte_live" not in st.session_state:
                 st.session_state["catcher_dikte_live"] = unpaid_draft
-                
+
+            # FUNGSI CALLBACK: Berjalan otomatis setiap kali isi kotak teks berubah (Di-trigger oleh JS)
+            def kelola_brankas_otomatis():
+                if st.session_state.logged_in:
+                    teks_terkini = st.session_state.get("catcher_dikte_live", "").strip()
+                    try:
+                        # Jika teks ada (User klik Stop & Finish), amankan ke database!
+                        if teks_terkini:
+                            db.collection('users').document(st.session_state.current_user).update({
+                                "draft_unpaid_dikte": teks_terkini
+                            })
+                        # Jika teks kosong (User klik Record New Audio), hapus dari database!
+                        else:
+                            db.collection('users').document(st.session_state.current_user).update({
+                                "draft_unpaid_dikte": firestore.DELETE_FIELD
+                            })
+                        if 'temp_user_data' in st.session_state: del st.session_state['temp_user_data']
+                    except: pass
+
             # ==========================================
             # 2. CSS VISUAL UNTUK KOTAK STREAMLIT (ANTI-SELECT MUTLAK)
             # ==========================================
@@ -3150,7 +3168,7 @@ with tab_rekam:
             """, unsafe_allow_html=True)
 
             # ==========================================
-            # 3. INJEKSI HTML & JS (TEMA TERMINAL & AUTO-UNLOCK BRANKAS)
+            # 3. INJEKSI HTML & JS (TEMA TERMINAL & AUTO-UNLOCK)
             # ==========================================
             html_code = f"""
             <!DOCTYPE html>
@@ -3214,7 +3232,7 @@ with tab_rekam:
                 </button>
                 
                 <div id="status">Status: 📴 Siap mendengarkan...</div>
-                <div id="transcript">admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...</div>
+                <div id="transcript">Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...</div>
 
                 <script>
                     const parentDoc = window.parent.document;
@@ -3222,12 +3240,12 @@ with tab_rekam:
                     
                     const statusText = document.getElementById('status');
                     
-                    // 🚀 DETEKSI BRANKAS CADANGAN: Jika ada isinya saat web diload, Buka Kunci AI!
+                    // 🚀 DETEKSI BRANKAS CADANGAN: Jika ada isinya, Buka Kunci AI!
                     setTimeout(() => {{
                         const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                         if (hiddenTextarea && hiddenTextarea.value.trim() !== "") {{
                             isAILocked = false;
-                            statusText.innerText = "Status: 📥 Draf dari Brankas Cadangan berhasil dimuat. Silakan bayar & lanjut AI.";
+                            statusText.innerText = "Status: 📥 Draf dari Brankas Cadangan berhasil dimuat. Silakan lanjut ke AI.";
                             statusText.style.borderLeftColor = "#f39c12";
                             statusText.style.color = "#d35400";
                         }}
@@ -3299,6 +3317,7 @@ with tab_rekam:
                         startBtn.onclick = () => {{ recognition.start(); }};
                         stopBtn.onclick = () => {{ recognition.stop(); }};
                         
+                        // SAAT USER KLIK STOP & FINISH
                         submitBtn.onclick = () => {{
                             recognition.stop(); 
                             const fullText = transcriptBox.innerText; 
@@ -3321,7 +3340,7 @@ with tab_rekam:
                                 
                                 hiddenTextarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
                                 hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                                hiddenTextarea.blur(); 
+                                hiddenTextarea.blur(); // 🚀 INI AKAN MEMICU CALLBACK PYTHON SECARA OTOMATIS!
                                 
                                 if(wrapper) wrapper.style.pointerEvents = 'none';
                                 
@@ -3337,6 +3356,7 @@ with tab_rekam:
                             }}
                         }};
                         
+                        // SAAT USER KLIK RECORD NEW AUDIO
                         resetBtn.onclick = () => {{
                             recognition.stop();
                             
@@ -3354,22 +3374,16 @@ with tab_rekam:
                                 if(wrapper) wrapper.style.pointerEvents = 'auto';
                                 
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-                                nativeInputValueSetter.call(hiddenTextarea, ""); 
+                                nativeInputValueSetter.call(hiddenTextarea, ""); // KOSONGKAN TEKS
                                 
                                 hiddenTextarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
                                 hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                hiddenTextarea.blur(); // 🚀 INI MEMICU PENGHAPUSAN BRANKAS DI PYTHON!
                                 
                                 if(wrapper) wrapper.style.pointerEvents = 'none';
                                 
                                 isAILocked = true;
                                 enforceAILock();
-                                
-                                // 🚀 JIKA USER RESET, HAPUS JUGA BRANKAS DARURAT DI DATABASE PYTHON
-                                setTimeout(() => {{
-                                    const buttons = Array.from(parentDoc.querySelectorAll('button'));
-                                    const pythonResetVault = buttons.find(btn => btn.textContent.includes('HiddenDeleteVault'));
-                                    if (pythonResetVault) {{ pythonResetVault.click(); }}
-                                }}, 300);
                             }}
                         }};
                     }}
@@ -3380,55 +3394,39 @@ with tab_rekam:
             components.html(html_code, height=450)
 
             # ==========================================
-            # 4. TOMBOL GAIB HAPUS BRANKAS (Khusus Ditekan Saat Klik Reset Audio)
-            # ==========================================
-            st.markdown("<div style='display: none;'>", unsafe_allow_html=True)
-            if st.button("HiddenDeleteVault", key="btn_del_vault"):
-                if st.session_state.logged_in:
-                    db.collection('users').document(st.session_state.current_user).update({
-                        "draft_unpaid_dikte": firestore.DELETE_FIELD
-                    })
-                    if 'temp_user_data' in st.session_state: del st.session_state['temp_user_data']
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            # ==========================================
-            # 5. WADAH PYTHON & TOMBOL LANJUT
+            # 4. WADAH PYTHON & TOMBOL LANJUT
             # ==========================================
             st.markdown("---")
             st.info("💡 **Petunjuk:** Setelah klik **Stop & Finish**, teks Anda akan disalin ke kotak di bawah ini. Pastikan teks sudah muncul, lalu klik **🧠 Lanjut ke Analisis AI**.")
             
-            realtime_input = st.text_area("📝 Konfirmasi Hasil Transkripsi", placeholder="Teks akan otomatis ditransfer ke sini...", key="catcher_dikte_live", height=150)
+            # KOTAK TEKS YANG TERHUBUNG LANGSUNG DENGAN CALLBACK PYTHON!
+            realtime_input = st.text_area(
+                "📝 Konfirmasi Hasil Transkripsi", 
+                placeholder="Teks akan otomatis ditransfer ke sini...", 
+                key="catcher_dikte_live", 
+                height=150,
+                on_change=kelola_brankas_otomatis  # 🚀 MAGIC HAPPENS HERE
+            )
             
             # Tombol Utama
             submit_realtime = st.button("🧠 Lanjut ke Analisis AI", key="btn_lanjut_ai_dikte", type="primary", use_container_width=True)
             
             # ==========================================
-            # 6. LOGIKA BRANKAS, PAYWALL & PINDAH TAB
+            # 5. LOGIKA PAYWALL & PINDAH TAB
             # ==========================================
             if submit_realtime:
                 if realtime_input and realtime_input.strip() != "":
-                    
-                    # --- FASE 1: THE SAFE VAULT (AMANKAN TEKS DULUAN) ---
-                    if st.session_state.logged_in:
-                        db.collection('users').document(st.session_state.current_user).update({
-                            "draft_unpaid_dikte": realtime_input
-                        })
-                        if 'temp_user_data' in st.session_state: del st.session_state['temp_user_data']
-                        u_info = get_user(st.session_state.current_user)
-                    else:
-                        st.error("❌ Silakan Login terlebih dahulu.")
-                        st.stop()
                         
-                    # --- FASE 2: VALIDASI LIMIT KASTA (KARAKTER) ---
+                    # --- FASE 1: VALIDASI LIMIT KASTA (KARAKTER) ---
                     jumlah_karakter = len(realtime_input)
                     soft_limit = 75000
                     nama_paket_tertinggi = "Freemium"
                     
-                    if u_info.get("role") == "admin":
+                    if u_info_vault.get("role") == "admin":
                         soft_limit = 99999999
                         nama_paket_tertinggi = "Admin"
                     else:
-                        for pkt in u_info.get("inventori", []):
+                        for pkt in u_info_vault.get("inventori", []):
                             nama_pkt_up = pkt["nama"].upper()
                             if "ENTERPRISE" in nama_pkt_up: 
                                 soft_limit = max(soft_limit, 400000); nama_paket_tertinggi = "ENTERPRISE"
@@ -3453,7 +3451,7 @@ with tab_rekam:
                         st.info(f"Teks Anda mencapai **{jumlah_karakter:,} Karakter**. Batas maksimal paket **{nama_paket_tertinggi}** adalah **{soft_limit:,} Karakter**. Silakan **Upgrade Paket Anda**.")
                         st.stop()
                         
-                    # --- FASE 3: PENAGIHAN PEMBAYARAN (THE GATEWAY) ---
+                    # --- FASE 2: PENAGIHAN PEMBAYARAN (THE GATEWAY) ---
                     durasi_teks = hitung_estimasi_menit(realtime_input)
                     berhasil_potong = False
                     is_fallback_reguler = False
@@ -3462,7 +3460,7 @@ with tab_rekam:
                         berhasil_potong = True
                     else:
                         u_doc = db.collection('users').document(st.session_state.current_user)
-                        inv = u_info.get("inventori", [])
+                        inv = u_info_vault.get("inventori", [])
                         idx_to_cut = -1
                         # Cari tiket reguler yang ada isinya
                         for i, pkt in enumerate(inv):
@@ -3470,7 +3468,7 @@ with tab_rekam:
                                 idx_to_cut = i
                                 break
                                 
-                        bank_menit_user = u_info.get("bank_menit", 0)
+                        bank_menit_user = u_info_vault.get("bank_menit", 0)
                         
                         if bank_menit_user > 0:
                             if durasi_teks <= bank_menit_user:
@@ -3502,10 +3500,10 @@ with tab_rekam:
                                 st.warning("💡 Teks Anda tersimpan aman di Brankas! Silakan Beli Paket di menu samping lalu kembali ke sini.")
                                 st.stop()
                                 
-                    # --- FASE 4: LOLOS PENAGIHAN (PINDAH BRANKAS KE TAB 4) ---
+                    # --- FASE 3: LOLOS PENAGIHAN (PINDAH BRANKAS KE TAB 4) ---
                     if berhasil_potong:
                         max_fup_reg = 0
-                        for pkt in u_info.get("inventori", []):
+                        for pkt in u_info_vault.get("inventori", []):
                             p_name = pkt.get("nama", "").upper()
                             if "AIO" not in p_name and pkt.get("kuota", 0) > 0:
                                 if "ENTERPRISE" in p_name: max_fup_reg = max(max_fup_reg, 15)
@@ -3514,8 +3512,8 @@ with tab_rekam:
                                 elif "STARTER" in p_name: max_fup_reg = max(max_fup_reg, 4)
                                 elif "LITE" in p_name: max_fup_reg = max(max_fup_reg, 2)
                                 
-                        if u_info.get("bank_menit", 0) > 0 and not is_fallback_reguler:
-                            st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
+                        if u_info_vault.get("bank_menit", 0) > 0 and not is_fallback_reguler:
+                            st.session_state.sisa_nyawa_dok = u_info_vault.get("fup_dok_harian_limit", 35)
                             st.session_state.is_using_aio = True
                         elif max_fup_reg > 0:
                             st.session_state.sisa_nyawa_dok = max_fup_reg
@@ -5896,4 +5894,3 @@ st.markdown("""
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
