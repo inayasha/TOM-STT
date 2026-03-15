@@ -3105,96 +3105,67 @@ with tab_rekam:
                 proses_transkrip_audio(audio_to_process, source_name, lang_code)
                 
         elif opsi_rekam == "⚡ Dikte Real-Time (Cepat & Gratis)":
-            st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo. Setelah selesai, klik tombol **Selesai & Lanjut AI**.")
+            st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo.")
             
-            # --- WADAH TERSEMBUNYI UNTUK MENANGKAP TEKS DARI JAVASCRIPT ---
-            # Menggunakan logika asli Anda yang terbukti lancar
-            st.markdown("<div style='display: none;'>", unsafe_allow_html=True)
-            realtime_input = st.text_area("Catcher Realtime", key="realtime_catcher")
-            submit_realtime = st.button("Trigger Realtime", key="btn_trigger_realtime")
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-            # --- LOGIKA PENERIMA TEKS OTOMATIS (Original Working Code) ---
-            if submit_realtime and realtime_input:
-                # 1. Simpan ke Memori Streamlit
-                st.session_state.transcript = realtime_input
-                st.session_state.filename = "Dikte_RealTime"
-                st.session_state.is_text_upload = True 
-                
-                # 2. Simpan ke Draft Firestore
-                if st.session_state.logged_in:
-                    db.collection('users').document(st.session_state.current_user).update({
-                        "draft_transcript": st.session_state.transcript,
-                        "draft_filename": st.session_state.filename,
-                        "draft_ai_result": "",
-                        "draft_ai_prefix": "",
-                        "is_text_upload": True
-                    })
-                
-                # 3. Pindah tab ke Analisis AI secara Instan
-                st.success("✅ Dikte selesai! Mengalihkan ke menu Analisis AI...")
-                components.html("""<script>
-                    var tabs = window.parent.document.querySelectorAll('button[data-baseweb=\\'tab\\']');
-                    var targetTab = Array.from(tabs).find(tab => tab.innerText.includes('Analisis AI'));
-                    if(targetTab) { targetTab.click(); window.parent.scrollTo({top: 0, behavior: 'smooth'}); }
-                </script>""", height=0)
-                import time
-                time.sleep(1) # Beri nafas sedikit sebelum reload
-                st.rerun()
+            # ==========================================
+            # 1. KUNCI CSS UNTUK WADAH STREAMLIT (ANTI-COPY ABSOLUT)
+            # ==========================================
+            st.markdown("""
+            <style>
+            textarea[aria-label="Konfirmasi Teks Realtime"] {
+                -webkit-user-select: none !important;
+                -moz-user-select: none !important;
+                -ms-user-select: none !important;
+                user-select: none !important;
+                pointer-events: none !important; /* Membuat kotak sama sekali tidak bisa diklik/disorot */
+                background-color: #f1f3f5 !important;
+                color: #495057 !important;
+                border: 2px dashed #ced4da !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
 
-            # 🚀 INJEKSI JAVASCRIPT & HTML (Anti-Copy Terpasang)
+            # ==========================================
+            # 2. INJEKSI JAVASCRIPT & HTML (KOTAK REKAM ATAS)
+            # ==========================================
             html_code = """
             <!DOCTYPE html>
             <html>
             <head>
                 <style>
                     body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 0; background: transparent; margin: 0; }
-                    
-                    /* KUNCI PERBAIKAN: Menggunakan DIV sebagai pengganti Textarea untuk Anti-Copy Absolut */
                     #transcript { 
-                        width: 100%; height: 250px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; 
+                        width: 100%; height: 220px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; 
                         font-size: 15px; margin-bottom: 10px; box-sizing: border-box; line-height: 1.6; 
-                        color: #333; background-color: #F8F9FA;
-                        overflow-y: auto; /* Memunculkan scrollbar */
-                        
-                        /* SHIELD: ANTI SELECT / ANTI COPY */
-                        -webkit-user-select: none !important;
-                        -moz-user-select: none !important;
-                        -ms-user-select: none !important;
-                        user-select: none !important;
-                        cursor: default !important;
+                        color: #333; background-color: #F8F9FA; overflow-y: auto; 
+                        /* SHIELD ANTI-COPY */
+                        -webkit-user-select: none !important; user-select: none !important; cursor: default !important;
                     }
-                    
                     .btn-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-                    button { flex: 1; padding: 14px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; color: white; transition: 0.2s; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; }
-                    
+                    button { flex: 1; padding: 14px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; color: white; transition: 0.2s; font-size: 14px; }
                     #startBtn { background-color: #e74c3c; } 
-                    #startBtn:hover { background-color: #c0392b; transform: translateY(-2px); }
                     #stopBtn { background-color: #95a5a6; } 
-                    #stopBtn:hover:not(:disabled) { background-color: #7f8c8d; transform: translateY(-2px); }
-                    #submitBtn { background-color: #27ae60; } 
-                    #submitBtn:hover { background-color: #219653; transform: translateY(-2px); }
-                    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
-                    
-                    #status { font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; transition: all 0.3s; }
+                    #submitBtn { background-color: #2980b9; } /* Tombol Transfer Berwarna Biru */
+                    button:disabled { opacity: 0.5; cursor: not-allowed; }
+                    #status { font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; }
                 </style>
             </head>
             <body oncontextmenu="return false;" oncopy="return false;" oncut="return false;" onselectstart="return false;">
                 <div class="btn-group">
                     <button id="startBtn">🔴 Mulai Bicara</button>
                     <button id="stopBtn" disabled>⏸️ Jeda</button>
-                    <button id="submitBtn">✨ Selesai & Lanjut AI</button>
+                    <button id="submitBtn">⬇️ Selesai & Transfer Teks</button>
                 </div>
                 <div id="status">Status: 📴 Siap mendengarkan...</div>
                 
                 <div id="transcript">Izinkan akses mikrofon saat diminta, lalu mulailah berbicara. Teks akan muncul di sini secara real-time...</div>
 
                 <script>
+                    const parentDoc = window.parent.document;
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     
                     if (!SpeechRecognition) {
-                        document.getElementById('status').innerText = "⚠️ Browser Anda tidak mendukung fitur ini. Gunakan Google Chrome atau Edge.";
-                        document.getElementById('status').style.borderLeftColor = "#f39c12";
+                        document.getElementById('status').innerText = "⚠️ Browser Anda tidak mendukung fitur ini.";
                     } else {
                         const recognition = new SpeechRecognition();
                         recognition.continuous = true;       
@@ -3212,88 +3183,62 @@ with tab_rekam:
                         recognition.onstart = function() {
                             statusText.innerText = "Status: 🎙️ Sedang merekam... (Silakan bicara)";
                             statusText.style.borderLeftColor = "#e74c3c";
-                            statusText.style.color = "#e74c3c";
-                            startBtn.disabled = true;
-                            stopBtn.disabled = false;
-                            
-                            // Kosongkan placeholder text saat mulai rekaman
-                            if (finalTranscript === '') {
-                                transcriptBox.innerText = '';
-                            }
+                            startBtn.disabled = true; stopBtn.disabled = false;
+                            if (finalTranscript === '') transcriptBox.innerText = '';
                         };
 
                         recognition.onresult = function(event) {
                             let interimTranscript = '';
                             for (let i = event.resultIndex; i < event.results.length; ++i) {
-                                if (event.results[i].isFinal) {
-                                    finalTranscript += event.results[i][0].transcript + '. ';
-                                } else {
-                                    interimTranscript += event.results[i][0].transcript;
-                                }
+                                if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + '. ';
+                                else interimTranscript += event.results[i][0].transcript;
                             }
-                            // PERBAIKAN: Menggunakan innerText untuk DIV
                             transcriptBox.innerText = finalTranscript + interimTranscript;
                             transcriptBox.scrollTop = transcriptBox.scrollHeight; 
                         };
 
                         recognition.onerror = function(event) {
                             if (event.error === 'no-speech') return;
-                            statusText.innerText = "Status: ⚠️ Terekam terhenti otomatis (" + event.error + ")";
-                            statusText.style.borderLeftColor = "#f39c12";
-                            statusText.style.color = "#d35400";
-                            startBtn.disabled = false;
-                            stopBtn.disabled = true;
+                            statusText.innerText = "Status: ⚠️ Rekaman terhenti otomatis (" + event.error + ")";
+                            startBtn.disabled = false; stopBtn.disabled = true;
                         };
 
                         recognition.onend = function() {
-                            statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Mulai Bicara untuk lanjut.";
-                            statusText.style.borderLeftColor = "#95a5a6";
-                            statusText.style.color = "#555";
-                            startBtn.disabled = false;
-                            stopBtn.disabled = true;
+                            if (startBtn.disabled === true && submitBtn.disabled === false) {
+                                statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Mulai Bicara untuk lanjut.";
+                                startBtn.disabled = false; stopBtn.disabled = true;
+                            }
                         };
 
                         startBtn.onclick = () => { recognition.start(); };
                         stopBtn.onclick = () => { recognition.stop(); };
                         
-                        // JEMBATAN GAIB JS KE STREAMLIT PYTHON (LOGIKA ORIGINAL ANDA)
+                        // LOGIKA HANYA TRANSFER TEKS (TIDAK AUTO-CLICK)
                         submitBtn.onclick = () => {
                             recognition.stop(); 
-                            
-                            // PERBAIKAN: Ambil nilai dari innerText, bukan value
                             const fullText = transcriptBox.innerText; 
                             
                             if (!fullText.trim() || fullText.includes("Izinkan akses mikrofon")) {
-                                statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam untuk diproses.";
-                                statusText.style.color = "#d35400";
+                                statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam.";
                                 return;
                             }
                             
-                            statusText.innerText = "Status: ⏳ Menyimpan teks dan menyiapkan Mesin AI...";
-                            statusText.style.borderLeftColor = "#27ae60";
-                            statusText.style.color = "#27ae60";
-                            submitBtn.disabled = true;
-                            startBtn.disabled = true;
+                            statusText.innerText = "Status: ⏳ Mentransfer teks ke kotak konfirmasi...";
                             
-                            const parentDoc = window.parent.document;
-                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Catcher Realtime"]');
+                            // Cari TextBox Streamlit di bawah berdasarkan Aria-Label
+                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Konfirmasi Teks Realtime"]');
                             
                             if (hiddenTextarea) {
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
                                 nativeInputValueSetter.call(hiddenTextarea, fullText);
+                                hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                                 
-                                let event = new Event('input', { bubbles: true });
-                                hiddenTextarea.dispatchEvent(event);
-                                
-                                setTimeout(() => {
-                                    const buttons = Array.from(parentDoc.querySelectorAll('button'));
-                                    const hiddenBtn = buttons.find(btn => btn.innerText.includes('Trigger Realtime'));
-                                    if (hiddenBtn) {
-                                        hiddenBtn.click();
-                                    }
-                                }, 300);
+                                statusText.innerText = "Status: ✅ Teks berhasil ditransfer! Silakan klik tombol 'Lanjut ke Analisis AI' di bawah.";
+                                statusText.style.borderLeftColor = "#27ae60";
+                                statusText.style.color = "#27ae60";
+                                submitBtn.disabled = true; startBtn.disabled = true;
                             } else {
-                                statusText.innerText = "Status: ❌ Gagal terhubung ke sistem. Refresh halaman.";
+                                statusText.innerText = "Status: ❌ Gagal menemukan kotak konfirmasi.";
                             }
                         };
                     }
@@ -3302,6 +3247,53 @@ with tab_rekam:
             </html>
             """
             components.html(html_code, height=380)
+
+            # ==========================================
+            # 3. WADAH PYTHON (KOTAK KONFIRMASI DI BAWAH)
+            # ==========================================
+            st.markdown("---")
+            st.markdown("### 📝 Konfirmasi Hasil Transkripsi")
+            st.info("💡 Teks hasil rekaman Anda akan otomatis disalin ke kotak di bawah ini setelah menekan tombol biru **'⬇️ Selesai & Transfer Teks'** di atas.")
+            
+            # Wadah Teks Streamlit (Terlihat secara visual, tapi terkunci keras oleh CSS di atas)
+            realtime_input = st.text_area("Konfirmasi Teks Realtime", label_visibility="collapsed", key="realtime_catcher", height=150)
+            
+            # Tombol Streamlit (Panjang penuh dan rata tengah)
+            submit_realtime = st.button("🧠 Lanjut ke Analisis AI", key="btn_trigger_realtime", type="primary", use_container_width=True)
+            
+            # ==========================================
+            # 4. LOGIKA PEMROSESAN & PINDAH TAB (KODE EMAS ANDA)
+            # ==========================================
+            if submit_realtime:
+                if realtime_input and realtime_input.strip() != "":
+                    # 1. Simpan ke Memori Streamlit
+                    st.session_state.transcript = realtime_input
+                    st.session_state.filename = "Dikte_RealTime"
+                    st.session_state.is_text_upload = True 
+                    
+                    # 2. Simpan ke Draft Firestore
+                    if st.session_state.logged_in:
+                        db.collection('users').document(st.session_state.current_user).update({
+                            "draft_transcript": st.session_state.transcript,
+                            "draft_filename": st.session_state.filename,
+                            "draft_ai_result": "",
+                            "draft_ai_prefix": "",
+                            "is_text_upload": True
+                        })
+                    
+                    # 3. Pindah tab ke Analisis AI secara Instan
+                    st.success("✅ Dikte selesai! Mengalihkan ke menu Analisis AI...")
+                    components.html("""<script>
+                        var tabs = window.parent.document.querySelectorAll('button[data-baseweb=\\'tab\\']');
+                        var targetTab = Array.from(tabs).find(tab => tab.innerText.includes('Analisis AI'));
+                        if(targetTab) { targetTab.click(); window.parent.scrollTo({top: 0, behavior: 'smooth'}); }
+                    </script>""", height=0)
+                    
+                    import time
+                    time.sleep(1) # Beri nafas sedikit sebelum reload
+                    st.rerun()
+                else:
+                    st.error("⚠️ Teks kosong! Silakan rekam suara dan klik '⬇️ Selesai & Transfer Teks' terlebih dahulu.")
 
 # ==========================================
 # TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
