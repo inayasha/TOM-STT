@@ -3075,7 +3075,6 @@ with tab_rekam:
         # ==========================================
         # 🚀 PENGATURAN BAHASA GLOBAL (Berlaku untuk semua mode)
         # ==========================================
-        st.markdown("##### 🌐 Pengaturan Bahasa")
         lang_choice_mic = st.selectbox("Pilih Bahasa Audio yang Diucapkan", ("Indonesia", "Inggris"), key="lang_mic_global")
         lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
         
@@ -3116,7 +3115,19 @@ with tab_rekam:
             st.info("💡 **Mode Transkripsi:** Teks akan muncul seketika (kata demi kata) di layar saat Anda berbicara.")
             
             # ==========================================
-            # 1. CSS VISUAL UNTUK KOTAK STREAMLIT (ANTI-SELECT MUTLAK)
+            # 1. 🛡️ SISTEM PEMULIHAN BRANKAS DARURAT (AUTO-RESTORE)
+            # ==========================================
+            u_info_vault = {}
+            if st.session_state.logged_in:
+                u_info_vault = get_user(st.session_state.current_user) or {}
+                
+            unpaid_draft = u_info_vault.get("draft_unpaid_dikte", "")
+            # Jika ada teks di brankas cadangan, otomatis masukkan ke memori kotak Streamlit
+            if unpaid_draft and "catcher_dikte_live" not in st.session_state:
+                st.session_state["catcher_dikte_live"] = unpaid_draft
+                
+            # ==========================================
+            # 2. CSS VISUAL UNTUK KOTAK STREAMLIT (ANTI-SELECT MUTLAK)
             # ==========================================
             st.markdown("""
             <style>
@@ -3125,7 +3136,6 @@ with tab_rekam:
                 -webkit-user-select: none !important;
                 user-select: none !important;
             }
-            
             textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"] {
                 -webkit-user-select: none !important;
                 -moz-user-select: none !important;
@@ -3140,7 +3150,7 @@ with tab_rekam:
             """, unsafe_allow_html=True)
 
             # ==========================================
-            # 2. INJEKSI HTML & JS (TEMA TERMINAL & KUNCI TOMBOL CERDAS)
+            # 3. INJEKSI HTML & JS (TEMA TERMINAL & AUTO-UNLOCK BRANKAS)
             # ==========================================
             html_code = f"""
             <!DOCTYPE html>
@@ -3204,52 +3214,55 @@ with tab_rekam:
                 </button>
                 
                 <div id="status">Status: 📴 Siap mendengarkan...</div>
-                
                 <div id="transcript">admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...</div>
 
                 <script>
                     const parentDoc = window.parent.document;
-                    let isAILocked = true; // Status kunci tombol Streamlit
+                    let isAILocked = true; 
                     
-                    // ==========================================
-                    // PENJAGA GERBANG TOMBOL AI (BULLETPROOF)
-                    // ==========================================
+                    const statusText = document.getElementById('status');
+                    
+                    // 🚀 DETEKSI BRANKAS CADANGAN: Jika ada isinya saat web diload, Buka Kunci AI!
+                    setTimeout(() => {{
+                        const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
+                        if (hiddenTextarea && hiddenTextarea.value.trim() !== "") {{
+                            isAILocked = false;
+                            statusText.innerText = "Status: 📥 Draf dari Brankas Cadangan berhasil dimuat. Silakan bayar & lanjut AI.";
+                            statusText.style.borderLeftColor = "#f39c12";
+                            statusText.style.color = "#d35400";
+                        }}
+                    }}, 1500);
+                    
                     function enforceAILock() {{
                         const buttons = Array.from(parentDoc.querySelectorAll('button'));
                         const aiBtn = buttons.find(btn => btn.textContent.includes('Lanjut ke Analisis AI'));
                         if (aiBtn) {{
                             if (isAILocked) {{
-                                aiBtn.disabled = true;
-                                aiBtn.style.opacity = '0.4';
-                                aiBtn.style.cursor = 'not-allowed';
-                                aiBtn.style.pointerEvents = 'none';
+                                aiBtn.disabled = true; aiBtn.style.opacity = '0.4';
+                                aiBtn.style.cursor = 'not-allowed'; aiBtn.style.pointerEvents = 'none';
                             }} else {{
-                                aiBtn.disabled = false;
-                                aiBtn.style.opacity = '1';
-                                aiBtn.style.cursor = 'pointer';
-                                aiBtn.style.pointerEvents = 'auto';
+                                aiBtn.disabled = false; aiBtn.style.opacity = '1';
+                                aiBtn.style.cursor = 'pointer'; aiBtn.style.pointerEvents = 'auto';
                             }}
                         }}
                     }}
-                    // Jalankan setiap 500ms agar Streamlit tidak bisa mencurangi kuncinya
                     setInterval(enforceAILock, 500);
 
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     
                     if (!SpeechRecognition) {{
-                        document.getElementById('status').innerText = "⚠️ Browser Anda tidak mendukung fitur ini.";
+                        statusText.innerText = "⚠️ Browser Anda tidak mendukung fitur ini.";
                     }} else {{
                         const recognition = new SpeechRecognition();
                         recognition.continuous = true;       
                         recognition.interimResults = true;   
-                        recognition.lang = '{lang_code}'; // Mengambil bahasa dari Python          
+                        recognition.lang = '{lang_code}';     
 
                         const startBtn = document.getElementById('startBtn');
                         const stopBtn = document.getElementById('stopBtn');
                         const submitBtn = document.getElementById('submitBtn');
                         const resetBtn = document.getElementById('resetBtn');
                         const transcriptBox = document.getElementById('transcript');
-                        const statusText = document.getElementById('status');
 
                         let finalTranscript = '';
 
@@ -3286,7 +3299,6 @@ with tab_rekam:
                         startBtn.onclick = () => {{ recognition.start(); }};
                         stopBtn.onclick = () => {{ recognition.stop(); }};
                         
-                        // KETIKA KLIK STOP & FINISH
                         submitBtn.onclick = () => {{
                             recognition.stop(); 
                             const fullText = transcriptBox.innerText; 
@@ -3297,11 +3309,9 @@ with tab_rekam:
                             }}
                             
                             statusText.innerText = "Status: ⏳ Menyinkronkan data...";
-                            
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                             
                             if (hiddenTextarea) {{
-                                // Trik menghilangkan pointer-events sementara agar Streamlit merespons input
                                 const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
                                 if(wrapper) wrapper.style.pointerEvents = 'auto';
                                 
@@ -3313,23 +3323,20 @@ with tab_rekam:
                                 hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
                                 hiddenTextarea.blur(); 
                                 
-                                if(wrapper) wrapper.style.pointerEvents = 'none'; // Kunci kembali anti-copynya
+                                if(wrapper) wrapper.style.pointerEvents = 'none';
                                 
                                 statusText.innerText = "Status: ✅ Sukses! Silakan klik tombol biru '🧠 Lanjut ke Analisis AI' di bawah.";
                                 statusText.style.borderLeftColor = "#27ae60";
                                 statusText.style.color = "#27ae60";
                                 submitBtn.disabled = true; startBtn.disabled = true; stopBtn.disabled = true;
                                 
-                                // BUKA KUNCI TOMBOL STREAMLIT
                                 isAILocked = false;
                                 enforceAILock();
-                                
                             }} else {{
                                 statusText.innerText = "Status: ❌ Gagal menemukan kotak konfirmasi.";
                             }}
                         }};
                         
-                        // KETIKA KLIK RECORD NEW AUDIO
                         resetBtn.onclick = () => {{
                             recognition.stop();
                             
@@ -3339,11 +3346,8 @@ with tab_rekam:
                             statusText.style.borderLeftColor = "#3498db";
                             statusText.style.color = "#555";
                             
-                            startBtn.disabled = false; 
-                            stopBtn.disabled = true; 
-                            submitBtn.disabled = false;
+                            startBtn.disabled = false; stopBtn.disabled = true; submitBtn.disabled = false;
                             
-                            // Kosongkan kotak Streamlit di bawah
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                             if (hiddenTextarea) {{
                                 const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
@@ -3357,9 +3361,15 @@ with tab_rekam:
                                 
                                 if(wrapper) wrapper.style.pointerEvents = 'none';
                                 
-                                // KUNCI KEMBALI TOMBOL STREAMLIT
                                 isAILocked = true;
                                 enforceAILock();
+                                
+                                // 🚀 JIKA USER RESET, HAPUS JUGA BRANKAS DARURAT DI DATABASE PYTHON
+                                setTimeout(() => {{
+                                    const buttons = Array.from(parentDoc.querySelectorAll('button'));
+                                    const pythonResetVault = buttons.find(btn => btn.textContent.includes('HiddenDeleteVault'));
+                                    if (pythonResetVault) {{ pythonResetVault.click(); }}
+                                }}, 300);
                             }}
                         }};
                     }}
@@ -3370,45 +3380,180 @@ with tab_rekam:
             components.html(html_code, height=450)
 
             # ==========================================
-            # 3. WADAH PYTHON & TOMBOL LANJUT (TANPA TOMBOL GAIB!)
+            # 4. TOMBOL GAIB HAPUS BRANKAS (Khusus Ditekan Saat Klik Reset Audio)
+            # ==========================================
+            st.markdown("<div style='display: none;'>", unsafe_allow_html=True)
+            if st.button("HiddenDeleteVault", key="btn_del_vault"):
+                if st.session_state.logged_in:
+                    db.collection('users').document(st.session_state.current_user).update({
+                        "draft_unpaid_dikte": firestore.DELETE_FIELD
+                    })
+                    if 'temp_user_data' in st.session_state: del st.session_state['temp_user_data']
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            # ==========================================
+            # 5. WADAH PYTHON & TOMBOL LANJUT
             # ==========================================
             st.markdown("---")
             st.info("💡 **Petunjuk:** Setelah klik **Stop & Finish**, teks Anda akan disalin ke kotak di bawah ini. Pastikan teks sudah muncul, lalu klik **🧠 Lanjut ke Analisis AI**.")
             
-            # Wadah teks 100% terkunci dari klik/select oleh CSS di atas
             realtime_input = st.text_area("📝 Konfirmasi Hasil Transkripsi", placeholder="Teks akan otomatis ditransfer ke sini...", key="catcher_dikte_live", height=150)
             
-            # Tombol Utama (Biasa saja, penguncian murni dilakukan oleh JavaScript di browser)
+            # Tombol Utama
             submit_realtime = st.button("🧠 Lanjut ke Analisis AI", key="btn_lanjut_ai_dikte", type="primary", use_container_width=True)
             
             # ==========================================
-            # 4. LOGIKA PEMROSESAN & PINDAH TAB
+            # 6. LOGIKA BRANKAS, PAYWALL & PINDAH TAB
             # ==========================================
             if submit_realtime:
                 if realtime_input and realtime_input.strip() != "":
-                    st.session_state.transcript = realtime_input
-                    st.session_state.filename = "Dikte_RealTime"
-                    st.session_state.is_text_upload = True 
                     
+                    # --- FASE 1: THE SAFE VAULT (AMANKAN TEKS DULUAN) ---
                     if st.session_state.logged_in:
                         db.collection('users').document(st.session_state.current_user).update({
+                            "draft_unpaid_dikte": realtime_input
+                        })
+                        if 'temp_user_data' in st.session_state: del st.session_state['temp_user_data']
+                        u_info = get_user(st.session_state.current_user)
+                    else:
+                        st.error("❌ Silakan Login terlebih dahulu.")
+                        st.stop()
+                        
+                    # --- FASE 2: VALIDASI LIMIT KASTA (KARAKTER) ---
+                    jumlah_karakter = len(realtime_input)
+                    soft_limit = 75000
+                    nama_paket_tertinggi = "Freemium"
+                    
+                    if u_info.get("role") == "admin":
+                        soft_limit = 99999999
+                        nama_paket_tertinggi = "Admin"
+                    else:
+                        for pkt in u_info.get("inventori", []):
+                            nama_pkt_up = pkt["nama"].upper()
+                            if "ENTERPRISE" in nama_pkt_up: 
+                                soft_limit = max(soft_limit, 400000); nama_paket_tertinggi = "ENTERPRISE"
+                            elif "VIP" in nama_pkt_up: 
+                                soft_limit = max(soft_limit, 300000)
+                                if nama_paket_tertinggi not in ["ENTERPRISE"]: nama_paket_tertinggi = "VIP"
+                            elif "EKSEKUTIF" in nama_pkt_up: 
+                                soft_limit = max(soft_limit, 200000)
+                                if nama_paket_tertinggi not in ["ENTERPRISE", "VIP"]: nama_paket_tertinggi = "EKSEKUTIF"
+                            elif "STARTER" in nama_pkt_up or "PRO" in nama_pkt_up: 
+                                soft_limit = max(soft_limit, 100000)
+                                if nama_paket_tertinggi not in ["ENTERPRISE", "VIP", "EKSEKUTIF"]: nama_paket_tertinggi = "STARTER"
+                            elif "LITE" in nama_pkt_up:
+                                soft_limit = max(soft_limit, 75000)
+                                if nama_paket_tertinggi not in ["ENTERPRISE", "VIP", "EKSEKUTIF", "STARTER", "LITE"]: nama_paket_tertinggi = "LITE"
+                            elif "AIO" in nama_pkt_up:
+                                soft_limit = max(soft_limit, 999999)
+                                if nama_paket_tertinggi not in ["ENTERPRISE", "VIP", "EKSEKUTIF", "STARTER", "LITE", "AIO"]: nama_paket_tertinggi = "AIO (All-In-One)"
+                                
+                    if jumlah_karakter > soft_limit:
+                        st.error(f"❌ **BATAS KARAKTER TERCAPAI!**")
+                        st.info(f"Teks Anda mencapai **{jumlah_karakter:,} Karakter**. Batas maksimal paket **{nama_paket_tertinggi}** adalah **{soft_limit:,} Karakter**. Silakan **Upgrade Paket Anda**.")
+                        st.stop()
+                        
+                    # --- FASE 3: PENAGIHAN PEMBAYARAN (THE GATEWAY) ---
+                    durasi_teks = hitung_estimasi_menit(realtime_input)
+                    berhasil_potong = False
+                    is_fallback_reguler = False
+                    
+                    if st.session_state.user_role == "admin":
+                        berhasil_potong = True
+                    else:
+                        u_doc = db.collection('users').document(st.session_state.current_user)
+                        inv = u_info.get("inventori", [])
+                        idx_to_cut = -1
+                        # Cari tiket reguler yang ada isinya
+                        for i, pkt in enumerate(inv):
+                            if pkt.get('batas_durasi', 0) != 9999 and pkt.get('kuota', 0) > 0:
+                                idx_to_cut = i
+                                break
+                                
+                        bank_menit_user = u_info.get("bank_menit", 0)
+                        
+                        if bank_menit_user > 0:
+                            if durasi_teks <= bank_menit_user:
+                                new_bank = bank_menit_user - durasi_teks
+                                u_doc.update({"bank_menit": new_bank})
+                                st.toast(f"🌟 Teks setara {durasi_teks} Menit. Saldo AIO terpotong!", icon="⏳")
+                                berhasil_potong = True
+                            else:
+                                if idx_to_cut != -1:
+                                    is_fallback_reguler = True
+                                    inv[idx_to_cut]['kuota'] -= 1
+                                    if inv[idx_to_cut]['kuota'] <= 0: inv.pop(idx_to_cut)
+                                    u_doc.update({"inventori": inv})
+                                    st.toast(f"🎟️ Waktu AIO kurang ({bank_menit_user} Mnt). 1 Tiket Reguler terpotong!", icon="✅")
+                                    berhasil_potong = True
+                                else:
+                                    st.error(f"❌ **WAKTU AIO TIDAK CUKUP:** Beban teks Anda setara **{durasi_teks} Menit**, sisa AIO Anda **{bank_menit_user} Menit**.")
+                                    st.warning("💡 Teks Anda tersimpan aman di Brankas! Silakan Top-Up lalu kembali ke sini.")
+                                    st.stop()
+                        else:
+                            if idx_to_cut != -1:
+                                inv[idx_to_cut]['kuota'] -= 1
+                                if inv[idx_to_cut]['kuota'] <= 0: inv.pop(idx_to_cut)
+                                u_doc.update({"inventori": inv})
+                                st.toast("🎟️ 1 Tiket Reguler terpotong untuk Dikte Teks!", icon="✅")
+                                berhasil_potong = True
+                            else:
+                                st.error("❌ **TIKET HABIS:** Anda tidak memiliki tiket/kuota yang tersisa untuk memproses dokumen ini.")
+                                st.warning("💡 Teks Anda tersimpan aman di Brankas! Silakan Beli Paket di menu samping lalu kembali ke sini.")
+                                st.stop()
+                                
+                    # --- FASE 4: LOLOS PENAGIHAN (PINDAH BRANKAS KE TAB 4) ---
+                    if berhasil_potong:
+                        max_fup_reg = 0
+                        for pkt in u_info.get("inventori", []):
+                            p_name = pkt.get("nama", "").upper()
+                            if "AIO" not in p_name and pkt.get("kuota", 0) > 0:
+                                if "ENTERPRISE" in p_name: max_fup_reg = max(max_fup_reg, 15)
+                                elif "VIP" in p_name: max_fup_reg = max(max_fup_reg, 8)
+                                elif "EKSEKUTIF" in p_name: max_fup_reg = max(max_fup_reg, 6)
+                                elif "STARTER" in p_name: max_fup_reg = max(max_fup_reg, 4)
+                                elif "LITE" in p_name: max_fup_reg = max(max_fup_reg, 2)
+                                
+                        if u_info.get("bank_menit", 0) > 0 and not is_fallback_reguler:
+                            st.session_state.sisa_nyawa_dok = u_info.get("fup_dok_harian_limit", 35)
+                            st.session_state.is_using_aio = True
+                        elif max_fup_reg > 0:
+                            st.session_state.sisa_nyawa_dok = max_fup_reg
+                            st.session_state.is_using_aio = False
+                        else:
+                            st.session_state.sisa_nyawa_dok = 2
+                            st.session_state.is_using_aio = False
+                            
+                        # Simpan Memori Lintas Layar
+                        st.session_state.transcript = realtime_input
+                        st.session_state.filename = "Dikte_RealTime"
+                        st.session_state.is_text_upload = True
+                        st.session_state.durasi_audio_kotor = durasi_teks
+                        st.session_state.chat_history = [] 
+                        st.session_state.chat_usage_count = 0 
+                        st.session_state.ai_result = ""
+                        
+                        # Buang isi Brankas Darurat karena pembayaran lunas
+                        db.collection('users').document(st.session_state.current_user).update({
+                            "draft_unpaid_dikte": firestore.DELETE_FIELD, 
                             "draft_transcript": st.session_state.transcript,
                             "draft_filename": st.session_state.filename,
                             "draft_ai_result": "",
                             "draft_ai_prefix": "",
                             "is_text_upload": True
                         })
-                    
-                    st.success("✅ Dikte selesai! Mengalihkan ke menu Analisis AI...")
-                    components.html("""<script>
-                        var tabs = window.parent.document.querySelectorAll('button[data-baseweb=\\'tab\\']');
-                        var targetTab = Array.from(tabs).find(tab => tab.innerText.includes('Analisis AI'));
-                        if(targetTab) { targetTab.click(); window.parent.scrollTo({top: 0, behavior: 'smooth'}); }
-                    </script>""", height=0)
-                    
-                    import time
-                    time.sleep(1) 
-                    st.rerun()
+                        if 'temp_user_data' in st.session_state: del st.session_state['temp_user_data']
+                        
+                        st.success(f"✅ Tagihan Lunas! ({jumlah_karakter:,} Karakter | Beban Setara {durasi_teks} Menit). Mengalihkan ke AI...")
+                        components.html("""<script>
+                            var tabs = window.parent.document.querySelectorAll('button[data-baseweb=\\'tab\\']');
+                            var targetTab = Array.from(tabs).find(tab => tab.innerText.includes('Analisis AI'));
+                            if(targetTab) { targetTab.click(); window.parent.scrollTo({top: 0, behavior: 'smooth'}); }
+                        </script>""", height=0)
+                        
+                        import time
+                        time.sleep(1) 
+                        st.rerun()
                 else:
                     st.error("⚠️ Teks masih kosong! Pastikan Anda sudah merekam audio dan menekan tombol '⏹️ Stop & Finish' di atas terlebih dahulu.")
 
