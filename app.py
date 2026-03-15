@@ -3289,108 +3289,100 @@ with tab_rekam:
                         const resetBtn = document.getElementById('resetBtn');
                         const transcriptBox = document.getElementById('transcript');
 
-                        let finalTranscript = '';
+                        // ==========================================
+                        // 🧠 ARSITEKTUR MEMORI 2 LAPIS (ANTI-HILANG & ANTI-LOOPING)
+                        // ==========================================
+                        let permanentMemory = ''; // Lapis 1: Aman dari restart
+                        let currentSessionMemory = ''; // Lapis 2: Dibuat ulang tiap kalimat
                         
-                        // 🚀 DETEKSI PERANGKAT USER (MOBILE vs LAPTOP)
-                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                        let isManuallyStopped = false; // Saklar khusus Mobile
+                        let isManuallyStopped = false; 
+                        let restartTimer = null; // 🛡️ PENJAGA TIMER AUTO-RESTART
 
                         recognition.onstart = function() {{
                             statusText.innerText = "Status: 🎙️ Sedang merekam... (Silakan bicara)";
                             statusText.style.borderLeftColor = "#e74c3c";
                             startBtn.disabled = true; stopBtn.disabled = false;
-                            if (finalTranscript === '') transcriptBox.innerText = '';
+                            
+                            // KUNCI TEKS SEBELUMNYA KE MEMORI PERMANEN SAAT RESTART
+                            if (currentSessionMemory.trim() !== '') {{
+                                permanentMemory += currentSessionMemory + ' ';
+                                currentSessionMemory = ''; 
+                            }}
+                            if (permanentMemory === '') transcriptBox.innerText = '';
                         }};
 
                         recognition.onresult = function(event) {{
-                            if (isMobile) {{
-                                // ==========================================
-                                // 📱 LOGIKA MOBILE: SAPU BERSIH & TULIS ULANG (Anti-Looping)
-                                // ==========================================
-                                let fullFinal = '';
-                                let interim = '';
-                                for (let i = 0; i < event.results.length; ++i) {{
-                                    let textSegment = event.results[i][0].transcript.trim();
-                                    if (event.results[i].isFinal) {{
-                                        if (textSegment !== '') {{
-                                            textSegment = textSegment.charAt(0).toUpperCase() + textSegment.slice(1);
-                                            fullFinal += textSegment + '. ';
-                                        }}
-                                    }} else {{
-                                        interim += textSegment + ' ';
+                            currentSessionMemory = ''; // Sapu bersih HANYA memori sesi ini
+                            let interimTranscript = '';
+                            let localLastText = ''; // Penjaga duplikat kata beruntun
+                            
+                            for (let i = 0; i < event.results.length; ++i) {{
+                                let currentText = event.results[i][0].transcript.trim();
+                                if (currentText === '') continue;
+
+                                if (event.results[i].isFinal) {{
+                                    // Cegah duplikat ganda bawaan bug Android
+                                    if (currentText !== localLastText) {{
+                                        currentText = currentText.charAt(0).toUpperCase() + currentText.slice(1);
+                                        currentSessionMemory += currentText + '. ';
+                                        localLastText = currentText; 
                                     }}
+                                }} else {{
+                                    interimTranscript += currentText + ' ';
                                 }}
-                                finalTranscript = fullFinal; 
-                                transcriptBox.innerText = fullFinal + interim;
-                                
-                            }} else {{
-                                // ==========================================
-                                // 💻 LOGIKA LAPTOP: ORIGINAL (Instan & Ringan)
-                                // ==========================================
-                                let interimTranscript = '';
-                                for (let i = event.resultIndex; i < event.results.length; ++i) {{
-                                    if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + '. ';
-                                    else interimTranscript += event.results[i][0].transcript;
-                                }}
-                                transcriptBox.innerText = finalTranscript + interimTranscript;
                             }}
+                            
+                            // GABUNGKAN SEMUA LAPISAN MEMORI KE LAYAR
+                            transcriptBox.innerText = permanentMemory + currentSessionMemory + interimTranscript;
                             transcriptBox.scrollTop = transcriptBox.scrollHeight; 
                         }};
 
                         recognition.onerror = function(event) {{
                             if (event.error === 'no-speech') return;
-                            
-                            if (isMobile) {{
-                                // Abaikan log error agar auto-restart bisa bekerja di HP
-                                console.log("Mic Error Mobile: ", event.error);
-                            }} else {{
-                                // Logika Laptop: Munculkan pesan error
-                                statusText.innerText = "Status: ⚠️ Rekaman terhenti otomatis (" + event.error + ")";
+                            console.log("Mic Error: ", event.error); // Biarkan error ditelan agar HP tidak panik
+                        }};
+
+                        recognition.onend = function() {{
+                            // 🚀 LOGIKA AUTO-RESTART KHUSUS HP/LAPTOP JIKA MATI SEPIHAK
+                            if (!isManuallyStopped && startBtn.disabled === true) {{
+                                clearTimeout(restartTimer); // Bersihkan sisa timer lama
+                                restartTimer = setTimeout(() => {{
+                                    try {{ recognition.start(); }} catch(e) {{}}
+                                }}, 250); // Nyalakan paksa dalam 0.25 detik!
+                            }} 
+                            // Jika murni di-stop oleh user (State Pause)
+                            else if (startBtn.disabled === true && submitBtn.disabled === false) {{
+                                statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Record Audio untuk lanjut.";
                                 startBtn.disabled = false; stopBtn.disabled = true;
                             }}
                         }};
 
-                        recognition.onend = function() {{
-                            if (isMobile) {{
-                                // 📱 LOGIKA MOBILE: AUTO-RESTART
-                                if (!isManuallyStopped && startBtn.disabled === true) {{
-                                    // HP mati sendiri? Nyalakan paksa secara gaib!
-                                    setTimeout(() => {{
-                                        try {{ recognition.start(); }} catch(e) {{}}
-                                    }}, 250);
-                                }} else if (startBtn.disabled === true && submitBtn.disabled === false) {{
-                                    statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Record Audio untuk lanjut.";
-                                    startBtn.disabled = false; stopBtn.disabled = true;
-                                }}
-                            }} else {{
-                                // 💻 LOGIKA LAPTOP: ORIGINAL
-                                if (startBtn.disabled === true && submitBtn.disabled === false) {{
-                                    statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Record Audio untuk lanjut.";
-                                    startBtn.disabled = false; stopBtn.disabled = true;
-                                }}
-                            }}
-                        }};
-
-                        // --- KONTROL TOMBOL & SAKLAR PEMUTUS AUTO-RESTART ---
+                        // ==========================================
+                        // KONTROL TOMBOL & SAKLAR PEMBUNUH TIMER
+                        // ==========================================
                         
                         startBtn.onclick = () => {{ 
-                            isManuallyStopped = false; // Buka kunci auto-restart
-                            recognition.start(); 
+                            isManuallyStopped = false; 
+                            clearTimeout(restartTimer); 
+                            try {{ recognition.start(); }} catch(e) {{}} 
                         }};
                         
                         stopBtn.onclick = () => {{ 
-                            isManuallyStopped = true; // User tekan Pause, larang auto-restart!
+                            isManuallyStopped = true; // Matikan izin restart
+                            clearTimeout(restartTimer); // Bunuh timer yang sedang berjalan!
                             recognition.stop(); 
                         }};
                         
                         // SAAT USER KLIK STOP & FINISH
                         submitBtn.onclick = () => {{
-                            isManuallyStopped = true; // 🚀 MATIKAN AUTO-RESTART SECARA TOTAL DI SINI!
+                            isManuallyStopped = true; // 🚀 MATIKAN IZIN RESTART
+                            clearTimeout(restartTimer); // 🚀 BUNUH TIMER SECARA TOTAL!
                             recognition.stop(); 
                             
-                            const fullText = transcriptBox.innerText; 
+                            // Kunci teks terakhir sebelum dikirim
+                            const fullText = (permanentMemory + currentSessionMemory).trim(); 
                             
-                            if (!fullText.trim() || fullText.includes("admin@tomstt")) {{
+                            if (!fullText || fullText.includes("admin@tomstt")) {{
                                 statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam.";
                                 return;
                             }}
@@ -3426,10 +3418,13 @@ with tab_rekam:
                         
                         // SAAT USER KLIK RECORD NEW AUDIO
                         resetBtn.onclick = () => {{
-                            isManuallyStopped = true; // 🚀 MATIKAN JUGA DI SINI!
+                            isManuallyStopped = true; 
+                            clearTimeout(restartTimer); // 🚀 BUNUH TIMER SECARA TOTAL!
                             recognition.stop();
                             
-                            finalTranscript = '';
+                            permanentMemory = ''; // Sapu bersih memori abadi
+                            currentSessionMemory = ''; // Sapu bersih memori sesi
+                            
                             transcriptBox.innerText = 'admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...';
                             statusText.innerText = "Status: 📴 Perekaman di-reset. Siap mendengarkan kembali.";
                             statusText.style.borderLeftColor = "#3498db";
@@ -3448,76 +3443,6 @@ with tab_rekam:
                                 hiddenTextarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
                                 hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
                                 hiddenTextarea.blur(); 
-                                
-                                if(wrapper) wrapper.style.pointerEvents = 'none';
-                                
-                                isAILocked = true;
-                                enforceAILock();
-                            }}
-                        }};
-                        
-                        // SAAT USER KLIK STOP & FINISH
-                        submitBtn.onclick = () => {{
-                            recognition.stop(); 
-                            const fullText = transcriptBox.innerText; 
-                            
-                            if (!fullText.trim() || fullText.includes("admin@tomstt")) {{
-                                statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam.";
-                                return;
-                            }}
-                            
-                            statusText.innerText = "Status: ⏳ Menyinkronkan data...";
-                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
-                            
-                            if (hiddenTextarea) {{
-                                const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
-                                if(wrapper) wrapper.style.pointerEvents = 'auto';
-                                
-                                hiddenTextarea.focus(); 
-                                let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-                                nativeInputValueSetter.call(hiddenTextarea, fullText);
-                                
-                                hiddenTextarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                                hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                                hiddenTextarea.blur(); // 🚀 INI AKAN MEMICU CALLBACK PYTHON SECARA OTOMATIS!
-                                
-                                if(wrapper) wrapper.style.pointerEvents = 'none';
-                                
-                                statusText.innerText = "Status: ✅ Sukses! Silakan klik tombol biru '🧠 Lanjut ke Analisis AI' di bawah.";
-                                statusText.style.borderLeftColor = "#27ae60";
-                                statusText.style.color = "#27ae60";
-                                submitBtn.disabled = true; startBtn.disabled = true; stopBtn.disabled = true;
-                                
-                                isAILocked = false;
-                                enforceAILock();
-                            }} else {{
-                                statusText.innerText = "Status: ❌ Gagal menemukan kotak konfirmasi.";
-                            }}
-                        }};
-                        
-                        // SAAT USER KLIK RECORD NEW AUDIO
-                        resetBtn.onclick = () => {{
-                            recognition.stop();
-                            
-                            finalTranscript = '';
-                            transcriptBox.innerText = 'admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...';
-                            statusText.innerText = "Status: 📴 Perekaman di-reset. Siap mendengarkan kembali.";
-                            statusText.style.borderLeftColor = "#3498db";
-                            statusText.style.color = "#555";
-                            
-                            startBtn.disabled = false; stopBtn.disabled = true; submitBtn.disabled = false;
-                            
-                            const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
-                            if (hiddenTextarea) {{
-                                const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
-                                if(wrapper) wrapper.style.pointerEvents = 'auto';
-                                
-                                let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-                                nativeInputValueSetter.call(hiddenTextarea, ""); // KOSONGKAN TEKS
-                                
-                                hiddenTextarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                                hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                                hiddenTextarea.blur(); // 🚀 INI MEMICU PENGHAPUSAN BRANKAS DI PYTHON!
                                 
                                 if(wrapper) wrapper.style.pointerEvents = 'none';
                                 
