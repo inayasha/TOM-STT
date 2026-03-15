@@ -3388,8 +3388,13 @@ with tab_rekam:
                             }};
 
                             recognition.onerror = function(event) {{
-                                if (event.error === 'no-speech') return; // Abaikan error hening
-                                // Sembunyikan error dari UI agar user tidak panik, biarkan Auto-Restart bekerja
+                                if (event.error === 'no-speech') return; 
+                                
+                                // 🚀 TAKTIK BARU: Jika jaringan ngelag/error, matikan paksa SEKARANG
+                                // agar fungsi onend bisa langsung me-restart secepat kilat!
+                                if (event.error === 'network' || event.error === 'audio-capture') {{
+                                    try {{ recognition.abort(); }} catch(e) {{}}
+                                }}
                                 console.log("Mic Error Desktop: ", event.error);
                             }};
 
@@ -3397,9 +3402,11 @@ with tab_rekam:
                                 // 🚀 LOGIKA AUTO-RESTART KHUSUS LAPTOP (ANTI KEHENINGAN)
                                 if (!isManuallyStopped && startBtn.disabled === true) {{
                                     clearTimeout(restartTimer);
+                                    
+                                    // 🚀 PERCEPAT WAKTU RESTART DARI 250ms MENJADI 50ms (SECEPAT KILAT!)
                                     restartTimer = setTimeout(() => {{
                                         try {{ recognition.start(); }} catch(e) {{}}
-                                    }}, 250);
+                                    }}, 50);
                                 }} 
                                 else if (startBtn.disabled === true && submitBtn.disabled === false) {{
                                     statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Record Audio untuk lanjut.";
