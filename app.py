@@ -3076,6 +3076,9 @@ with tab_rekam:
         # 🚀 PENGATURAN BAHASA GLOBAL (Berlaku untuk semua mode)
         # ==========================================
 
+        # ---> KOTAK INFORMASI DITAMBAHKAN DI SINI <---
+        st.info("💡 Pastikan **koneksi internet Anda stabil** saat merekam audio. Untuk hasil terbaik, **aktifkan mode Do Not Disturbe (DND)** agar proses perekaman tidak terganggu oleh panggilan atau notifikasi.")
+ 
         lang_choice_mic = st.selectbox("Pilih Bahasa Audio yang Diucapkan", ("Indonesia", "Inggris"), key="lang_mic_global")
         lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
         
@@ -3258,7 +3261,7 @@ with tab_rekam:
                     </button>
                     
                     <div id="status">Status: 📴 Siap mendengarkan...</div>
-                    <div id="transcript">admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...</div>
+                    <div id="transcript">Izinkan akses mikrofon saat diminta.</div>
                 </div>
 
                 <script>
@@ -3349,7 +3352,7 @@ with tab_rekam:
                             let finalTranscript = '';
 
                             recognition.onstart = function() {{
-                                statusText.innerText = "Status: 🎙️ Sedang merekam... (Silakan bicara)";
+                                statusText.innerText = "Status: 🎙️ Sedang merekam...";
                                 statusText.style.borderLeftColor = "#e74c3c";
                                 startBtn.disabled = true; stopBtn.disabled = false;
                                 if (finalTranscript === '') transcriptBox.innerText = '';
@@ -3385,7 +3388,8 @@ with tab_rekam:
                                 recognition.stop(); 
                                 const fullText = transcriptBox.innerText; 
                                 
-                                if (!fullText.trim() || fullText.includes("admin@tomstt")) {{
+                                // Ganti kata kunci pengecekan agar tombol menolak jika user belum bicara apa-apa
+                                if (!fullText.trim() || fullText.includes("Izinkan akses mikrofon saat diminta")) {{
                                     statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam.";
                                     return;
                                 }}
@@ -3423,7 +3427,7 @@ with tab_rekam:
                                 recognition.stop();
                                 
                                 finalTranscript = '';
-                                transcriptBox.innerText = 'admin@tomstt:~$ Izinkan akses mikrofon saat diminta, lalu mulailah berbicara...';
+                                transcriptBox.innerText = 'Izinkan akses mikrofon saat diminta.';
                                 statusText.innerText = "Status: 📴 Perekaman di-reset. Siap mendengarkan kembali.";
                                 statusText.style.borderLeftColor = "#3498db";
                                 statusText.style.color = "#555";
