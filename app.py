@@ -3108,21 +3108,17 @@ with tab_rekam:
             st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo.")
             
             # ==========================================
-            # 1. CSS SHIELD: WADAH STREAMLIT ANTI-COPY + FONT MESIN TIK
+            # 1. CSS VISUAL UNTUK KOTAK STREAMLIT (Tanpa merusak klik sistem)
             # ==========================================
             st.markdown("""
             <style>
             textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"] {
-                font-family: 'Courier New', Courier, monospace !important; /* 👈 FONT MESIN TIK */
-                font-size: 16px !important; /* Diperbesar sedikit agar pas dengan font klasik */
-                font-weight: 600 !important;
                 -webkit-user-select: none !important;
                 -moz-user-select: none !important;
                 -ms-user-select: none !important;
                 user-select: none !important;
-                caret-color: transparent !important; /* Menyembunyikan kursor ketik */
                 background-color: #f1f3f5 !important;
-                color: #2c3e50 !important;
+                color: #495057 !important;
             }
             </style>
             """, unsafe_allow_html=True)
@@ -3136,34 +3132,32 @@ with tab_rekam:
             <head>
                 <style>
                     body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 0; background: transparent; margin: 0; }
-                    
-                    /* KOTAK TRANSKRIP DENGAN EFEK MESIN TIK */
                     #transcript { 
                         width: 100%; height: 220px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; 
                         
-                        font-family: 'Courier New', Courier, monospace; /* 👈 FONT MESIN TIK */
-                        font-size: 16px; font-weight: 600; /* Ditebalkan sedikit */
+                        /* Font Klasik Hanya di Kotak Rekam Atas */
+                        font-family: 'Courier New', Courier, monospace; 
+                        font-size: 16px; font-weight: 600; 
                         
                         margin-bottom: 10px; box-sizing: border-box; line-height: 1.6; 
                         color: #2c3e50; background-color: #F8F9FA; overflow-y: auto; 
-                        /* SHIELD: ANTI-COPY UNTUK KOTAK HTML */
+                        /* SHIELD: ANTI-COPY */
                         -webkit-user-select: none !important; user-select: none !important; cursor: default !important;
                     }
-                    
                     .btn-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
                     button { flex: 1; padding: 14px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; color: white; transition: 0.2s; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif;}
                     #startBtn { background-color: #e74c3c; } 
                     #stopBtn { background-color: #95a5a6; } 
-                    #submitBtn { background-color: #27ae60; } 
+                    #submitBtn { background-color: #2980b9; } 
                     button:disabled { opacity: 0.5; cursor: not-allowed; }
                     #status { font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; }
                 </style>
             </head>
             <body oncontextmenu="return false;" oncopy="return false;" oncut="return false;" onselectstart="return false;">
                 <div class="btn-group">
-                    <button id="startBtn">🔴 Mulai Bicara</button>
-                    <button id="stopBtn" disabled>⏸️ Jeda</button>
-                    <button id="submitBtn">✨ Selesai & Lanjut AI</button>
+                    <button id="startBtn">🔴 Record Audio</button>
+                    <button id="stopBtn" disabled>⏸️ Pause</button>
+                    <button id="submitBtn">⏹️ Stop & Finish</button>
                 </div>
                 <div id="status">Status: 📴 Siap mendengarkan...</div>
                 
@@ -3214,7 +3208,7 @@ with tab_rekam:
 
                         recognition.onend = function() {
                             if (startBtn.disabled === true && submitBtn.disabled === false) {
-                                statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Mulai Bicara untuk lanjut.";
+                                statusText.innerText = "Status: ⏸️ Mikrofon Jeda. Klik Record Audio untuk lanjut.";
                                 startBtn.disabled = false; stopBtn.disabled = true;
                             }
                         };
@@ -3222,7 +3216,7 @@ with tab_rekam:
                         startBtn.onclick = () => { recognition.start(); };
                         stopBtn.onclick = () => { recognition.stop(); };
                         
-                        // LOGIKA AUTO-CLICK YANG TERBUKTI LANCAR (MILIK ANDA)
+                        // LOGIKA BUG FIX: SINKRONISASI SEMPURNA STREAMLIT & ANTI COPY
                         submitBtn.onclick = () => {
                             recognition.stop(); 
                             const fullText = transcriptBox.innerText; 
@@ -3232,29 +3226,36 @@ with tab_rekam:
                                 return;
                             }
                             
-                            statusText.innerText = "Status: ⏳ Menjalankan fungsi sinkronisasi otomatis...";
-                            statusText.style.borderLeftColor = "#27ae60";
-                            submitBtn.disabled = true; startBtn.disabled = true;
+                            statusText.innerText = "Status: ⏳ Mentransfer teks ke kotak konfirmasi...";
                             
-                            // Cari TextBox Streamlit di bawah
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                             
                             if (hiddenTextarea) {
+                                // 1. MENGUNCI KOTAK STREAMLIT (ANTI COPY, SELECT, PASTE) DARI JAVASCRIPT
+                                hiddenTextarea.readOnly = true;
+                                hiddenTextarea.oncopy = (e) => e.preventDefault();
+                                hiddenTextarea.oncut = (e) => e.preventDefault();
+                                hiddenTextarea.onpaste = (e) => e.preventDefault();
+                                hiddenTextarea.oncontextmenu = (e) => e.preventDefault();
+                                hiddenTextarea.onselectstart = (e) => e.preventDefault();
+
+                                // 2. MEMAKSA STREAMLIT SADAR (Trik Focus & Blur)
+                                hiddenTextarea.focus(); 
+                                
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
                                 nativeInputValueSetter.call(hiddenTextarea, fullText);
-                                hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                                 
-                                // Jeda sedikit lalu otomatis tekan tombol Streamlit "Lanjut ke Analisis AI"
-                                setTimeout(() => {
-                                    const buttons = Array.from(parentDoc.querySelectorAll('button'));
-                                    const pythonBtn = buttons.find(btn => btn.textContent.includes('Lanjut ke Analisis AI'));
-                                    if (pythonBtn) {
-                                        pythonBtn.click();
-                                        statusText.innerText = "Status: 🚀 Berhasil! Melanjutkan ke AI...";
-                                    }
-                                }, 400);
+                                hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                                hiddenTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+                                
+                                hiddenTextarea.blur(); // Memicu React Streamlit menyimpan data seketika!
+                                
+                                statusText.innerText = "Status: ✅ Teks berhasil ditransfer! Silakan tekan tombol '🚀 Lanjut ke Analisis AI' di bawah ini.";
+                                statusText.style.borderLeftColor = "#27ae60";
+                                statusText.style.color = "#27ae60";
+                                submitBtn.disabled = true; startBtn.disabled = true; stopBtn.disabled = true;
                             } else {
-                                statusText.innerText = "Status: ❌ Gagal menemukan kotak tujuan.";
+                                statusText.innerText = "Status: ❌ Gagal menemukan kotak konfirmasi.";
                             }
                         };
                     }
@@ -3263,6 +3264,59 @@ with tab_rekam:
             </html>
             """
             components.html(html_code, height=380)
+
+            # ==========================================
+            # 3. WADAH PYTHON & TOMBOL-TOMBOL BAWAH
+            # ==========================================
+            st.markdown("---")
+            st.info("💡 **Petunjuk:** Setelah Anda selesai merekam, klik tombol **Stop & Finish** di atas. Teks akan muncul di kotak ini, lalu klik tombol **Lanjut ke Analisis AI**.")
+            
+            # Wadah teks (Font standar, Anti-copy diurus oleh Javascript di atas)
+            realtime_input = st.text_area("📝 Konfirmasi Hasil Transkripsi", placeholder="Teks akan otomatis ditransfer ke sini...", key="realtime_catcher", height=150)
+            
+            # Tombol Utama (Sepanjang field teks)
+            submit_realtime = st.button("🚀 Lanjut ke Analisis AI", key="btn_trigger_realtime", type="primary", use_container_width=True)
+            
+            # FITUR BARU: Tombol Rekam Ulang / Reset
+            if st.button("🔄 Rekam Audio Baru", type="secondary", use_container_width=True):
+                # Menghapus memori teks dan me-refresh halaman (Reset total)
+                if "realtime_catcher" in st.session_state:
+                    del st.session_state["realtime_catcher"]
+                st.rerun()
+            
+            # ==========================================
+            # 4. LOGIKA PEMROSESAN & PINDAH TAB
+            # ==========================================
+            if submit_realtime:
+                if realtime_input and realtime_input.strip() != "":
+                    # 1. Simpan ke Memori Streamlit
+                    st.session_state.transcript = realtime_input
+                    st.session_state.filename = "Dikte_RealTime"
+                    st.session_state.is_text_upload = True 
+                    
+                    # 2. Simpan ke Draft Firestore
+                    if st.session_state.logged_in:
+                        db.collection('users').document(st.session_state.current_user).update({
+                            "draft_transcript": st.session_state.transcript,
+                            "draft_filename": st.session_state.filename,
+                            "draft_ai_result": "",
+                            "draft_ai_prefix": "",
+                            "is_text_upload": True
+                        })
+                    
+                    # 3. Pindah tab ke Analisis AI
+                    st.success("✅ Dikte selesai! Mengalihkan ke menu Analisis AI...")
+                    components.html("""<script>
+                        var tabs = window.parent.document.querySelectorAll('button[data-baseweb=\\'tab\\']');
+                        var targetTab = Array.from(tabs).find(tab => tab.innerText.includes('Analisis AI'));
+                        if(targetTab) { targetTab.click(); window.parent.scrollTo({top: 0, behavior: 'smooth'}); }
+                    </script>""", height=0)
+                    
+                    import time
+                    time.sleep(1) 
+                    st.rerun()
+                else:
+                    st.error("⚠️ Teks masih kosong! Pastikan Anda sudah merekam audio dan menekan tombol '⏹️ Stop & Finish' di atas terlebih dahulu.")
 
             # ==========================================
             # 3. WADAH PYTHON (TERLIHAT, TAPI ANTI-COPY)
