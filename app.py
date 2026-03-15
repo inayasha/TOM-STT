@@ -3077,13 +3077,13 @@ with tab_rekam:
         # ==========================================
 
         # ---> KOTAK INFORMASI DITAMBAHKAN DI SINI <---
-        st.info("💡 **Tips untuk Hasil Transkripsi Maksimal**\n\nGunakan **Laptop atau PC** dengan koneksi internet yang stabil saat merekam. Perekaman menggunakan *Smartphone* (HP) sangat tidak disarankan, karena sistem HP seringkali mematikan mikrofon secara sepihak saat ada panggilan/notifikasi masuk.")
+        st.info("💡 **Tips untuk Hasil Transkripsi Maksimal**\n\nGunakan **Laptop atau PC** dengan koneksi internet yang stabil saat merekam. Perekaman audio menggunakan *Smartphone* (HP) sangat tidak disarankan, karena sistem HP seringkali mematikan mikrofon secara sepihak saat ada panggilan/notifikasi masuk.")
  
         lang_choice_mic = st.selectbox("Pilih Bahasa Audio yang Diucapkan", ("Indonesia", "Inggris"), key="lang_mic_global")
         lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
         
         st.write("")
-        st.markdown("##### 🎙️ Pengaturan Perekaman")
+        st.markdown("##### 🎙️ Pengaturan Perekaman Audio")
         
         # 🚀 PERUBAHAN NAMA MODE MENJADI LEBIH PROFESIONAL
         opsi_rekam = st.radio(
@@ -3097,7 +3097,7 @@ with tab_rekam:
         
         # PASTIKAN STRING INI SAMA PERSIS DENGAN YANG ADA DI DALAM RADIO BUTTON DI ATAS
         if opsi_rekam == "🎙️ Rekam Audio Utuh":
-            st.info("💡 **Mode Rekam Utuh:** Sistem akan merekam seluruh percakapan Anda dari awal hingga akhir, kemudian diproses menjadi teks. Cocok untuk rapat berdurasi panjang.")
+            st.info("💡 **Mode Rekam Audio Utuh:** Sistem akan merekam seluruh percakapan Anda dari awal hingga akhir, kemudian diproses menjadi teks. Cocok untuk rapat berdurasi panjang.")
             
             audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
             if audio_mic: audio_to_process, source_name = audio_mic, "rekaman_mic.wav"
@@ -3119,7 +3119,7 @@ with tab_rekam:
                 proses_transkrip_audio(audio_to_process, source_name, lang_code)
             
         elif opsi_rekam == "⚡ Transkripsi Real Time":
-            st.info("💡 **Mode Transkripsi:** Teks akan muncul seketika (kata demi kata) di layar saat Anda berbicara.")
+            st.info("💡 **Mode Transkripsi Real Time:** Teks akan muncul seketika (kata demi kata) di layar saat Anda berbicara.")
             
             # ==========================================
             # 1. 🛡️ SISTEM PEMULIHAN & CALLBACK BRANKAS (TANPA TOMBOL GAIB!)
