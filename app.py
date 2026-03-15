@@ -3075,12 +3075,11 @@ with tab_rekam:
         # ==========================================
         # 🚀 PENGATURAN BAHASA GLOBAL (Berlaku untuk semua mode)
         # ==========================================
-
-        # ---> TAMBAHKAN KOTAK INFORMASI DI SINI <---
-        st.info("💡 **Tips Hasil Transkripsi Maksimal**\n\nDemi kenyamanan Anda, gunakanlah **Laptop atau PC** dengan koneksi internet yang stabil saat merekam. \n\n*Catatan:* Perekaman menggunakan *Smartphone* (HP) tidak disarankan untuk durasi panjang, karena sistem HP seringkali mematikan mikrofon secara sepihak saat layar meredup atau ada panggilan/notifikasi masuk.")
- 
         lang_choice_mic = st.selectbox("Pilih Bahasa Audio yang Diucapkan", ("Indonesia", "Inggris"), key="lang_mic_global")
         lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
+        
+        # ---> KOTAK INFORMASI DITAMBAHKAN DI SINI <---
+        st.info("💡 **Tips Hasil Transkripsi Maksimal**\n\nDemi kenyamanan Anda, gunakanlah **Laptop atau PC** dengan koneksi internet yang stabil saat merekam. \n\n*Catatan:* Perekaman menggunakan *Smartphone* (HP) tidak disarankan untuk durasi panjang, karena sistem HP seringkali mematikan mikrofon secara sepihak saat layar meredup atau ada panggilan/notifikasi masuk.")
         
         st.write("")
         st.markdown("##### 🎙️ Pengaturan Perekaman")
@@ -3092,10 +3091,11 @@ with tab_rekam:
             horizontal=True,
             label_visibility="collapsed"
         )
-        
+
         st.markdown("---")
         
-        if opsi_rekam == "🎙️ Rekam dahulu bukan real time":
+        # PASTIKAN STRING INI SAMA PERSIS DENGAN YANG ADA DI DALAM RADIO BUTTON DI ATAS
+        if opsi_rekam == "🎙️ Rekam Audio Lengkap (Bukan real time)":
             st.info("💡 **Mode Rekam Utuh:** Sistem akan merekam seluruh percakapan Anda dari awal hingga akhir, kemudian diproses menjadi teks. Cocok untuk rapat berdurasi panjang.")
             
             audio_mic = st.audio_input("Klik ikon mic untuk mulai merekam")
@@ -3107,12 +3107,14 @@ with tab_rekam:
             with c2:
                 if audio_mic:
                     show_mobile_warning()
+                    # Tombol Mulai Transkrip menggunakan gaya yang ada
                     if st.button("🚀 Mulai Transkrip", use_container_width=True, key="btn_mic"):
                         submit_rekam = True
                 else:
                     st.markdown('<div class="custom-info-box">👆 Silahkan Rekam terlebih dahulu.</div>', unsafe_allow_html=True)
                     
             if submit_rekam:
+                # Menggunakan variabel lang_code dari pilihan di atasnya
                 proses_transkrip_audio(audio_to_process, source_name, lang_code)
                 
         elif opsi_rekam == "⚡ Transkripsi real time":
