@@ -3085,7 +3085,7 @@ with tab_rekam:
         # 🚀 PERUBAHAN NAMA MODE MENJADI LEBIH PROFESIONAL
         opsi_rekam = st.radio(
             "Pilih Mode Perekaman:", 
-            ["🎙️ Rekam dahulu bukan real time", "⚡ Transkripsi real time"], 
+            ["🎙️ Rekam Audio Lengkap (Bukan real time)", "⚡ Transkripsi real time"], 
             horizontal=True,
             label_visibility="collapsed"
         )
@@ -3140,9 +3140,8 @@ with tab_rekam:
             """, unsafe_allow_html=True)
 
             # ==========================================
-            # 2. INJEKSI HTML & JS (TEMA TERMINAL LINUX)
+            # 2. INJEKSI HTML & JS (TEMA TERMINAL & KUNCI TOMBOL CERDAS)
             # ==========================================
-            # Menginjeksikan parameter bahasa pilihan user langsung ke Javascript!
             html_code = f"""
             <!DOCTYPE html>
             <html>
@@ -3201,7 +3200,7 @@ with tab_rekam:
                 
                 <button id="resetBtn">
                     <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                    Record New Audio
+                        Record New Audio
                 </button>
                 
                 <div id="status">Status: 📴 Siap mendengarkan...</div>
@@ -3210,6 +3209,31 @@ with tab_rekam:
 
                 <script>
                     const parentDoc = window.parent.document;
+                    let isAILocked = true; // Status kunci tombol Streamlit
+                    
+                    // ==========================================
+                    // PENJAGA GERBANG TOMBOL AI (BULLETPROOF)
+                    // ==========================================
+                    function enforceAILock() {{
+                        const buttons = Array.from(parentDoc.querySelectorAll('button'));
+                        const aiBtn = buttons.find(btn => btn.textContent.includes('Lanjut ke Analisis AI'));
+                        if (aiBtn) {{
+                            if (isAILocked) {{
+                                aiBtn.disabled = true;
+                                aiBtn.style.opacity = '0.4';
+                                aiBtn.style.cursor = 'not-allowed';
+                                aiBtn.style.pointerEvents = 'none';
+                            }} else {{
+                                aiBtn.disabled = false;
+                                aiBtn.style.opacity = '1';
+                                aiBtn.style.cursor = 'pointer';
+                                aiBtn.style.pointerEvents = 'auto';
+                            }}
+                        }}
+                    }}
+                    // Jalankan setiap 500ms agar Streamlit tidak bisa mencurangi kuncinya
+                    setInterval(enforceAILock, 500);
+
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     
                     if (!SpeechRecognition) {{
@@ -3218,7 +3242,7 @@ with tab_rekam:
                         const recognition = new SpeechRecognition();
                         recognition.continuous = true;       
                         recognition.interimResults = true;   
-                        recognition.lang = '{lang_code}'; // 🚀 BAHASA DINAMIS DARI PYTHON TADI!          
+                        recognition.lang = '{lang_code}'; // Mengambil bahasa dari Python          
 
                         const startBtn = document.getElementById('startBtn');
                         const stopBtn = document.getElementById('stopBtn');
@@ -3262,7 +3286,7 @@ with tab_rekam:
                         startBtn.onclick = () => {{ recognition.start(); }};
                         stopBtn.onclick = () => {{ recognition.stop(); }};
                         
-                        // FUNGSI TRANSFER TEKS & TRIGGER MEMBUKA KUNCI TOMBOL AI
+                        // KETIKA KLIK STOP & FINISH
                         submitBtn.onclick = () => {{
                             recognition.stop(); 
                             const fullText = transcriptBox.innerText; 
@@ -3277,6 +3301,7 @@ with tab_rekam:
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                             
                             if (hiddenTextarea) {{
+                                // Trik menghilangkan pointer-events sementara agar Streamlit merespons input
                                 const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
                                 if(wrapper) wrapper.style.pointerEvents = 'auto';
                                 
@@ -3288,28 +3313,23 @@ with tab_rekam:
                                 hiddenTextarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
                                 hiddenTextarea.blur(); 
                                 
-                                if(wrapper) wrapper.style.pointerEvents = 'none';
+                                if(wrapper) wrapper.style.pointerEvents = 'none'; // Kunci kembali anti-copynya
                                 
-                                statusText.innerText = "Status: ✅ Sukses! Lanjut tekan tombol '🧠 Lanjut ke Analisis AI' di bawah.";
+                                statusText.innerText = "Status: ✅ Sukses! Silakan klik tombol biru '🧠 Lanjut ke Analisis AI' di bawah.";
                                 statusText.style.borderLeftColor = "#27ae60";
                                 statusText.style.color = "#27ae60";
                                 submitBtn.disabled = true; startBtn.disabled = true; stopBtn.disabled = true;
                                 
-                                // 🚀 JEDA: Panggil trigger Python gaib agar tombol "Lanjut ke Analisis AI" terbuka kuncinya!
-                                setTimeout(() => {{
-                                    const buttons = Array.from(parentDoc.querySelectorAll('button'));
-                                    const pythonUnlockBtn = buttons.find(btn => btn.textContent.includes('HiddenUnlock_Dikte'));
-                                    if (pythonUnlockBtn) {{
-                                        pythonUnlockBtn.click();
-                                    }}
-                                }}, 400);
+                                // BUKA KUNCI TOMBOL STREAMLIT
+                                isAILocked = false;
+                                enforceAILock();
                                 
                             }} else {{
                                 statusText.innerText = "Status: ❌ Gagal menemukan kotak konfirmasi.";
                             }}
                         }};
                         
-                        // FUNGSI RESET & MENGUNCI KEMBALI TOMBOL AI
+                        // KETIKA KLIK RECORD NEW AUDIO
                         resetBtn.onclick = () => {{
                             recognition.stop();
                             
@@ -3323,6 +3343,7 @@ with tab_rekam:
                             stopBtn.disabled = true; 
                             submitBtn.disabled = false;
                             
+                            // Kosongkan kotak Streamlit di bawah
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="📝 Konfirmasi Hasil Transkripsi"]');
                             if (hiddenTextarea) {{
                                 const wrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
@@ -3336,14 +3357,9 @@ with tab_rekam:
                                 
                                 if(wrapper) wrapper.style.pointerEvents = 'none';
                                 
-                                // 🚀 Panggil trigger Python gaib untuk mengunci kembali tombol AI
-                                setTimeout(() => {{
-                                    const buttons = Array.from(parentDoc.querySelectorAll('button'));
-                                    const pythonUnlockBtn = buttons.find(btn => btn.textContent.includes('HiddenUnlock_Dikte'));
-                                    if (pythonUnlockBtn) {{
-                                        pythonUnlockBtn.click();
-                                    }}
-                                }}, 200);
+                                // KUNCI KEMBALI TOMBOL STREAMLIT
+                                isAILocked = true;
+                                enforceAILock();
                             }}
                         }};
                     }}
@@ -3354,37 +3370,21 @@ with tab_rekam:
             components.html(html_code, height=450)
 
             # ==========================================
-            # 3. TOMBOL GAIB UNTUK RE-RENDER STREAMLIT
-            # ==========================================
-            st.markdown("<div style='display: none;'>", unsafe_allow_html=True)
-            # Tombol ini hanya dipencet oleh JS untuk memaksa Python merefresh layar dan membaca State Teks
-            if st.button("HiddenUnlock_Dikte", key="btn_unlock_dikte"):
-                pass 
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            # ==========================================
-            # 4. WADAH PYTHON & TOMBOL KUNCI
+            # 3. WADAH PYTHON & TOMBOL LANJUT (TANPA TOMBOL GAIB!)
             # ==========================================
             st.markdown("---")
             st.info("💡 **Petunjuk:** Setelah klik **Stop & Finish**, teks Anda akan disalin ke kotak di bawah ini. Pastikan teks sudah muncul, lalu klik **🧠 Lanjut ke Analisis AI**.")
             
-            # Mengambil data langsung dari memori penangkap Streamlit
-            current_text = st.session_state.get("catcher_dikte_live", "")
-            
-            # 🚀 KUNCI LOGIKA: Disable tombol JIKA kotaknya masih kosong
-            is_btn_disabled = not bool(current_text.strip())
-            
             # Wadah teks 100% terkunci dari klik/select oleh CSS di atas
             realtime_input = st.text_area("📝 Konfirmasi Hasil Transkripsi", placeholder="Teks akan otomatis ditransfer ke sini...", key="catcher_dikte_live", height=150)
             
-            # Tombol Utama yang dipasangi Kunci Keamanan
-            submit_realtime = st.button("🧠 Lanjut ke Analisis AI", key="btn_lanjut_ai_dikte", type="primary", use_container_width=True, disabled=is_btn_disabled)
+            # Tombol Utama (Biasa saja, penguncian murni dilakukan oleh JavaScript di browser)
+            submit_realtime = st.button("🧠 Lanjut ke Analisis AI", key="btn_lanjut_ai_dikte", type="primary", use_container_width=True)
             
             # ==========================================
-            # 5. LOGIKA PEMROSESAN & PINDAH TAB
+            # 4. LOGIKA PEMROSESAN & PINDAH TAB
             # ==========================================
             if submit_realtime:
-                # Double check murni untuk keamanan ekstra
                 if realtime_input and realtime_input.strip() != "":
                     st.session_state.transcript = realtime_input
                     st.session_state.filename = "Dikte_RealTime"
@@ -3409,6 +3409,8 @@ with tab_rekam:
                     import time
                     time.sleep(1) 
                     st.rerun()
+                else:
+                    st.error("⚠️ Teks masih kosong! Pastikan Anda sudah merekam audio dan menekan tombol '⏹️ Stop & Finish' di atas terlebih dahulu.")
 
 # ==========================================
 # TAB 3 (AKSES AKUN) & TAB 4 (EKSTRAK AI)
