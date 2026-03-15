@@ -3141,7 +3141,7 @@ with tab_rekam:
                 time.sleep(1) # Beri nafas sedikit sebelum reload
                 st.rerun()
 
-            # 🚀 INJEKSI JAVASCRIPT & HTML (Anti-Copy & Jembatan ke Python)
+            # 🚀 INJEKSI JAVASCRIPT & HTML (Anti-Copy Absolut & Jembatan ke Python)
             html_code = """
             <!DOCTYPE html>
             <html>
@@ -3149,17 +3149,21 @@ with tab_rekam:
                 <style>
                     body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 0; background: transparent; margin: 0; }
                     
-                    /* KUNCI PERBAIKAN: ANTI SELECT / ANTI COPY */
-                    textarea { 
+                    /* KUNCI PERBAIKAN: Menggunakan DIV sebagai pengganti Textarea agar Anti-Copy Bekerja 100% */
+                    #transcript { 
                         width: 100%; height: 250px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; 
-                        font-size: 15px; resize: none; margin-bottom: 10px; box-sizing: border-box; line-height: 1.6; 
+                        font-size: 15px; margin-bottom: 10px; box-sizing: border-box; line-height: 1.6; 
                         color: #333; background-color: #F8F9FA;
+                        overflow-y: auto; /* Memunculkan scrollbar jika teks panjang */
+                        
+                        /* SHIELD: PERTAHANAN ANTI-COPY ABSOLUT */
+                        -webkit-touch-callout: none !important;
                         -webkit-user-select: none !important;
                         -moz-user-select: none !important;
                         -ms-user-select: none !important;
                         user-select: none !important;
+                        cursor: default !important;
                     }
-                    textarea:focus { outline: none; }
                     
                     .btn-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
                     button { flex: 1; padding: 14px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; color: white; transition: 0.2s; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -3175,7 +3179,7 @@ with tab_rekam:
                     #status { font-size: 14px; color: #555; font-weight: 700; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; transition: all 0.3s; }
                 </style>
             </head>
-            <body>
+            <body oncontextmenu="return false;" oncopy="return false;" oncut="return false;" onselectstart="return false;">
                 <div class="btn-group">
                     <button id="startBtn">🔴 Mulai Bicara</button>
                     <button id="stopBtn" disabled>⏸️ Jeda</button>
@@ -3183,7 +3187,7 @@ with tab_rekam:
                 </div>
                 <div id="status">Status: 📴 Siap mendengarkan...</div>
                 
-                <textarea id="transcript" readonly placeholder="Izinkan akses mikrofon saat diminta, lalu mulailah berbicara. Teks akan muncul di sini secara real-time..."></textarea>
+                <div id="transcript">Izinkan akses mikrofon saat diminta, lalu mulailah berbicara. Teks akan muncul di sini secara real-time...</div>
 
                 <script>
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -3211,6 +3215,11 @@ with tab_rekam:
                             statusText.style.color = "#e74c3c";
                             startBtn.disabled = true;
                             stopBtn.disabled = false;
+                            
+                            // Hapus teks placeholder saat mulai
+                            if (finalTranscript === '') {
+                                transcriptBox.innerText = '';
+                            }
                         };
 
                         recognition.onresult = function(event) {
@@ -3222,14 +3231,14 @@ with tab_rekam:
                                     interimTranscript += event.results[i][0].transcript;
                                 }
                             }
-                            transcriptBox.value = finalTranscript + interimTranscript;
+                            // Menggunakan innerText karena ini DIV, bukan Textarea
+                            transcriptBox.innerText = finalTranscript + interimTranscript;
                             transcriptBox.scrollTop = transcriptBox.scrollHeight; 
                         };
 
                         recognition.onerror = function(event) {
-                            // Abaikan error 'no-speech' agar tidak panik saat user diam sebentar
                             if (event.error === 'no-speech') return;
-                            statusText.innerText = "Status: ⚠️ Terekam terhenti otomatis (" + event.error + ")";
+                            statusText.innerText = "Status: ⚠️ Rekaman terhenti otomatis (" + event.error + ")";
                             statusText.style.borderLeftColor = "#f39c12";
                             statusText.style.color = "#d35400";
                             startBtn.disabled = false;
@@ -3249,10 +3258,10 @@ with tab_rekam:
                         
                         // JEMBATAN GAIB JS KE STREAMLIT PYTHON
                         submitBtn.onclick = () => {
-                            recognition.stop(); // Pastikan mic mati
+                            recognition.stop(); 
                             
-                            const fullText = transcriptBox.value;
-                            if (!fullText.trim()) {
+                            const fullText = transcriptBox.innerText; // Mengambil dari innerText
+                            if (!fullText.trim() || fullText.includes("Izinkan akses mikrofon")) {
                                 statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam untuk diproses.";
                                 statusText.style.color = "#d35400";
                                 return;
@@ -3264,20 +3273,16 @@ with tab_rekam:
                             submitBtn.disabled = true;
                             startBtn.disabled = true;
                             
-                            // Trik React: Menembus DOM parent Streamlit
                             const parentDoc = window.parent.document;
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Catcher Realtime"]');
                             
                             if (hiddenTextarea) {
-                                // Paksa isi value textarea python
                                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
                                 nativeInputValueSetter.call(hiddenTextarea, fullText);
                                 
-                                // Picu event 'input' agar Streamlit/React tahu ada perubahan data
                                 let event = new Event('input', { bubbles: true });
                                 hiddenTextarea.dispatchEvent(event);
                                 
-                                // Klik tombol trigger secara otomatis setelah jeda 300ms
                                 setTimeout(() => {
                                     const buttons = Array.from(parentDoc.querySelectorAll('button'));
                                     const hiddenBtn = buttons.find(btn => btn.innerText.includes('Trigger Realtime'));
