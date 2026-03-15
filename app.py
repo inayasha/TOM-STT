@@ -3105,20 +3105,19 @@ with tab_rekam:
                 proses_transkrip_audio(audio_to_process, source_name, lang_code)
                 
         elif opsi_rekam == "⚡ Dikte Real-Time (Cepat & Gratis)":
-            st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo. Setelah selesai, klik tombol Lanjut.")
+            st.success("💡 **Mode Real-Time:** Teks akan muncul langsung saat Anda berbicara secara *Live*! Tidak memotong kuota/saldo. Setelah selesai, klik tombol **Selesai & Lanjut AI**.")
             
             # --- WADAH TERSEMBUNYI UNTUK MENANGKAP TEKS DARI JAVASCRIPT ---
-            st.markdown("<div style='display: none;'>", unsafe_allow_html=True)
-            realtime_input = st.text_area("Catcher Realtime", key="realtime_catcher")
+            # (Secara visual akan dilenyapkan oleh script JS di bawah)
+            realtime_input = st.text_area("Catcher Realtime", key="realtime_catcher", label_visibility="collapsed")
             submit_realtime = st.button("Trigger Realtime", key="btn_trigger_realtime")
-            st.markdown("</div>", unsafe_allow_html=True)
             
             # --- LOGIKA PENERIMA TEKS OTOMATIS ---
             if submit_realtime and realtime_input:
                 # 1. Simpan ke Memori Streamlit
                 st.session_state.transcript = realtime_input
                 st.session_state.filename = "Dikte_RealTime"
-                st.session_state.is_text_upload = True # Dianggap sebagai upload teks agar FUP di Tab 4 dihitung sesuai karakter
+                st.session_state.is_text_upload = True 
                 
                 # 2. Simpan ke Draft Firestore
                 if st.session_state.logged_in:
@@ -3138,7 +3137,7 @@ with tab_rekam:
                     if(targetTab) { targetTab.click(); window.parent.scrollTo({top: 0, behavior: 'smooth'}); }
                 </script>""", height=0)
                 import time
-                time.sleep(1) # Beri nafas sedikit sebelum reload
+                time.sleep(1) 
                 st.rerun()
 
             # 🚀 INJEKSI JAVASCRIPT & HTML (Anti-Copy Absolut & Jembatan ke Python)
@@ -3149,14 +3148,12 @@ with tab_rekam:
                 <style>
                     body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 0; background: transparent; margin: 0; }
                     
-                    /* KUNCI PERBAIKAN: Menggunakan DIV sebagai pengganti Textarea agar Anti-Copy Bekerja 100% */
+                    /* SHIELD: PERTAHANAN ANTI-COPY ABSOLUT */
                     #transcript { 
                         width: 100%; height: 250px; padding: 15px; border-radius: 10px; border: 2px solid #e0e0e0; 
                         font-size: 15px; margin-bottom: 10px; box-sizing: border-box; line-height: 1.6; 
                         color: #333; background-color: #F8F9FA;
-                        overflow-y: auto; /* Memunculkan scrollbar jika teks panjang */
-                        
-                        /* SHIELD: PERTAHANAN ANTI-COPY ABSOLUT */
+                        overflow-y: auto; 
                         -webkit-touch-callout: none !important;
                         -webkit-user-select: none !important;
                         -moz-user-select: none !important;
@@ -3190,6 +3187,29 @@ with tab_rekam:
                 <div id="transcript">Izinkan akses mikrofon saat diminta, lalu mulailah berbicara. Teks akan muncul di sini secara real-time...</div>
 
                 <script>
+                    const parentDoc = window.parent.document;
+
+                    // ========================================================
+                    // 1. MANTRA GAIB: MELENYAPKAN CATCHER & TRIGGER STREAMLIT
+                    // ========================================================
+                    setTimeout(() => {
+                        // Hilangkan Textarea
+                        const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Catcher Realtime"]');
+                        if(hiddenTextarea) {
+                            const taWrapper = hiddenTextarea.closest('div[data-testid="stTextArea"]');
+                            if(taWrapper) taWrapper.style.display = 'none';
+                        }
+                        // Hilangkan Tombol
+                        const buttons = Array.from(parentDoc.querySelectorAll('button'));
+                        const hiddenBtn = buttons.find(btn => btn.innerText.includes('Trigger Realtime'));
+                        if(hiddenBtn) {
+                            const btnWrapper = hiddenBtn.closest('div[data-testid="stButton"]');
+                            if(btnWrapper) btnWrapper.style.display = 'none';
+                            else hiddenBtn.style.display = 'none';
+                        }
+                    }, 100); // Dieksekusi 0.1 detik setelah HTML termuat
+                    // ========================================================
+
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     
                     if (!SpeechRecognition) {
@@ -3216,7 +3236,6 @@ with tab_rekam:
                             startBtn.disabled = true;
                             stopBtn.disabled = false;
                             
-                            // Hapus teks placeholder saat mulai
                             if (finalTranscript === '') {
                                 transcriptBox.innerText = '';
                             }
@@ -3231,7 +3250,6 @@ with tab_rekam:
                                     interimTranscript += event.results[i][0].transcript;
                                 }
                             }
-                            // Menggunakan innerText karena ini DIV, bukan Textarea
                             transcriptBox.innerText = finalTranscript + interimTranscript;
                             transcriptBox.scrollTop = transcriptBox.scrollHeight; 
                         };
@@ -3256,11 +3274,10 @@ with tab_rekam:
                         startBtn.onclick = () => { recognition.start(); };
                         stopBtn.onclick = () => { recognition.stop(); };
                         
-                        // JEMBATAN GAIB JS KE STREAMLIT PYTHON
                         submitBtn.onclick = () => {
                             recognition.stop(); 
                             
-                            const fullText = transcriptBox.innerText; // Mengambil dari innerText
+                            const fullText = transcriptBox.innerText; 
                             if (!fullText.trim() || fullText.includes("Izinkan akses mikrofon")) {
                                 statusText.innerText = "Status: ⚠️ Tidak ada teks yang terekam untuk diproses.";
                                 statusText.style.color = "#d35400";
@@ -3273,7 +3290,6 @@ with tab_rekam:
                             submitBtn.disabled = true;
                             startBtn.disabled = true;
                             
-                            const parentDoc = window.parent.document;
                             const hiddenTextarea = parentDoc.querySelector('textarea[aria-label="Catcher Realtime"]');
                             
                             if (hiddenTextarea) {
@@ -3284,14 +3300,13 @@ with tab_rekam:
                                 hiddenTextarea.dispatchEvent(event);
                                 
                                 setTimeout(() => {
-                                    const buttons = Array.from(parentDoc.querySelectorAll('button'));
-                                    const hiddenBtn = buttons.find(btn => btn.innerText.includes('Trigger Realtime'));
+                                    const hiddenBtn = Array.from(parentDoc.querySelectorAll('button')).find(btn => btn.innerText.includes('Trigger Realtime'));
                                     if (hiddenBtn) {
                                         hiddenBtn.click();
                                     }
                                 }, 300);
                             } else {
-                                statusText.innerText = "Status: ❌ Gagal terhubung ke sistem. Refresh halaman.";
+                                statusText.innerText = "Status: ❌ Gagal terhubung. Refresh halaman.";
                             }
                         };
                     }
