@@ -3077,7 +3077,7 @@ with tab_rekam:
         # ==========================================
 
         # ---> KOTAK INFORMASI DITAMBAHKAN DI SINI <---
-        st.info("💡 **Tips Hasil Transkripsi Maksimal**\n\nDemi kenyamanan Anda, gunakanlah **Laptop atau PC** dengan koneksi internet yang stabil saat merekam. \n\n*Catatan:* Perekaman menggunakan *Smartphone* (HP) tidak disarankan untuk durasi panjang, karena sistem HP seringkali mematikan mikrofon secara sepihak saat layar meredup atau ada panggilan/notifikasi masuk.")
+        st.info("💡 **Tips untuk Hasil Transkripsi Maksimal**\n\nGunakan **Laptop atau PC** dengan koneksi internet yang stabil saat merekam. \n\n*Catatan:* Perekaman menggunakan *Smartphone* (HP) sangat tidak disarankan, karena sistem HP seringkali mematikan mikrofon secara sepihak saat ada panggilan/notifikasi masuk.")
  
         lang_choice_mic = st.selectbox("Pilih Bahasa Audio yang Diucapkan", ("Indonesia", "Inggris"), key="lang_mic_global")
         lang_code = "id-ID" if lang_choice_mic == "Indonesia" else "en-US"
@@ -3117,8 +3117,8 @@ with tab_rekam:
             if submit_rekam:
                 # Menggunakan variabel lang_code dari pilihan di atasnya
                 proses_transkrip_audio(audio_to_process, source_name, lang_code)
-                
-        elif opsi_rekam == "⚡ Transkripsi real time":
+            
+        elif opsi_rekam == "⚡ Transkripsi Real Time":
             st.info("💡 **Mode Transkripsi:** Teks akan muncul seketika (kata demi kata) di layar saat Anda berbicara.")
             
             # ==========================================
@@ -5897,8 +5897,7 @@ st.markdown("""
     Kontak Support:<br>
     📧 Email: <a href="mailto:tom.stt.official@gmail.com" style="color: #cccccc; text-decoration: none;">tom.stt.official@gmail.com</a> &nbsp;|&nbsp; 
     📞 Telp/WA: <a href="https://wa.me/6281297971551" style="color: #cccccc; text-decoration: none;">+62 812 9797 1551</a><br>
-    📍 Alamat: Kota Wisata, Cibubur, Jawa Barat, Indonesia<br><br>
+    📍 Alamat: Jakarta - Indonesia<br><br>
     <span style="color: #111111;">Powered by</span> <a href="https://espeje.com" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">espeje.com</a> <span style="color: #111111;">&</span> <a href="https://link-gr.id" target="_blank" style="color: #e74c3c; text-decoration: none; font-weight: bold;">link-gr.id</a>
 </div>
 """, unsafe_allow_html=True)
-
