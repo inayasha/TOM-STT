@@ -3233,7 +3233,7 @@ with tab_rekam:
                 <div id="mobile-warning">
                     <h3><svg style="width: 24px; height: 24px;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> FITUR KHUSUS LAPTOP / PC</h3>
                     <p>
-                        Fitur <b>Dikte Real-Time</b> saat ini hanya dapat diakses secara maksimal melalui browser Laptop atau Komputer (PC).<br><br>
+                        Fitur <b>Transkripsi Real Time</b> saat ini hanya dapat diakses melalui browser Laptop atau Komputer (PC).<br><br>
                         <i style="opacity: 0.9; font-size: 13.5px;">Sistem operasi pada Smartphone (Android/iOS) memiliki batasan akses mikrofon yang sering menyebabkan error.</i><br><br>
                         💡 Silakan gunakan mode <b>"🎙️ Rekam Audio Utuh"</b> di atas untuk hasil yang 100% aman dan akurat di HP Anda.
                     </p>
